@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --green: #7cc242;
+    --green-dark: #6aad35;
+    --green-soft: #eef7e6;
+    --text: #2b2b2b;
+    --muted: #8a8a8a;
+    --border: #ececec;
+    --bg-soft: #f6f6f6;
+    --orange: #f5a623;
+    --red: #e53935;
+    --blue: #3b82f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Poppins", system-ui, sans-serif;
+    color: var(--text);
+    background: #fff;
+    font-size: 14px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  svg { display: block; }
+
+  /* Header */
+  .header {
+    background: var(--green);
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 32px;
+  }
+  .header h1 { font-size: 24px; font-weight: 600; }
+  .header h1 span { font-size: 15px; font-weight: 400; opacity: .85; margin-left: 6px; }
+  .refresh {
+    background: none; border: 0; color: #fff; display: flex; gap: 6px;
+    align-items: center; font-size: 15px; opacity: .95;
+  }
+  .refresh:hover { opacity: 1; }
+  .refresh.spin svg { animation: spin .6s linear; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 20px 32px 0;
+  }
+  .icon-group { display: flex; gap: 16px; }
+  .icon-btn-group {
+    display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  }
+  .icon-btn {
+    width: 56px; height: 56px; background: #fff; border: 0; display: grid; place-items: center;
+    color: #555;
+  }
+  .icon-btn + .icon-btn { border-left: 1px solid var(--border); }
+  .icon-btn:hover { background: var(--bg-soft); }
+  .icon-btn.active { color: var(--green); background: var(--green-soft); }
+  .search {
+    flex: 0 1 410px; min-width: 220px; height: 56px; display: flex; align-items: center; gap: 10px;
+    background: var(--bg-soft); border-radius: 10px; padding: 0 16px; border: 1px solid transparent;
+  }
+  .search:focus-within { border-color: var(--green); background: #fff; }
+  .search input { border: 0; outline: 0; background: none; font: inherit; font-size: 15px; width: 100%; }
+  .toggles { display: flex; gap: 18px; flex-wrap: wrap; margin-left: auto; }
+  .toggle { display: flex; align-items: center; gap: 10px; color: #777; font-size: 15px; cursor: pointer; user-select: none; }
+  .toggle input { display: none; }
+  .switch {
+    width: 44px; height: 24px; border-radius: 12px; background: #e3e3e3; position: relative; transition: .2s;
+  }
+  .switch::after {
+    content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: #fff;
+    top: 2px; left: 2px; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: .2s;
+  }
+  .toggle input:checked + .switch { background: var(--green); }
+  .toggle input:checked + .switch::after { left: 22px; }
+  .toggle input:checked ~ .label { color: var(--text); }
+
+  .create-row { display: flex; justify-content: flex-end; padding: 18px 32px 18px; }
+  .btn-create {
+    background: var(--green); color: #fff; border: 0; border-radius: 8px; height: 54px; padding: 0 26px;
+    font-size: 17px; font-weight: 500; letter-spacing: .5px; display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 2px 6px rgba(124,194,66,.35);
+  }
+  .btn-create:hover { background: var(--green-dark); }
+
+  /* Date filter bar */
+  .date-bar {
+    background: var(--bg-soft); display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    padding: 14px 32px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+  .date-label { display: flex; align-items: center; gap: 10px; color: #666; font-size: 14px; font-weight: 500; letter-spacing: .5px; }
+  .chip {
+    background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 8px 16px; font-size: 15px; color: #555;
+  }
+  .chip:hover { border-color: var(--green); }
+  .chip.active { background: var(--green); color: #fff; border-color: var(--green); font-weight: 500; }
+  .date-field { display: flex; align-items: center; gap: 10px; color: #555; font-size: 15px; }
+  .date-field input {
+    font: inherit; font-size: 15px; background: var(--bg-soft); border: 0; padding: 8px 10px; border-radius: 6px; color: #444;
+  }
+  .date-field input:focus { outline: 1px solid var(--green); background: #fff; }
+
+  /* Table */
+  .table-wrap { flex: 1; overflow-x: auto; position: relative; }
+  table { width: 100%; border-collapse: collapse; min-width: 1500px; }
+  thead th {
+    text-align: left; font-size: 14px; font-weight: 500; color: #777; letter-spacing: 1px; text-transform: uppercase;
+    padding: 18px 12px; vertical-align: bottom; position: relative; white-space: nowrap; background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+  th .th-inner { display: flex; align-items: flex-end; gap: 8px; }
+  th .th-inner.wrap { white-space: normal; line-height: 1.9; }
+  .filter-btn { background: none; border: 0; color: #777; padding: 2px; }
+  .filter-btn.on { color: var(--green); }
+  tbody td { padding: 20px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:hover { background: #fcfcfc; }
+  .expand { background: none; border: 0; color: #777; transition: .2s; padding: 2px; }
+  .expand.open { transform: rotate(180deg); }
+  .store { color: var(--green); font-weight: 500; font-size: 16px; line-height: 1.4; max-width: 170px; }
+  .store small { display: block; color: #666; font-weight: 400; font-size: 14px; margin-top: 4px; line-height: 1.7; }
+  .dash { color: #999; }
+  .customer { display: flex; gap: 14px; align-items: flex-start; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-size: 11px;
+    font-weight: 500; flex-shrink: 0; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 0 0 1px rgba(0,0,0,.05);
+  }
+  .name { font-weight: 500; font-size: 17px; }
+  .sub { color: #888; font-size: 14px; margin-top: 2px; }
+  .name, .customer .sub, .loc { white-space: nowrap; }
+  .loc { font-weight: 500; font-size: 17px; }
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 14px; }
+  .tag.kitchen { background: #fff4ea; color: #f0a070; }
+  .tag.bathroom { background: #eef4ff; color: #6a9ae8; }
+  .tag.multi { background: #f3f3f3; color: #888; }
+  .status {
+    display: inline-block; background: var(--orange); color: #fff; font-size: 14px; font-weight: 500;
+    padding: 6px 16px; border-radius: 20px; white-space: nowrap;
+  }
+  .status.won { background: var(--green); }
+  .status.lost { background: #bdbdbd; }
+  .actions { display: flex; gap: 22px; }
+  .actions button { background: none; border: 0; padding: 2px; }
+  .actions button:hover { transform: scale(1.12); }
+  .detail-row td { background: #fafafa; padding: 16px 12px 16px 60px; color: #555; font-size: 14px; }
+  .detail-row .grid { display: grid; grid-template-columns: repeat(4, max-content); gap: 8px 48px; }
+  .detail-row b { font-weight: 500; color: var(--text); display: block; }
+
+  /* Popover */
+  .popover {
+    position: absolute; z-index: 20; background: #fff; border-radius: 10px; width: 325px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.12); padding: 20px 20px 18px; display: none; text-transform: none;
+    letter-spacing: 0; font-weight: 400; color: var(--text);
+  }
+  .popover.show { display: block; }
+  .pop-head { display: flex; justify-content: space-between; font-size: 15px; font-weight: 500; }
+  .pop-head button { background: none; border: 0; color: #999; font-size: 14px; }
+  .pop-opts { border-bottom: 1px solid var(--border); padding: 20px 0 14px; display: flex; flex-direction: column; gap: 12px; }
+  .pop-opts label { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }
+  .pop-opts input { accent-color: var(--green); width: 18px; height: 18px; }
+  .btn-apply {
+    margin-top: 16px; width: 100%; background: var(--green); color: #fff; border: 0; border-radius: 6px;
+    height: 44px; font-size: 15px; font-weight: 500;
+  }
+  .btn-apply:hover { background: var(--green-dark); }
+
+  .settings-fab {
+    position: fixed; right: 0; top: 50%; background: var(--green); color: #fff; border: 0;
+    width: 64px; height: 70px; border-radius: 10px 0 0 10px; display: grid; place-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,.15);
+  }
+
+  /* Pagination */
+  .pager {
+    display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; gap: 16px; flex-wrap: wrap;
+  }
+  .rows { display: flex; align-items: center; gap: 12px; color: #666; font-size: 15px; }
+  .rows button {
+    min-width: 46px; height: 42px; border-radius: 6px; border: 1px solid var(--border); background: #fff; font-size: 15px;
+  }
+  .rows button.active { background: var(--green); color: #fff; border-color: var(--green); }
+  .range, .page-of { color: #666; font-size: 15px; }
+  .pages { display: flex; align-items: center; gap: 12px; }
+  .pages button {
+    width: 46px; height: 46px; border-radius: 6px; border: 1px solid var(--border); background: #fff; display: grid; place-items: center;
+  }
+  .pages button:disabled { background: var(--bg-soft); color: #ccc; border-color: var(--bg-soft); cursor: default; }
+
+  /* Footer */
+  footer {
+    background: var(--bg-soft); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    padding: 14px 32px; font-size: 19px;
+  }
+  .foot-right { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+  .foot-right a { color: var(--text); text-decoration: none; }
+  .foot-right a:hover { color: var(--green); }
+  .clock { color: var(--green); font-size: 17px; border-left: 1px solid #ddd; padding-left: 28px; }
+  .online { background: var(--green); color: #fff; border-radius: 6px; padding: 10px 20px; font-weight: 500; }
+
+  .empty { text-align: center; padding: 60px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>Leads <span id="total">(482)</span></h1>
+  <button class="refresh" id="refresh">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+    Refresh
+  </button>
+</header>
+
+<div class="toolbar">
+  <div class="icon-group">
+    <div class="icon-btn-group">
+      <button class="icon-btn" title="Layers"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg></button>
+    </div>
+    <div class="icon-btn-group">
+      <button class="icon-btn" title="Pricing"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></button>
+      <button class="icon-btn" title="Payments"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg></button>
+    </div>
+    <div class="icon-btn-group">
+      <button class="icon-btn" title="View"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+    <div class="icon-btn-group">
+      <button class="icon-btn" title="Filter"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4Z"/></svg></button>
+    </div>
+    <div class="icon-btn-group">
+      <button class="icon-btn" title="Export"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></button>
+    </div>
+  </div>
+
+  <label class="search">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="search" type="text" placeholder="Search" />
+  </label>
+
+  <div class="toggles">
+    <label class="toggle"><input type="checkbox" data-toggle="mine"><span class="switch"></span><span class="label">My Leads</span></label>
+    <label class="toggle"><input type="checkbox" data-toggle="feedback"><span class="switch"></span><span class="label">Show Feedbacks</span></label>
+    <label class="toggle"><input type="checkbox" data-toggle="archives"><span class="switch"></span><span class="label">Include Archives</span></label>
+    <label class="toggle"><input type="checkbox" data-toggle="followup"><span class="switch"></span><span class="label">Follow up Leads</span></label>
+    <label class="toggle"><input type="checkbox" data-toggle="consult"><span class="switch"></span><span class="label">In Home Consultation</span></label>
+  </div>
+</div>
+
+<div class="create-row">
+  <button class="btn-create">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    CREATE NEW
+  </button>
+</div>
+
+<div class="date-bar">
+  <div class="date-label">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    IN HOME CONSULTATION
+  </div>
+  <button class="chip" data-range="week">This Week</button>
+  <button class="chip" data-range="month">This Month</button>
+  <button class="chip" data-range="year">This Year</button>
+  <button class="chip active" data-range="any">Any</button>
+  <div class="date-field">Created from <input type="date" id="from"></div>
+  <div class="date-field">To <input type="date" id="to"></div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:48px"></th>
+        <th style="width:190px">
+          <div class="th-inner">STORE
+            <button class="filter-btn on" id="storeFilterBtn" title="Filter by store">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4Z"/></svg>
+            </button>
+          </div>
+          <div class="popover" id="storePopover">
+            <div class="pop-head">Filter by Store <button id="storeClear">Clear</button></div>
+            <div class="pop-opts" id="storeOpts"></div>
+            <button class="btn-apply" id="storeApply">Apply</button>
+          </div>
+        </th>
+        <th style="width:260px"><div class="th-inner wrap">IN HOME<br>CONSULTATION <button class="filter-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4Z"/></svg></button></div></th>
+        <th style="width:270px"><div class="th-inner">CUSTOMER <button class="filter-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4Z"/></svg></button></div></th>
+        <th style="width:180px"><div class="th-inner">LOCATION <button class="filter-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4Z"/></svg></button></div></th>
+        <th style="width:290px"><div class="th-inner">PROJECT TYPES <button class="filter-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4Z"/></svg></button></div></th>
+        <th style="width:165px"><div class="th-inner">DESIGNER <button class="filter-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4Z"/></svg></button></div></th>
+        <th style="width:195px"><div class="th-inner wrap">LEAD<br>STATUS <button class="filter-btn" style="margin-left:40px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5L3 4Z"/></svg></button></div></th>
+        <th style="width:215px">ACTIONS</th>
+        <th>FEEDBACK</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="pager">
+  <div class="rows">Rows per page:
+    <button data-size="10">10</button>
+    <button data-size="20" class="active">20</button>
+    <button data-size="50">50</button>
+    <button data-size="100">100</button>
+  </div>
+  <div class="range" id="range">1–20 of 482</div>
+  <div class="pages">
+    <span class="page-of" id="pageOf">Page 1 of 25</span>
+    <button id="first" title="First"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m11 17-5-5 5-5M18 17l-5-5 5-5"/></svg></button>
+    <button id="prev" title="Previous"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <button id="next" title="Next"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></button>
+    <button id="last" title="Last"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m13 17 5-5-5-5M6 17l5-5-5-5"/></svg></button>
+  </div>
+</div>
+
+<footer>
+  <div>© 2023 – Confidential and Proprietary</div>
+  <div class="foot-right">
+    <a href="#">Documentation</a>
+    <a href="#">Support</a>
+    <span class="clock" id="clock"></span>
+    <span class="online">1 user online</span>
+  </div>
+</footer>
+
+<button class="settings-fab" title="Settings">
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+</button>
+
+<script>
+  // ---------- Mock data ----------
+  const STORES = ["VKB, Bethesda, MD"];
+  const seed = [
+    ["Cheryl Isaac", "+1 (202) 999-9962", "Washington", "Washington DC", "Kitchen", "2026-09-20T18:05"],
+    ["Stacey Parker", "+1 (202) 714-2231", "Washington", "Washington DC", "Bathroom", "2026-08-12T23:17"],
+    ["Gustavo Sanchez", "+1 (703) 629-3073", "Charlestown", "West Virginia", "Kitchen", "2026-07-25T19:25"],
+    ["Nick Lemon", "+1 (208) 681-4464", "Washington", "Washington DC", "Kitchen", "2026-06-05T16:10"],
+    ["Nicole Wise", "+1 (202) 607-7350", "Riverdale", "Maryland", "Multi Project", "2026-05-23T12:49"],
+  ];
+  const first = ["Laura","James","Olivia","Mark","Emma","David","Sophia","Brian","Grace","Kevin","Hannah","Ryan","Megan","Aaron","Chloe","Derek"];
+  const last = ["Brown","Miller","Nguyen","Carter","Hughes","Reed","Foster","Bennett","Price","Ward","Coleman","Diaz","Hayes","Morris"];
+  const places = [["Washington","Washington DC"],["Riverdale","Maryland"],["Arlington","Virginia"],["Silver Spring","Maryland"],["Bethesda","Maryland"],["Charlestown","West Virginia"]];
+  const types = ["Kitchen","Kitchen","Bathroom","Multi Project"];
+  const avatarColors = ["#f26b3a","#3b8ee6","#8b5cf6","#e98a2f","#2f9a78","#e2567a","#4fb0c6"];
+
+  const leads = seed.map((s, i) => ({ id: i + 1, name: s[0], phone: s[1], city: s[2], state: s[3], type: s[4], created: new Date(s[5]) }));
+  let d = new Date("2026-05-20T10:00");
+  for (let i = leads.length; i < 510; i++) {
+    d = new Date(d.getTime() - (8 + (i * 7) % 40) * 3600e3);
+    const p = places[i % places.length];
+    leads.push({
+      id: i + 1,
+      name: `${first[i % first.length]} ${last[(i * 3) % last.length]}`,
+      phone: `+1 (${[202, 301, 703, 240][i % 4]}) ${String(100 + (i * 37) % 900)}-${String(1000 + (i * 911) % 9000)}`,
+      city: p[0], state: p[1], type: types[i % types.length], created: d,
+    });
+  }
+  leads.forEach((l, i) => {
+    l.store = STORES[0];
+    l.status = i % 11 === 7 ? "Won" : i % 13 === 5 ? "Lost" : "Pending Leads";
+    l.consult = i % 6 === 2 ? new Date(l.created.getTime() + 5 * 86400e3) : null;
+    l.archived = i >= 482;
+    l.mine = i % 3 === 0;
+    l.followup = i % 5 === 1;
+    l.feedback = i % 9 === 4 ? "Customer requested second quote." : "";
+  });
+
+  // ---------- State ----------
+  const state = { page: 1, size: 20, q: "", range: "any", from: null, to: null, stores: new Set(STORES), pendingStores: new Set(STORES), toggles: {}, open: new Set() };
+  const $ = (s) => document.querySelector(s);
+  const NOW = new Date("2026-09-24T20:37:08");
+
+  const fmt = (dt) => dt.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+  const initials = (n) => n.split(" ").map((x) => x[0]).join("").slice(0, 2).toUpperCase();
+  const tagClass = (t) => t === "Kitchen" ? "kitchen" : t === "Bathroom" ? "bathroom" : "multi";
+
+  function filtered() {
+    const q = state.q.toLowerCase();
+    const t = state.toggles;
+    return leads.filter((l) => {
+      if (!state.stores.has(l.store)) return false;
+      if (!t.archives && l.archived) return false;
+      if (t.mine && !l.mine) return false;
+      if (t.followup && !l.followup) return false;
+      if (t.consult && !l.consult) return false;
+      if (q && !`${l.name} ${l.phone} ${l.city} ${l.state} ${l.type}`.toLowerCase().includes(q)) return false;
+      if (state.range !== "any") {
+        const start = new Date(NOW);
+        if (state.range === "week") start.setDate(NOW.getDate() - NOW.getDay());
+        if (state.range === "month") start.setDate(1);
+        if (state.range === "year") start.setMonth(0, 1);
+        start.setHours(0, 0, 0, 0);
+        if (l.created < start) return false;
+      }
+      if (state.from && l.created < state.from) return false;
+      if (state.to && l.created > state.to) return false;
+      return true;
+    });
+  }
+
+  const I = {
+    doc: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7cc242" stroke-width="1.8" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8l-5-5Z"/><path d="M14 3v5h5"/></svg>',
+    chat: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b6fe0" stroke-width="1.8" stroke-linejoin="round"><path d="M4 4h16v12H9l-5 4V4Z"/></svg>',
+    edit: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7cc242" stroke-width="1.8" stroke-linejoin="round"><path d="m15 5 4 4L8 20H4v-4L15 5Z"/></svg>',
+    del: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>',
+    chev: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>',
+  };
+
+  function render() {
+    const rows = filtered();
+    const pages = Math.max(1, Math.ceil(rows.length / state.size));
+    state.page = Math.min(state.page, pages);
+    const start = (state.page - 1) * state.size;
+    const slice = rows.slice(start, start + state.size);
+    const tb = $("#tbody");
+
+    tb.innerHTML = slice.length ? slice.map((l) => {
+      const open = state.open.has(l.id);
+      const statusCls = l.status === "Won" ? "won" : l.status === "Lost" ? "lost" : "";
+      return `
+      <tr>
+        <td><button class="expand ${open ? "open" : ""}" data-expand="${l.id}">${I.chev}</button></td>
+        <td class="store">${l.store.replace(", MD", ",<br>MD")}<small>${fmt(l.created)}</small></td>
+        <td>${l.consult ? `<span>${fmt(l.consult)}</span>` : '<span class="dash">—</span>'}</td>
+        <td><div class="customer"><div class="avatar" style="background:${avatarColors[l.id % avatarColors.length]}">${initials(l.name)}</div>
+          <div><div class="name">${l.name}</div><div class="sub">${l.phone}</div></div></div></td>
+        <td><div class="loc">${l.city}</div><div class="sub">${l.state}</div></td>
+        <td><span class="tag ${tagClass(l.type)}">${l.type}</span></td>
+        <td><span class="dash">—</span></td>
+        <td><span class="status ${statusCls}">${l.status}</span></td>
+        <td><div class="actions">
+          <button title="Details">${I.doc}</button><button title="Notes">${I.chat}</button>
+          <button title="Edit">${I.edit}</button><button title="Delete" data-del="${l.id}">${I.del}</button>
+        </div></td>
+        <td>${state.toggles.feedback && l.feedback ? `<span class="sub">${l.feedback}</span>` : ""}</td>
+      </tr>
+      ${open ? `<tr class="detail-row"><td colspan="10"><div class="grid">
+        <div><b>Lead ID</b>#${String(l.id).padStart(5, "0")}</div>
+        <div><b>Source</b>Website form</div>
+        <div><b>Follow up</b>${l.followup ? "Yes" : "No"}</div>
+        <div><b>Archived</b>${l.archived ? "Yes" : "No"}</div>
+      </div></td></tr>` : ""}`;
+    }).join("") : `<tr><td colspan="10" class="empty">No leads match your filters.</td></tr>`;
+
+    $("#total").textContent = `(${rows.length})`;
+    $("#range").textContent = rows.length ? `${start + 1}–${Math.min(start + state.size, rows.length)} of ${rows.length}` : "0 of 0";
+    $("#pageOf").textContent = `Page ${state.page} of ${pages}`;
+    $("#first").disabled = $("#prev").disabled = state.page === 1;
+    $("#next").disabled = $("#last").disabled = state.page === pages;
+    $("#storeFilterBtn").classList.toggle("on", state.stores.size !== STORES.length || true);
+  }
+
+  // ---------- Events ----------
+  $("#tbody").addEventListener("click", (e) => {
+    const ex = e.target.closest("[data-expand]");
+    if (ex) { const id = +ex.dataset.expand; state.open.has(id) ? state.open.delete(id) : state.open.add(id); render(); }
+    const del = e.target.closest("[data-del]");
+    if (del && confirm("Delete this lead?")) { leads.splice(leads.findIndex((l) => l.id === +del.dataset.del), 1); render(); }
+  });
+
+  $("#search").addEventListener("input", (e) => { state.q = e.target.value; state.page = 1; render(); });
+
+  document.querySelectorAll("[data-toggle]").forEach((t) =>
+    t.addEventListener("change", () => { state.toggles[t.dataset.toggle] = t.checked; state.page = 1; render(); }));
+
+  document.querySelectorAll("[data-range]").forEach((c) => c.addEventListener("click", () => {
+    document.querySelectorAll("[data-range]").forEach((x) => x.classList.remove("active"));
+    c.classList.add("active"); state.range = c.dataset.range; state.page = 1; render();
+  }));
+  $("#from").addEventListener("change", (e) => { state.from = e.target.value ? new Date(e.target.value) : null; state.page = 1; render(); });
+  $("#to").addEventListener("change", (e) => { state.to = e.target.value ? new Date(e.target.value + "T23:59:59") : null; state.page = 1; render(); });
+
+  document.querySelectorAll("[data-size]").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("[data-size]").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active"); state.size = +b.dataset.size; state.page = 1; render();
+  }));
+  $("#first").onclick = () => { state.page = 1; render(); };
+  $("#prev").onclick = () => { state.page--; render(); };
+  $("#next").onclick = () => { state.page++; render(); };
+  $("#last").onclick = () => { state.page = 1e9; render(); };
+
+  // Store filter popover
+  const pop = $("#storePopover");
+  function renderStoreOpts() {
+    $("#storeOpts").innerHTML = STORES.map((s) =>
+      `<label><input type="checkbox" value="${s}" ${state.pendingStores.has(s) ? "checked" : ""}> ${s}</label>`).join("");
+  }
+  $("#storeFilterBtn").addEventListener("click", (e) => {
+    e.stopPropagation(); state.pendingStores = new Set(state.stores); renderStoreOpts(); pop.classList.toggle("show");
+  });
+  pop.addEventListener("click", (e) => e.stopPropagation());
+  $("#storeOpts").addEventListener("change", (e) => {
+    e.target.checked ? state.pendingStores.add(e.target.value) : state.pendingStores.delete(e.target.value);
+  });
+  $("#storeClear").onclick = () => { state.pendingStores.clear(); renderStoreOpts(); };
+  $("#storeApply").onclick = () => { state.stores = new Set(state.pendingStores); state.page = 1; pop.classList.remove("show"); render(); };
+  document.addEventListener("click", () => pop.classList.remove("show"));
+
+  $("#refresh").addEventListener("click", () => {
+    const r = $("#refresh"); r.classList.remove("spin"); void r.offsetWidth; r.classList.add("spin"); render();
+  });
+
+  // Clock
+  function tick() {
+    $("#clock").textContent = new Date().toLocaleString("en-US", {
+      weekday: "long", month: "long", day: "numeric", year: "numeric",
+      hour: "numeric", minute: "2-digit", second: "2-digit", timeZoneName: "short",
+    }).replace(/, (\d{4}),/, ", $1 at");
+  }
+  tick(); setInterval(tick, 1000);
+
+  render();
+</script>
+</body>
+</html>

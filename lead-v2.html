@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lead Overview v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --green: #7cc242;
+    --green-dark: #6aad35;
+    --green-soft: #eef7e6;
+    --blue: #3fa2c8;
+    --blue-soft: #eaf5fa;
+    --violet: #6d5bd0;
+    --violet-soft: #f3f1fd;
+    --text: #2b2b2b;
+    --muted: #8a8a8a;
+    --border: #ececec;
+    --bg-soft: #f6f6f6;
+    --page: #fafafa;
+    --orange: #f5a623;
+    --orange-soft: #fff4e2;
+    --red: #e53935;
+    --red-soft: #fdecec;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  body { font-family: "Poppins", system-ui, sans-serif; color: var(--text); background: #fff; font-size: 14px; height: 100vh; display: flex; overflow: hidden; }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; }
+  svg { display: block; flex-shrink: 0; }
+  a { color: inherit; }
+
+  /* ---------- Navigation (same as Leads list) ---------- */
+  .rail { width: 110px; flex-shrink: 0; background: #0f0f0f; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px 0; }
+  .rail-item { width: 100%; background: none; border: 0; color: #9a9a9a; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 0 12px; font-size: 13px; }
+  .rail-item .ico { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; }
+  .rail-item:hover { color: #fff; }
+  .rail-item.active { color: #fff; font-weight: 600; }
+  .rail-item.active .ico { background: #2a2a2a; box-shadow: inset 0 0 0 1px #3a3a3a; }
+  .rail-item:first-child { border-bottom: 1px solid #222; margin-bottom: 8px; padding-bottom: 20px; }
+  .subnav { width: 290px; flex-shrink: 0; background: #1a1a1a; color: #d6d6d6; padding: 20px 16px; transition: width .2s, padding .2s; overflow: hidden; white-space: nowrap; }
+  .subnav.collapsed { width: 0; padding-left: 0; padding-right: 0; }
+  .subnav-head { display: flex; justify-content: space-between; align-items: center; padding: 0 10px 0 12px; margin-bottom: 36px; }
+  .subnav-head h2 { font-size: 19px; font-weight: 500; color: #fff; }
+  .icon-plain { background: none; border: 0; color: #aaa; padding: 4px; border-radius: 6px; }
+  .icon-plain:hover { color: #fff; background: #2a2a2a; }
+  .subnav a { display: flex; justify-content: space-between; align-items: center; color: #d6d6d6; text-decoration: none; font-size: 18px; padding: 14px 16px; border-radius: 8px; margin-bottom: 4px; }
+  .subnav a:hover { background: #242424; }
+  .subnav a.active { background: #26331c; color: var(--green); font-weight: 500; }
+  .subnav a svg { color: #777; }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; background: var(--page); }
+  .main > * { flex-shrink: 0; }
+  .topbar { display: flex; align-items: center; gap: 16px; padding: 16px 32px; border-bottom: 1px solid var(--border); background: #fff; position: sticky; top: 0; z-index: 30; }
+  .add-circle { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: #fff; color: #888; display: grid; place-items: center; }
+  .top-search { margin-left: auto; width: 370px; height: 48px; display: flex; align-items: center; gap: 10px; background: var(--bg-soft); border-radius: 10px; padding: 0 16px; }
+  .top-search input { border: 0; outline: 0; background: none; font-size: 16px; width: 100%; }
+  .top-icons { display: flex; gap: 10px; margin-left: 12px; }
+  .top-icons button { position: relative; width: 48px; height: 48px; background: none; border: 0; color: #555; border-radius: 8px; display: grid; place-items: center; }
+  .top-icons button:hover { background: var(--bg-soft); }
+  .badge { position: absolute; top: 2px; right: 4px; background: var(--red); color: #fff; font-size: 11px; font-weight: 500; min-width: 20px; height: 20px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px; }
+
+  /* ---------- Shared UI ---------- */
+  .content { padding: 24px 32px 40px; display: flex; flex-direction: column; gap: 24px; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .card-head h3 { font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .card-head .meta { color: var(--muted); font-size: 13px; font-weight: 400; }
+  .card-body { padding: 16px 20px; }
+  .btn { height: 38px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: #fff; color: var(--text); white-space: nowrap; }
+  .btn:hover { border-color: #cfcfcf; background: var(--bg-soft); }
+  .btn.primary { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn.primary:hover { background: var(--green-dark); }
+  .btn.ghost { border-color: transparent; background: none; color: #555; }
+  .btn.ghost:hover { background: var(--bg-soft); }
+  .btn.link { border: 0; background: none; color: var(--green-dark); padding: 0; height: auto; }
+  .btn.link:hover { text-decoration: underline; background: none; }
+  .btn.danger-outline { color: #555; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; padding: 4px 12px; border-radius: 20px; white-space: nowrap; }
+  .pill.pending { background: var(--orange-soft); color: #c77c00; }
+  .pill.overdue { background: var(--red-soft); color: #c62828; }
+  .pill.upcoming { background: var(--blue-soft); color: #2378a0; }
+  .pill.done { background: var(--green-soft); color: #4f8f1f; }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .label { color: var(--muted); font-size: 12px; font-weight: 500; letter-spacing: .6px; text-transform: uppercase; }
+
+  /* Menus */
+  .menu-wrap { position: relative; }
+  .menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.12); padding: 6px; min-width: 210px; display: none; }
+  .menu.show { display: block; }
+  .menu button, .menu label { width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 9px 10px; border-radius: 6px; font-size: 14px; color: var(--text); cursor: pointer; text-align: left; }
+  .menu button:hover, .menu label:hover { background: var(--bg-soft); }
+  .menu .danger { color: var(--red); }
+  .menu hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
+  .menu .menu-title { padding: 8px 10px 4px; }
+  .menu input[type=checkbox] { accent-color: var(--green); width: 16px; height: 16px; }
+
+  /* ---------- Page header ---------- */
+  .back { display: inline-flex; align-items: center; gap: 8px; color: #777; text-decoration: none; font-size: 14px; }
+  .back:hover { color: var(--green-dark); }
+  .title-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+  .title-row h1 { font-size: 28px; font-weight: 600; color: var(--green); display: flex; align-items: center; gap: 14px; }
+  .title-actions { display: flex; gap: 10px; }
+
+  .lead-card { overflow: hidden; }
+  .lead-bar { background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; font-size: 15px; font-weight: 500; cursor: pointer; user-select: none; }
+  .lead-bar svg { transition: transform .2s; }
+  .lead-card.collapsed .lead-bar svg { transform: rotate(180deg); }
+  .lead-card.collapsed .lead-info { display: none; }
+  .lead-info { display: grid; grid-template-columns: 1.1fr 1.2fr 1fr 1fr; }
+  .lead-info > div { padding: 20px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+  .lead-info > div:last-child { border-right: 0; }
+  .status-big { color: var(--orange); font-size: 24px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .kv { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: #555; line-height: 1.5; }
+  .kv svg { margin-top: 2px; color: #888; }
+  .phone { color: var(--green-dark); font-weight: 600; font-size: 17px; }
+  .total { text-align: right; }
+  .total .amount { font-size: 30px; font-weight: 600; }
+  .total .amount sup { font-size: 15px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+  .tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 12px 14px; font-size: 14px; font-weight: 500; color: #666; display: flex; align-items: center; gap: 8px; margin-bottom: -1px; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--green-dark); border-bottom-color: var(--green); }
+  .tab .count { background: var(--bg-soft); color: #777; font-size: 12px; padding: 1px 8px; border-radius: 10px; }
+  .tab.active .count { background: var(--green-soft); color: var(--green-dark); }
+
+  /* ---------- Overview grid ---------- */
+  .grid { display: grid; grid-template-columns: minmax(360px, 1fr) 2fr; gap: 24px; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+
+  /* At a glance */
+  .glance { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .tile { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; text-align: left; display: flex; flex-direction: column; gap: 6px; transition: border-color .15s, box-shadow .15s; }
+  .tile:hover { border-color: var(--green); box-shadow: 0 2px 10px rgba(124,194,66,.12); }
+  .tile .t-head { display: flex; align-items: center; justify-content: space-between; color: #666; font-size: 13px; font-weight: 500; }
+  .tile .t-val { font-size: 20px; font-weight: 600; }
+  .tile .t-sub { font-size: 12px; color: var(--muted); }
+  .tile .t-sub.warn { color: #c77c00; }
+
+  /* AI assistant — visually distinct from data widgets */
+  .ai { border: 1px solid #d9d3f7; background: linear-gradient(180deg, var(--violet-soft) 0%, #fff 60%); border-radius: 12px; overflow: hidden; }
+  .ai-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px 6px; }
+  .ai-avatar { width: 40px; height: 40px; border-radius: 12px; background: var(--violet); color: #fff; display: grid; place-items: center; }
+  .ai-head h3 { font-size: 17px; font-weight: 600; }
+  .ai-head p { font-size: 13px; color: #6b6b7b; }
+  .ai-thread { padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; }
+  .msg { max-width: 88%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+  .msg.bot { background: #fff; border: 1px solid #e6e2fa; border-top-left-radius: 4px; }
+  .msg.me { background: var(--violet); color: #fff; align-self: flex-end; border-top-right-radius: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 20px 12px; }
+  .chip { background: #fff; border: 1px solid #d9d3f7; color: var(--violet); border-radius: 16px; padding: 6px 12px; font-size: 13px; }
+  .chip:hover { background: var(--violet-soft); }
+  .ai-input { display: flex; gap: 8px; padding: 12px 20px 16px; border-top: 1px solid #eee9fb; background: #fff; }
+  .ai-input input { flex: 1; height: 42px; border: 1px solid #d9d3f7; border-radius: 10px; padding: 0 14px; font-size: 14px; outline: 0; }
+  .ai-input input:focus { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(109,91,208,.12); }
+  .ai-send { width: 42px; height: 42px; border-radius: 10px; border: 0; background: var(--violet); color: #fff; display: grid; place-items: center; }
+  .typing span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #b7addf; margin-right: 3px; animation: blink 1s infinite; }
+  .typing span:nth-child(2) { animation-delay: .15s; } .typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes blink { 50% { opacity: .2; } }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; padding: 10px 12px; background: #fcfcfc; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 14px; }
+  tr:last-child td { border-bottom: 0; }
+  th.num, td.num { text-align: right; }
+  td .sub { color: var(--muted); font-size: 12px; }
+  .col-hidden { display: none; }
+  .proj-name { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid transparent; background: none; display: grid; place-items: center; color: #666; }
+  .icon-btn:hover { background: var(--bg-soft); border-color: var(--border); }
+  .toolbar { display: flex; align-items: center; gap: 8px; }
+  .divider-v { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+
+  /* Agenda */
+  .task-done-cell { width: 44px; }
+  .check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #cfcfcf; background: #fff; display: grid; place-items: center; color: transparent; padding: 0; }
+  .check:hover { border-color: var(--green); }
+  .check.on { background: var(--green); border-color: var(--green); color: #fff; }
+  tr.is-done .task-title { text-decoration: line-through; color: var(--muted); }
+  .task-title { font-weight: 500; }
+  .empty { text-align: center; color: var(--muted); padding: 28px; }
+  .card-foot { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 13px; }
+
+  /* Agreement section (unchanged content) */
+  .agree-note { font-size: 13px; color: #777; line-height: 1.6; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .acc-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; font-weight: 500; font-size: 15px; background: #fcfcfc; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .field > span { font-size: 13px; color: #777; }
+  .field input[type=date], .field input[type=number] { height: 44px; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; font-size: 14px; }
+  .range { display: flex; align-items: center; gap: 10px; }
+  .range input { flex: 1; min-width: 0; }
+  .cbx { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: #555; margin-bottom: 12px; line-height: 1.5; }
+  .cbx input { accent-color: var(--green); width: 16px; height: 16px; margin-top: 3px; }
+
+  /* ---------- UX notes layer ---------- */
+  .notes-toggle { position: fixed; right: 24px; bottom: 84px; z-index: 50; background: #1f1f1f; color: #fff; border: 0; border-radius: 24px; padding: 12px 18px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+  .notes-toggle.on { background: var(--violet); }
+  .pin { display: none; width: 24px; height: 24px; border-radius: 50%; background: var(--violet); color: #fff; font-size: 12px; font-weight: 600; place-items: center; box-shadow: 0 0 0 3px rgba(109,91,208,.25); flex-shrink: 0; cursor: pointer; }
+  body.show-notes .pin { display: grid; }
+  .notes-panel { position: fixed; right: 24px; bottom: 140px; z-index: 50; width: 380px; max-height: 60vh; overflow-y: auto; background: #fff; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.2); padding: 18px 20px; display: none; }
+  body.show-notes .notes-panel { display: block; }
+  .notes-panel h4 { font-size: 15px; margin-bottom: 12px; }
+  .notes-panel ol { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .notes-panel li { display: flex; gap: 10px; font-size: 13px; line-height: 1.5; color: #444; padding: 6px; border-radius: 8px; }
+  .notes-panel li.flash { background: var(--violet-soft); }
+  .notes-panel li .pin { display: grid; cursor: default; }
+  .notes-panel b { color: var(--text); font-weight: 600; }
+
+  /* Responsive */
+  @media (max-width: 1500px) {
+    .grid { grid-template-columns: 1fr; }
+    .lead-info { grid-template-columns: 1fr 1fr; }
+    .lead-info > div:nth-child(2) { border-right: 0; }
+    .lead-info > div:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+    .sum-row { grid-template-columns: 1fr 1fr; }
+    .form-item { grid-template-columns: 44px 1fr; }
+    .form-item > div:nth-child(n+3) { grid-column: 2; }
+  }
+  @media (max-width: 1100px) {
+    .glance { grid-template-columns: 1fr 1fr !important; }
+    .card-head { flex-wrap: wrap; }
+  }
+  /* ---------- Overview v2 ---------- */
+  .ov { display: flex; flex-direction: column; gap: 24px; }
+  .row2 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start; }
+  .section-title { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .section-title h3 { font-size: 17px; font-weight: 600; }
+  .section-title .hint { color: var(--muted); font-size: 13px; }
+
+  /* Permission banner */
+  .perm { display: none; align-items: center; gap: 12px; background: #fff8e8; border: 1px solid #f3dfae; color: #7a5a00; border-radius: 10px; padding: 12px 16px; font-size: 14px; }
+  body.limited .perm { display: flex; }
+  .perm b { font-weight: 600; }
+  .perm .x { margin-left: auto; background: none; border: 0; color: #a07a1a; font-size: 18px; line-height: 1; }
+  [disabled], .is-disabled { opacity: .45; cursor: not-allowed !important; pointer-events: auto; }
+  .lock { display: none; }
+  body.limited .lock { display: inline-flex; }
+
+  /* Project details */
+  .seg-label { font-size: 13px; color: var(--muted); margin-right: 2px; }
+  .toggle-chip { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-size: 13px; font-weight: 500; color: #666; display: inline-flex; align-items: center; gap: 6px; }
+  .toggle-chip.on { background: var(--green-soft); border-color: #cfe7b8; color: var(--green-dark); }
+  .toggle-chip .box { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid currentColor; display: grid; place-items: center; }
+  .toggle-chip.on .box { background: var(--green); border-color: var(--green); color: #fff; }
+  .amt-cell { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+  .amt-link { text-decoration: none; text-align: right; }
+  .amt-link:hover b { color: var(--green-dark); text-decoration: underline; }
+  .amt-link b { font-weight: 500; display: block; }
+  .mini-add { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border); background: #fff; color: var(--green-dark); display: grid; place-items: center; }
+  .mini-add:hover { border-color: var(--green); background: var(--green-soft); }
+  .status-btn { border: 0; cursor: pointer; }
+  .pill.scheduled { background: var(--green-soft); color: #4f8f1f; }
+  tfoot td { background: #fcfcfc; font-weight: 600; border-top: 1px solid var(--border); }
+  .sale-col { display: none; }
+  .show-sale .sale-col { display: table-cell; }
+  .show-sale .cost-hidden .cost-col { display: none; }
+  .hide-cost .cost-col { display: none; }
+
+  /* Tasks */
+  .due-rel { font-size: 12px; color: var(--muted); display: block; }
+  .due-rel.warn { color: #c62828; }
+
+  /* AI */
+  .ai-history { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-top: 1px solid #eee9fb; font-size: 13px; color: #6b6b7b; background: #fff; cursor: pointer; }
+
+  /* Status cards */
+  .status-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .scard { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; text-align: left; display: flex; flex-direction: column; gap: 6px; min-height: 150px; transition: border-color .15s, box-shadow .15s; }
+  .scard:hover { border-color: var(--green); box-shadow: 0 2px 10px rgba(124,194,66,.12); }
+  .scard .s-head { display: flex; align-items: center; justify-content: space-between; color: #666; font-size: 13px; font-weight: 500; }
+  .scard .s-val { font-size: 20px; font-weight: 600; }
+  .scard .s-sub { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .scard .s-warn { font-size: 12px; color: #b26a00; display: flex; gap: 6px; align-items: flex-start; line-height: 1.45; }
+  .scard .s-link { margin-top: auto; font-size: 13px; font-weight: 500; color: var(--green-dark); }
+  .scard.locked { background: #fafafa; }
+  .scard .noaccess { display: none; }
+  body.limited .scard[data-lock] .normal { display: none; }
+  body.limited .scard[data-lock] .noaccess { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 13px; }
+  body.limited .scard[data-lock] { background: #fafafa; cursor: default; }
+  body.limited .scard[data-lock]:hover { border-color: var(--border); box-shadow: none; }
+
+  /* Timeline */
+  .tl { padding: 8px 20px 4px; }
+  .tl-day { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .5px; text-transform: uppercase; padding: 12px 0 6px; }
+  .tl-item { display: grid; grid-template-columns: 32px 1fr auto; gap: 12px; padding: 10px 0; align-items: start; position: relative; }
+  .tl-item::before { content: ""; position: absolute; left: 15px; top: 40px; bottom: -10px; width: 1px; background: var(--border); }
+  .tl-item:last-child::before { display: none; }
+  .tl-ico { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--bg-soft); color: #666; }
+  .tl-ico.sms { background: var(--blue-soft); color: #2378a0; }
+  .tl-ico.task { background: var(--orange-soft); color: #c77c00; }
+  .tl-ico.proj { background: var(--green-soft); color: var(--green-dark); }
+  .tl-text { font-size: 14px; line-height: 1.5; }
+  .tl-text .quote { display: block; margin-top: 6px; background: #fcfcfc; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: #555; }
+  .tl-time { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  /* Tab placeholder */
+  .tab-ph { padding: 56px 24px; text-align: center; }
+  .tab-ph h3 { font-size: 18px; margin-bottom: 8px; }
+  .tab-ph p { color: var(--muted); max-width: 520px; margin: 0 auto 18px; line-height: 1.6; }
+
+  /* Review toolbar */
+  .review-bar { position: fixed; right: 24px; bottom: 84px; z-index: 50; display: flex; gap: 8px; align-items: center; background: #1f1f1f; padding: 6px; border-radius: 28px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+  .review-bar button { border: 0; background: none; color: #ccc; border-radius: 22px; padding: 9px 14px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .review-bar button.on { background: #fff; color: #1f1f1f; }
+  .review-bar .sep { width: 1px; height: 22px; background: #444; }
+  .notes-toggle { position: static !important; box-shadow: none !important; }
+  .review-bar .notes-toggle.on { background: var(--violet); color: #fff; }
+  .notes-panel { bottom: 146px !important; }
+
+  footer { margin-top: auto; background: var(--bg-soft); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 32px; font-size: 17px; }
+  .foot-right { display: flex; align-items: center; gap: 24px; }
+  .foot-right a { text-decoration: none; }
+  .clock { color: var(--green); font-size: 15px; border-left: 1px solid #ddd; padding-left: 24px; }
+  .online { background: var(--green); color: #fff; border-radius: 6px; padding: 8px 18px; font-weight: 500; }
+  .toast { position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px); background: #1f1f1f; color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 14px; opacity: 0; transition: .2s; pointer-events: none; z-index: 60; }
+  .toast.show { opacity: 1; transform: translateX(-50%); }
+
+  @media (max-width: 1500px) {
+    .status-cards { grid-template-columns: repeat(3, 1fr); }
+    .lead-info { grid-template-columns: 1fr 1fr; }
+    .lead-info > div:nth-child(2) { border-right: 0; }
+    .lead-info > div:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+  }
+  @media (max-width: 1200px) {
+    .row2 { grid-template-columns: 1fr; }
+    .status-cards { grid-template-columns: 1fr 1fr; }
+    .card-head { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="rail">
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-9Z"/></svg></span>Home</button>
+  <button class="rail-item active"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span>Operations</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span>Calendar</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg></span>Price Check</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4v16h16M8 16v-5M12 16V8M16 16v-3"/></svg></span>Reports</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3V5ZM21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7V5Z"/></svg></span>Library</button>
+</nav>
+
+<aside class="subnav" id="subnav">
+  <div class="subnav-head">
+    <h2>Operations</h2>
+    <button class="icon-plain" id="collapseNav" title="Collapse sidebar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+  </div>
+  <a href="#">Follow up Leads <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+  <a href="index.html" class="active">Leads <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+  <a href="#">Productions <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+  <a href="#">Service Calls <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="add-circle" title="New"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <label class="top-search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" placeholder="Search" /></label>
+    <div class="top-icons">
+      <button title="Inbox"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 12h5l1 2h6l1-2h5M8 7V5h8v2"/></svg></button>
+      <button title="Gifts"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18M12 8S10 3 7.5 4 9 8 12 8Zm0 0s2-5 4.5-4S15 8 12 8Z"/></svg><span class="badge">21</span></button>
+      <button title="Calendar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></button>
+      <button title="Report a bug"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="7" y="7" width="10" height="13" rx="5"/><path d="M9 7a3 3 0 0 1 6 0M3 13h4M17 13h4M12 11v9"/></svg></button>
+      <button title="Feedback"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 4h16v12H9l-5 4V4Z"/></svg></button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Permission banner: one message instead of a red line in every block -->
+    <div class="perm" id="perm">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <span>You have <b>view-only</b> access to Labors, Materials, Countertops, Agenda and Messages, and no access to Forms. Unavailable actions are greyed out. Hover one to see why.</span>
+      <span class="pin" data-note="7">7</span>
+      <button class="x" title="Dismiss" onclick="this.parentElement.style.display='none'">×</button>
+    </div>
+
+    <!-- Header -->
+    <div>
+      <a class="back" href="index.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Back to Leads</a>
+      <div class="title-row">
+        <h1>Cheryl Isaac: Kitchen, Bathroom</h1>
+        <div class="title-actions">
+          <span class="pin" data-note="9">9</span>
+          <button class="btn" data-toast="Lead sent to archive (demo)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></svg>Send to archive</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card lead-card" id="leadCard">
+      <div class="lead-bar" id="leadBar">VKB, Bethesda, MD / No designer assigned
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 15 6-6 6 6"/></svg>
+      </div>
+      <div class="lead-info">
+        <div>
+          <span class="label">Created / Scheduled</span>
+          <div class="status-big" style="color:var(--green)">Scheduled Leads <button class="icon-btn" title="Edit lead info"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7cc242" stroke-width="1.8" stroke-linejoin="round"><path d="m15 5 4 4L8 20H4v-4L15 5Z"/></svg></button></div>
+          <div class="kv" style="color:var(--text)">Created: Sep 4, 2026, 12:18 AM</div>
+          <div class="kv" style="color:var(--text)">Consult: Oct 1, 2026, 5:20 PM</div>
+        </div>
+        <div>
+          <span class="label">Contact</span>
+          <div class="kv" style="align-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/></svg><a class="phone" href="tel:+12029999962" style="text-decoration:none">+1 (202) 999-9962</a>
+            <button class="btn" style="height:30px;padding:0 10px;font-size:13px" data-go="messages">SMS</button></div>
+          <div class="kv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>cherylisaac@gmail.com</div>
+          <div class="kv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>4605 Reno Road NW, Washington, DC 20008</div>
+        </div>
+        <div>
+          <span class="label">Assignees</span>
+          <div class="kv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/></svg>No designer assigned</div>
+          <button class="btn" style="align-self:flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></svg>Pick assignees</button>
+        </div>
+        <div class="total">
+          <span class="label">Total cost</span>
+          <div class="amount" id="headTotal"></div>
+          <div class="kv" style="justify-content:flex-end">2 projects · <button class="btn link" data-toast="Opening total cost and multiplier…">Multiplier</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs (unchanged set, now with names + counts) -->
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="agenda">Agenda <span class="count">1/4</span></button>
+      <button class="tab" data-tab="files">Files & Photos <span class="count">3</span></button>
+      <button class="tab" data-tab="labors">Labors <span class="count">5</span></button>
+      <button class="tab" data-tab="materials">Materials <span class="count">7</span></button>
+      <button class="tab" data-tab="countertops">Countertops <span class="count">2</span></button>
+      <button class="tab" data-tab="payment">Payment Plan</button>
+      <button class="tab" data-tab="agreements">Agreements <span class="count">1</span></button>
+      <button class="tab" data-tab="messages">Messages <span class="count">3</span></button>
+      <button class="tab" data-tab="forms">Forms <span class="count">0/1</span></button>
+    </div>
+
+    <!-- ================= OVERVIEW ================= -->
+    <section class="view ov" data-view="overview">
+
+      <!-- 1. Project Details = estimate summary -->
+      <div class="card" id="projCard">
+        <div class="card-head">
+          <h3>Project details <span class="pin" data-note="2">2</span></h3>
+          <div class="toolbar">
+            <span class="seg-label">Show</span>
+            <button class="toggle-chip on" id="tCost"><span class="box"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="m5 12 5 5 9-10"/></svg></span>Cost</button>
+            <button class="toggle-chip" id="tSale"><span class="box"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="m5 12 5 5 9-10"/></svg></span>Sale price</button>
+            <div class="divider-v"></div>
+            <button class="btn ghost" data-toast="Downloading summary PDF…"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8l-5-5Z"/><path d="M14 3v5h5M12 11v6M9 14l3 3 3-3"/></svg>Summary PDF</button>
+            <div class="divider-v"></div>
+            <button class="btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z"/></svg>Add from wishlist</button>
+            <button class="btn primary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add project</button>
+          </div>
+        </div>
+        <table id="projTable">
+          <thead><tr>
+            <th>Project</th>
+            <th class="num">Materials</th><th class="num">Labors</th><th class="num">Countertops</th>
+            <th class="num cost-col">Total cost</th><th class="num sale-col">Sale price</th>
+            <th>Status</th><th style="width:56px">Actions</th>
+          </tr></thead>
+          <tbody id="projBody"></tbody>
+          <tfoot id="projFoot"></tfoot>
+        </table>
+      </div>
+
+      <!-- 2. Upcoming tasks + ChatGPT -->
+      <div class="row2">
+        <div class="card">
+          <div class="card-head">
+            <h3>Upcoming tasks <span class="pin" data-note="3">3</span></h3>
+            <button class="btn" data-perm title=""><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add task</button>
+          </div>
+          <table>
+            <thead><tr><th class="task-done-cell" style="white-space:nowrap">Done</th><th>Task</th><th>Due</th><th>Status</th></tr></thead>
+            <tbody id="taskBody"></tbody>
+          </table>
+          <div class="card-foot"><span id="taskInfo"></span><button class="btn link" data-go="agenda">All tasks in Agenda →</button></div>
+        </div>
+
+        <div class="ai">
+          <div class="ai-head">
+            <div class="ai-avatar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.9L19 9.5l-5.2 1.6L12 16l-1.8-4.9L5 9.5l5.2-1.6L12 3Z"/></svg></div>
+            <div style="flex:1"><h3>ChatGPT</h3><p>Ask about this lead: history, estimate, next steps</p></div>
+            <span class="pin" data-note="6">6</span>
+          </div>
+          <div class="ai-thread" id="thread"><div class="msg bot">Cheryl's lead has 2 projects. The in-home consultation is on <b>Oct 1</b>, and 1 task is overdue. Ask me anything.</div></div>
+          <div class="chips" id="chips"><button class="chip">Summarize this lead</button><button class="chip">What's overdue?</button></div>
+          <form class="ai-input" id="aiForm"><input id="aiInput" placeholder="Ask ChatGPT about this lead…" autocomplete="off" /><button class="ai-send" title="Send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>
+          <div class="ai-history" data-toast="Opening previous conversations…">Messages (2 previous conversations) <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></div>
+        </div>
+      </div>
+
+      <!-- 3. Status cards (one number, one warning, one link) -->
+      <div>
+        <div class="section-title"><h3>Status</h3><span class="hint">The rest of the lead at a glance. Each card opens its tab.</span><span class="pin" data-note="4">4</span></div>
+        <div class="status-cards">
+          <button class="scard" data-go="files">
+            <span class="s-head">Files & Photos <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></span>
+            <span class="s-val">3 files</span>
+            <span class="s-sub">Kitchen 3 · Bathroom 0</span>
+            <span class="s-warn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 2 21h20L12 3ZM12 10v5M12 18h0"/></svg>Required "Before Photos" missing for Bathroom</span>
+            <span class="s-link">Upload files →</span>
+          </button>
+          <button class="scard" data-go="payment">
+            <span class="s-head">Payment Plan <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></span>
+            <span class="s-val">Not selected</span>
+            <span class="s-sub">Choose 1–10 payments for the total</span>
+            <span class="s-link">Choose a plan →</span>
+          </button>
+          <button class="scard" data-go="agreements">
+            <span class="s-head">Agreements <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></span>
+            <span class="s-val">0 of 1 signed</span>
+            <span class="s-sub">No documents sent with PiSign yet</span>
+            <span class="s-warn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3 2 21h20L12 3ZM12 10v5M12 18h0"/></svg>Agreement Settings: job start date not set</span>
+            <span class="s-link">Open agreements → <span class="pin" data-note="8" style="display:none">8</span></span>
+          </button>
+          <button class="scard" data-go="messages">
+            <span class="s-head">Messages <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></span>
+            <span class="s-val">1 unread</span>
+            <span class="s-sub">Cheryl, 2 h ago: "Weekday evenings after 6 work best for me."</span>
+            <span class="s-link">Reply →</span>
+          </button>
+          <button class="scard" data-go="forms" data-lock>
+            <span class="s-head">Forms <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></span>
+            <span class="normal" style="display:contents">
+              <span class="s-val">Not sent</span>
+              <span class="s-sub">Credit Card Form</span>
+              <span class="s-link">Send to customer →</span>
+            </span>
+            <span class="noaccess"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>No access<span style="font-size:12px">Ask a Store manager for access to Forms</span></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Activity Timeline -->
+      <div class="card">
+        <div class="card-head"><h3>Activity timeline <span class="pin" data-note="5">5</span></h3><span class="meta">Everything that happened on this lead</span></div>
+        <div class="tl">
+          <div class="tl-day">Today</div>
+          <div class="tl-item"><div class="tl-ico sms"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 4h16v12H9l-5 4V4Z"/></svg></div>
+            <div class="tl-text"><b>Cheryl Isaac</b> replied by SMS<span class="quote">Weekday evenings after 6 work best for me.</span></div><span class="tl-time">4:02 PM</span></div>
+          <div class="tl-item"><div class="tl-ico proj"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="tl-text"><b>Eleken UI/UX</b> added project <b>Bathroom</b> with 3 materials and 2 labors</div><span class="tl-time">2:40 PM</span></div>
+          <div class="tl-day">Sep 28</div>
+          <div class="tl-item"><div class="tl-ico task"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></div>
+            <div class="tl-text"><b>Eleken UI/UX</b> scheduled <b>In-home Consultation</b> for Oct 1, 5:20 PM</div><span class="tl-time">11:15 AM</span></div>
+          <div class="tl-item"><div class="tl-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></div>
+            <div class="tl-text">Status changed from <b>Pending Leads</b> to <b>Scheduled Leads</b></div><span class="tl-time">11:14 AM</span></div>
+          <div class="tl-day">Sep 4</div>
+          <div class="tl-item"><div class="tl-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></svg></div>
+            <div class="tl-text">Lead created from website form: <b>Kitchen</b></div><span class="tl-time">12:18 AM</span></div>
+        </div>
+        <div class="card-foot"><span>Showing latest 5 events</span><button class="btn link" data-toast="Loading full history…">Show full history</button></div>
+      </div>
+    </section>
+
+    <!-- Other tabs keep their existing working views -->
+    <section class="view" data-view="other" hidden>
+      <div class="card tab-ph">
+        <h3 id="phTitle"></h3>
+        <p id="phText"></p>
+        <button class="btn" data-go="overview">← Back to Overview</button>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <div>© 2023 – Confidential and Proprietary</div>
+    <div class="foot-right"><a href="#">Documentation</a><a href="#">Support</a><span class="clock" id="clock"></span><span class="online">1 user online</span></div>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Review toolbar -->
+<div class="review-bar">
+  <button class="on" data-access="full">Full access</button>
+  <button data-access="limited"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Limited access</button>
+  <span class="sep"></span>
+  <button class="notes-toggle" id="notesToggle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h0M11 12h1v5h1"/></svg><span>Show UX changes</span></button>
+</div>
+<div class="notes-panel" id="notesPanel">
+  <h4>Overview: from 12 working blocks to 5 summary zones</h4>
+  <ol>
+    <li data-n="1"><span class="pin">1</span><div><b>Every kind of data has one place to work: its tab.</b> The Labors, Materials, Countertops, Files & Photos, Payment Plan, Messages and Agreement editors are removed from Overview, along with the full Agenda table. Overview only shows what exists, what's wrong and where to go.</div></li>
+    <li data-n="2"><span class="pin">2</span><div><b>Project details is the estimate summary.</b> The amounts link to the Materials, Labors and Countertops tabs, and "+" adds an item. The Cost / Sale price toggles have labels. Row actions (Edit, Info, PDF, Duplicate, Wishlist, Delete) are in a labelled ⋯ menu.</div></li>
+    <li data-n="3"><span class="pin">3</span><div><b>Upcoming tasks shows open tasks only.</b> The one action here is a "Done" checkbox. Attach, Cancel, Edit and Delete stay in the Agenda tab.</div></li>
+    <li data-n="4"><span class="pin">4</span><div><b>Status cards: one value, one warning, one link.</b> They only use data PiSuite already has: required "Before Photos", whether a payment plan is selected, Agreement Settings and PiSign status, unread messages, and the Credit Card Form status.</div></li>
+    <li data-n="5"><span class="pin">5</span><div><b>Activity timeline moves up.</b> It's the existing block that shows everything that happened on the lead, which makes it the most natural summary. Before, it was at the very bottom.</div></li>
+    <li data-n="6"><span class="pin">6</span><div><b>ChatGPT stays on Overview.</b> It's an assistant for the whole lead, not a copy of a tab. It gets its own style so it doesn't blend in with the data blocks.</div></li>
+    <li data-n="7"><span class="pin">7</span><div><b>Restricted access.</b> One banner replaces a red "Insufficient permissions" line in ~9 blocks. Unavailable actions are greyed out and explain why on hover. A section you can't view shows a compact "No access" card. Switch to "Limited access" in the toolbar to see it.</div></li>
+    <li data-n="8"><span class="pin">8</span><div><b>The Agreement section is unchanged and lives only in the Agreements tab.</b> Overview shows its status. If the client wants it to stay on Overview as well, it can go back as a single, deliberate exception.</div></li>
+    <li data-n="9"><span class="pin">9</span><div><b>Header.</b> "Send to archive" is a secondary button, and the wording is the same everywhere ("No designer assigned"). SMS is a labelled button next to the phone number.</div></li>
+  </ol>
+</div>
+
+<script>
+  const $ = (s) => document.querySelector(s), $$ = (s) => document.querySelectorAll(s);
+  const money = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("show"), 2200); }
+  const DENY = "View-only access. Ask a Store manager for edit rights.";
+
+  // Existing PiSuite data shapes: per project sums + item counts
+  const projects = [
+    { name: "Kitchen", mat: [9504, 4], lab: [3150, 3], ctp: [5148, 2], mult: 1.35 },
+    { name: "Bathroom", mat: [2380, 3], lab: [1450, 2], ctp: [0, 0], mult: 1.35 },
+  ];
+  const tasks = [
+    { id: 1, title: "Call back about bathroom scope", due: "Sep 27, 2026", rel: "2 days overdue", warn: true, done: false },
+    { id: 2, title: "Send kitchen questionnaire", due: "Sep 30, 2026", rel: "Tomorrow", done: false },
+    { id: 3, title: "In-home Consultation", due: "Oct 1, 2026, 5:20 PM", rel: "In 2 days", done: false },
+    { id: 4, title: "First contact with customer", due: "Sep 4, 2026", done: true },
+  ];
+  const plus = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+  const dots = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+  const check = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>';
+  const total = (p) => p.mat[0] + p.lab[0] + p.ctp[0];
+
+  function renderProjects() {
+    const cell = (v, tab, perm) => `<td class="num"><div class="amt-cell"><a class="amt-link" href="#" data-go="${tab}"><b>${money(v[0])}</b><span class="sub">${v[1]} item${v[1] === 1 ? "" : "s"}</span></a><button class="mini-add" data-perm title="Add ${tab.slice(0, -1)}">${plus}</button></div></td>`;
+    $("#projBody").innerHTML = projects.map((p, i) => `<tr>
+      <td><div class="proj-name">${p.name}</div><div class="sub">${p.mat[1] + p.lab[1] + p.ctp[1]} items</div></td>
+      ${cell(p.mat, "materials")}${cell(p.lab, "labors")}${cell(p.ctp, "countertops")}
+      <td class="num cost-col"><b>${money(total(p))}</b></td>
+      <td class="num sale-col"><b>${money(total(p) * p.mult)}</b><div class="sub">× ${p.mult}</div></td>
+      <td><button class="pill scheduled status-btn" title="Change status" data-toast="Change status…"><span class="dot"></span>Scheduled Leads</button></td>
+      <td><div class="menu-wrap"><button class="icon-btn" data-menu="pm${i}" title="Project actions">${dots}</button>
+        <div class="menu" id="pm${i}"><button>Edit project</button><button>Project info</button><button>Download PDF</button><button>Duplicate</button><button>${i ? "Add to wishlist" : "Remove from wishlist"}</button><hr><button class="danger">Delete project</button></div></div></td>
+    </tr>`).join("");
+    const T = projects.reduce((a, p) => a + total(p), 0), S = projects.reduce((a, p) => a + total(p) * p.mult, 0);
+    $("#projFoot").innerHTML = `<tr><td>Total · ${projects.length} projects</td><td></td><td></td><td></td><td class="num cost-col">${money(T)}</td><td class="num sale-col">${money(S)}</td><td colspan="2"></td></tr>`;
+    $("#headTotal").innerHTML = `<sup>$</sup>${T.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+  }
+
+  function renderTasks() {
+    const open = tasks.filter((t) => !t.done);
+    $("#taskBody").innerHTML = open.length ? open.map((t) => `<tr>
+      <td class="task-done-cell"><button class="check" data-done="${t.id}" data-perm title="Mark as done">${check}</button></td>
+      <td><span class="task-title">${t.title}</span></td>
+      <td>${t.due}<span class="due-rel ${t.warn ? "warn" : ""}">${t.rel}</span></td>
+      <td><span class="pill ${t.warn ? "overdue" : "upcoming"}"><span class="dot"></span>${t.warn ? "Overdue" : "Upcoming"}</span></td>
+    </tr>`).join("") : `<tr><td colspan="4" class="empty">No open tasks</td></tr>`;
+    $("#taskInfo").textContent = `${tasks.length - open.length} of ${tasks.length} tasks done`;
+    applyAccess();
+  }
+
+  // Access preview
+  let limited = false;
+  function applyAccess() {
+    document.body.classList.toggle("limited", limited);
+    $$("[data-perm]").forEach((b) => { b.classList.toggle("is-disabled", limited); b.title = limited ? DENY : (b.dataset.origTitle ??= b.title); });
+  }
+  $$("[data-access]").forEach((b) => b.onclick = () => { $$("[data-access]").forEach((x) => x.classList.toggle("on", x === b)); limited = b.dataset.access === "limited"; $("#perm").style.display = ""; applyAccess(); });
+
+  // Cost / sale toggles
+  let showCost = true, showSale = false;
+  function applyCols() { $("#projCard").classList.toggle("hide-cost", !showCost); $("#projCard").classList.toggle("show-sale", showSale); $("#tCost").classList.toggle("on", showCost); $("#tSale").classList.toggle("on", showSale); }
+  $("#tCost").onclick = () => { showCost = !showCost; if (!showCost && !showSale) showSale = true; applyCols(); };
+  $("#tSale").onclick = () => { showSale = !showSale; if (!showCost && !showSale) showCost = true; applyCols(); };
+
+  // Tabs
+  const TAB_TEXT = {
+    agenda: "The full task table stays here: attach a file, cancel, edit and delete. Overview only lists open tasks.",
+    files: "Uploading to the Before Photos, 3D Renderings, 2020 Files and Additional Material Photos folders happens here, for each project.",
+    labors: "The existing editor stays as it is: choose a project, Add from catalog, List / Edit view.",
+    materials: "The existing editor stays as it is: choose a project, Add from catalog, List / Edit view.",
+    countertops: "The existing editor stays as it is: choose a project, Add from catalog, List / Edit view.",
+    payment: "Choosing the plan (1–10 payments) and working with it happens here.",
+    agreements: "Signed documents, Agreement Settings (unchanged, at the client's request) and Agreement Files live here.",
+    messages: "The full conversation and the message composer live here.",
+    forms: "The Credit Card Form and sending it to the customer live here.",
+  };
+  function openTab(name) {
+    $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
+    $$(".view").forEach((v) => v.hidden = (name === "overview") !== (v.dataset.view === "overview"));
+    if (name !== "overview") {
+      const label = [...$$(".tab")].find((t) => t.dataset.tab === name).firstChild.textContent.trim();
+      $("#phTitle").textContent = `${label}: working area`;
+      $("#phText").textContent = TAB_TEXT[name] + " This redesign doesn't change the tab itself.";
+    }
+    $(".main").scrollTo({ top: $("#tabs").offsetTop - 90, behavior: "smooth" });
+  }
+  $$(".tab").forEach((t) => t.onclick = () => openTab(t.dataset.tab));
+
+  // Global clicks
+  document.addEventListener("click", (e) => {
+    const trg = e.target.closest("[data-menu]"), inside = e.target.closest(".menu");
+    $$(".menu.show").forEach((m) => { if (m !== inside && (!trg || m.id !== trg.dataset.menu)) m.classList.remove("show"); });
+    if (trg) $("#" + trg.dataset.menu).classList.toggle("show");
+    if (inside && e.target.tagName === "BUTTON") inside.classList.remove("show");
+
+    const perm = e.target.closest("[data-perm]");
+    if (perm && limited) { e.preventDefault(); e.stopPropagation(); toast(DENY); return; }
+    if (limited && e.target.closest(".scard[data-lock]")) { toast("No access to Forms"); return; }
+
+    const d = e.target.closest("[data-done]");
+    if (d) { tasks.find((t) => t.id === +d.dataset.done).done = true; renderTasks(); toast("Task marked as done"); return; }
+    const go = e.target.closest("[data-go]"); if (go) { e.preventDefault(); openTab(go.dataset.go); }
+    const tst = e.target.closest("[data-toast]"); if (tst) toast(tst.dataset.toast);
+  }, true);
+
+  $("#leadBar").onclick = () => $("#leadCard").classList.toggle("collapsed");
+
+  // ChatGPT (prototype answers)
+  function say(h, who) { const m = document.createElement("div"); m.className = "msg " + who; m.innerHTML = h; $("#thread").appendChild(m); $("#thread").scrollTop = 1e9; return m; }
+  function ask(q) {
+    if (!q.trim()) return; say(q.replace(/</g, "&lt;"), "me");
+    const t = say('<span class="typing"><span></span><span></span><span></span></span>', "bot");
+    setTimeout(() => { t.innerHTML = /overdue/i.test(q) ? "<b>Call back about bathroom scope</b> was due Sep 27. Cheryl said weekday evenings after 6 work best." : /summar/i.test(q) ? `Kitchen + Bathroom, estimate <b>${$("#headTotal").innerText}</b>. Consultation Oct 1, no designer yet, payment plan not selected, 0 of 1 agreements signed.` : "In the product I'd answer from the lead's history. Try a suggested question."; }, 650);
+  }
+  $("#aiForm").onsubmit = (e) => { e.preventDefault(); ask($("#aiInput").value); $("#aiInput").value = ""; };
+  $$("#chips .chip").forEach((c) => c.onclick = () => ask(c.textContent));
+
+  // UX notes
+  $("#notesToggle").onclick = () => { const on = document.body.classList.toggle("show-notes"); $("#notesToggle").classList.toggle("on", on); $("#notesToggle span").textContent = on ? "Hide UX changes" : "Show UX changes"; };
+  $$(".pin[data-note]").forEach((p) => p.addEventListener("click", (e) => { e.stopPropagation(); const li = document.querySelector(`.notes-panel li[data-n="${p.dataset.note}"]`); $$(".notes-panel li").forEach((x) => x.classList.remove("flash")); li.classList.add("flash"); li.scrollIntoView({ block: "nearest", behavior: "smooth" }); }));
+  // pin 1 on the tab bar, pin 8 on the Agreements card
+  $("#tabs").insertAdjacentHTML("beforeend", '<span class="pin" data-note="1" style="align-self:center;margin-left:6px">1</span>');
+  $('#tabs .pin[data-note="1"]').addEventListener("click", (e) => { e.stopPropagation(); document.querySelector('.notes-panel li[data-n="1"]').classList.add("flash"); });
+  document.querySelector('.pin[data-note="8"]').style.display = "";
+
+  // Nav + clock
+  $("#collapseNav").onclick = () => $("#subnav").classList.add("collapsed");
+  function tick() { $("#clock").textContent = new Date().toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit", timeZoneName: "short" }).replace(/, (\d{4}),/, ", $1 at"); }
+  tick(); setInterval(tick, 1000);
+
+  renderProjects(); renderTasks(); applyCols();
+</script>
+</body>
+</html>

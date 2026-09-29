@@ -25,12 +25,69 @@
     color: var(--text);
     background: #fff;
     font-size: 14px;
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
-    flex-direction: column;
+    overflow: hidden;
   }
   button { font-family: inherit; cursor: pointer; }
   svg { display: block; }
+
+  /* Navigation: icon rail + section sidebar */
+  .rail {
+    width: 110px; flex-shrink: 0; background: #0f0f0f; display: flex; flex-direction: column;
+    align-items: center; gap: 6px; padding: 24px 0;
+  }
+  .rail-item {
+    width: 100%; background: none; border: 0; color: #9a9a9a; display: flex; flex-direction: column;
+    align-items: center; gap: 8px; padding: 10px 0 12px; font-size: 13px;
+  }
+  .rail-item .ico { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; }
+  .rail-item:hover { color: #fff; }
+  .rail-item.active { color: #fff; font-weight: 600; }
+  .rail-item.active .ico { background: #2a2a2a; box-shadow: inset 0 0 0 1px #3a3a3a; }
+  .rail-item:first-child { border-bottom: 1px solid #222; margin-bottom: 8px; padding-bottom: 20px; }
+
+  .subnav {
+    width: 290px; flex-shrink: 0; background: #1a1a1a; color: #d6d6d6; padding: 20px 16px;
+    transition: width .2s, padding .2s; overflow: hidden; white-space: nowrap;
+  }
+  .subnav.collapsed { width: 0; padding-left: 0; padding-right: 0; }
+  .subnav-head { display: flex; justify-content: space-between; align-items: center; padding: 0 10px 0 12px; margin-bottom: 36px; }
+  .subnav-head h2 { font-size: 19px; font-weight: 500; color: #fff; }
+  .icon-plain { background: none; border: 0; color: #aaa; padding: 4px; border-radius: 6px; }
+  .icon-plain:hover { color: #fff; background: #2a2a2a; }
+  .subnav a {
+    display: flex; justify-content: space-between; align-items: center; color: #d6d6d6; text-decoration: none;
+    font-size: 18px; padding: 14px 16px; border-radius: 8px; margin-bottom: 4px;
+  }
+  .subnav a:hover { background: #242424; }
+  .subnav a.active { background: #26331c; color: var(--green); font-weight: 500; }
+  .subnav a svg { color: #777; }
+
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; }
+  .main > * { flex-shrink: 0; }
+
+  .topbar {
+    display: flex; align-items: center; gap: 16px; padding: 16px 32px; border-bottom: 1px solid var(--border);
+    background: #fff; position: sticky; top: 0; z-index: 30;
+  }
+  .add-circle {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: #fff; color: #888;
+    display: grid; place-items: center; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .add-circle:hover { color: var(--green); border-color: var(--green); }
+  .top-search {
+    margin-left: auto; width: 370px; height: 48px; display: flex; align-items: center; gap: 10px;
+    background: var(--bg-soft); border-radius: 10px; padding: 0 16px;
+  }
+  .top-search input { border: 0; outline: 0; background: none; font: inherit; font-size: 16px; width: 100%; }
+  .top-icons { display: flex; gap: 10px; margin-left: 12px; }
+  .top-icons button { position: relative; width: 48px; height: 48px; background: none; border: 0; color: #555; border-radius: 8px; display: grid; place-items: center; }
+  .top-icons button:hover { background: var(--bg-soft); }
+  .badge {
+    position: absolute; top: 2px; right: 4px; background: var(--red); color: #fff; font-size: 11px; font-weight: 500;
+    min-width: 20px; height: 20px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px;
+  }
 
   /* Header */
   .header {
@@ -114,7 +171,7 @@
   .date-field input:focus { outline: 1px solid var(--green); background: #fff; }
 
   /* Table */
-  .table-wrap { flex: 1; overflow-x: auto; position: relative; }
+  .table-wrap { flex: 1 0 auto; overflow-x: auto; position: relative; }
   table { width: 100%; border-collapse: collapse; min-width: 1500px; }
   thead th {
     text-align: left; font-size: 14px; font-weight: 500; color: #777; letter-spacing: 1px; text-transform: uppercase;
@@ -213,6 +270,43 @@
 </style>
 </head>
 <body>
+
+<nav class="rail">
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-9Z"/></svg></span>Home</button>
+  <button class="rail-item active"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span>Operations</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4M8 14h2M14 14h2M8 17h2"/></svg></span>Calendar</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg></span>Price Check</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4v16h16M8 16v-5M12 16V8M16 16v-3"/></svg></span>Reports</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3V5ZM21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7V5Z"/></svg></span>Library</button>
+</nav>
+
+<aside class="subnav" id="subnav">
+  <div class="subnav-head">
+    <h2>Operations</h2>
+    <button class="icon-plain" id="collapseNav" title="Collapse sidebar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M6 8h0M6 11h0"/></svg></button>
+  </div>
+  <a href="#">Follow up Leads <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+  <a href="#" class="active">Leads <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+  <a href="#">Productions <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+  <a href="#">Service Calls <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+</aside>
+
+<div class="main">
+
+<div class="topbar">
+  <button class="add-circle" title="New"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  <label class="top-search">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input type="text" placeholder="Search" />
+  </label>
+  <div class="top-icons">
+    <button title="Inbox"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 12h5l1 2h6l1-2h5M8 7V5h8v2"/></svg></button>
+    <button title="Gifts"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18M12 8S10 3 7.5 4 9 8 12 8Zm0 0s2-5 4.5-4S15 8 12 8Z"/></svg><span class="badge">21</span></button>
+    <button title="Calendar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4M8 14h2M14 14h2M8 17h2"/></svg></button>
+    <button title="Report a bug"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="7" y="7" width="10" height="13" rx="5"/><path d="M9 7a3 3 0 0 1 6 0M3 13h4M17 13h4M4 7l3 2M20 7l-3 2M4 19l3-2M20 19l-3-2M12 11v9"/></svg></button>
+    <button title="Feedback"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 4h16v12H9l-5 4V4Z"/><path d="M12 7v3M12 13h0"/></svg></button>
+  </div>
+</div>
 
 <header class="header">
   <h1>Leads <span id="total">(482)</span></h1>
@@ -333,6 +427,8 @@
     <span class="online">1 user online</span>
   </div>
 </footer>
+
+</div>
 
 <button class="settings-fab" title="Settings">
   <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
@@ -519,6 +615,19 @@
     }).replace(/, (\d{4}),/, ", $1 at");
   }
   tick(); setInterval(tick, 1000);
+
+  // Navigation
+  $("#collapseNav").onclick = () => $("#subnav").classList.add("collapsed");
+  document.querySelectorAll(".rail-item").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".rail-item").forEach((x) => x.classList.remove("active"));
+    b.classList.add("active");
+    $("#subnav").classList.remove("collapsed");
+  }));
+  document.querySelectorAll(".subnav a").forEach((a) => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    document.querySelectorAll(".subnav a").forEach((x) => x.classList.remove("active"));
+    a.classList.add("active");
+  }));
 
   render();
 </script>

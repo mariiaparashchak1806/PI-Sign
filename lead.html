@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lead Overview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --green: #7cc242;
+    --green-dark: #6aad35;
+    --green-soft: #eef7e6;
+    --blue: #3fa2c8;
+    --blue-soft: #eaf5fa;
+    --violet: #6d5bd0;
+    --violet-soft: #f3f1fd;
+    --text: #2b2b2b;
+    --muted: #8a8a8a;
+    --border: #ececec;
+    --bg-soft: #f6f6f6;
+    --page: #fafafa;
+    --orange: #f5a623;
+    --orange-soft: #fff4e2;
+    --red: #e53935;
+    --red-soft: #fdecec;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  body { font-family: "Poppins", system-ui, sans-serif; color: var(--text); background: #fff; font-size: 14px; height: 100vh; display: flex; overflow: hidden; }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; }
+  svg { display: block; flex-shrink: 0; }
+  a { color: inherit; }
+
+  /* ---------- Navigation (same as Leads list) ---------- */
+  .rail { width: 110px; flex-shrink: 0; background: #0f0f0f; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 24px 0; }
+  .rail-item { width: 100%; background: none; border: 0; color: #9a9a9a; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 0 12px; font-size: 13px; }
+  .rail-item .ico { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; }
+  .rail-item:hover { color: #fff; }
+  .rail-item.active { color: #fff; font-weight: 600; }
+  .rail-item.active .ico { background: #2a2a2a; box-shadow: inset 0 0 0 1px #3a3a3a; }
+  .rail-item:first-child { border-bottom: 1px solid #222; margin-bottom: 8px; padding-bottom: 20px; }
+  .subnav { width: 290px; flex-shrink: 0; background: #1a1a1a; color: #d6d6d6; padding: 20px 16px; transition: width .2s, padding .2s; overflow: hidden; white-space: nowrap; }
+  .subnav.collapsed { width: 0; padding-left: 0; padding-right: 0; }
+  .subnav-head { display: flex; justify-content: space-between; align-items: center; padding: 0 10px 0 12px; margin-bottom: 36px; }
+  .subnav-head h2 { font-size: 19px; font-weight: 500; color: #fff; }
+  .icon-plain { background: none; border: 0; color: #aaa; padding: 4px; border-radius: 6px; }
+  .icon-plain:hover { color: #fff; background: #2a2a2a; }
+  .subnav a { display: flex; justify-content: space-between; align-items: center; color: #d6d6d6; text-decoration: none; font-size: 18px; padding: 14px 16px; border-radius: 8px; margin-bottom: 4px; }
+  .subnav a:hover { background: #242424; }
+  .subnav a.active { background: #26331c; color: var(--green); font-weight: 500; }
+  .subnav a svg { color: #777; }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; background: var(--page); }
+  .main > * { flex-shrink: 0; }
+  .topbar { display: flex; align-items: center; gap: 16px; padding: 16px 32px; border-bottom: 1px solid var(--border); background: #fff; position: sticky; top: 0; z-index: 30; }
+  .add-circle { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: #fff; color: #888; display: grid; place-items: center; }
+  .top-search { margin-left: auto; width: 370px; height: 48px; display: flex; align-items: center; gap: 10px; background: var(--bg-soft); border-radius: 10px; padding: 0 16px; }
+  .top-search input { border: 0; outline: 0; background: none; font-size: 16px; width: 100%; }
+  .top-icons { display: flex; gap: 10px; margin-left: 12px; }
+  .top-icons button { position: relative; width: 48px; height: 48px; background: none; border: 0; color: #555; border-radius: 8px; display: grid; place-items: center; }
+  .top-icons button:hover { background: var(--bg-soft); }
+  .badge { position: absolute; top: 2px; right: 4px; background: var(--red); color: #fff; font-size: 11px; font-weight: 500; min-width: 20px; height: 20px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px; }
+
+  /* ---------- Shared UI ---------- */
+  .content { padding: 24px 32px 40px; display: flex; flex-direction: column; gap: 24px; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .card-head h3 { font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .card-head .meta { color: var(--muted); font-size: 13px; font-weight: 400; }
+  .card-body { padding: 16px 20px; }
+  .btn { height: 38px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: #fff; color: var(--text); white-space: nowrap; }
+  .btn:hover { border-color: #cfcfcf; background: var(--bg-soft); }
+  .btn.primary { background: var(--green); border-color: var(--green); color: #fff; }
+  .btn.primary:hover { background: var(--green-dark); }
+  .btn.ghost { border-color: transparent; background: none; color: #555; }
+  .btn.ghost:hover { background: var(--bg-soft); }
+  .btn.link { border: 0; background: none; color: var(--green-dark); padding: 0; height: auto; }
+  .btn.link:hover { text-decoration: underline; background: none; }
+  .btn.danger-outline { color: #555; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; padding: 4px 12px; border-radius: 20px; white-space: nowrap; }
+  .pill.pending { background: var(--orange-soft); color: #c77c00; }
+  .pill.overdue { background: var(--red-soft); color: #c62828; }
+  .pill.upcoming { background: var(--blue-soft); color: #2378a0; }
+  .pill.done { background: var(--green-soft); color: #4f8f1f; }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .label { color: var(--muted); font-size: 12px; font-weight: 500; letter-spacing: .6px; text-transform: uppercase; }
+
+  /* Menus */
+  .menu-wrap { position: relative; }
+  .menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.12); padding: 6px; min-width: 210px; display: none; }
+  .menu.show { display: block; }
+  .menu button, .menu label { width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 9px 10px; border-radius: 6px; font-size: 14px; color: var(--text); cursor: pointer; text-align: left; }
+  .menu button:hover, .menu label:hover { background: var(--bg-soft); }
+  .menu .danger { color: var(--red); }
+  .menu hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
+  .menu .menu-title { padding: 8px 10px 4px; }
+  .menu input[type=checkbox] { accent-color: var(--green); width: 16px; height: 16px; }
+
+  /* ---------- Page header ---------- */
+  .back { display: inline-flex; align-items: center; gap: 8px; color: #777; text-decoration: none; font-size: 14px; }
+  .back:hover { color: var(--green-dark); }
+  .title-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+  .title-row h1 { font-size: 28px; font-weight: 600; color: var(--green); display: flex; align-items: center; gap: 14px; }
+  .title-actions { display: flex; gap: 10px; }
+
+  .lead-card { overflow: hidden; }
+  .lead-bar { background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; font-size: 15px; font-weight: 500; cursor: pointer; user-select: none; }
+  .lead-bar svg { transition: transform .2s; }
+  .lead-card.collapsed .lead-bar svg { transform: rotate(180deg); }
+  .lead-card.collapsed .lead-info { display: none; }
+  .lead-info { display: grid; grid-template-columns: 1.1fr 1.2fr 1fr 1fr; }
+  .lead-info > div { padding: 20px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+  .lead-info > div:last-child { border-right: 0; }
+  .status-big { color: var(--orange); font-size: 24px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .kv { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: #555; line-height: 1.5; }
+  .kv svg { margin-top: 2px; color: #888; }
+  .phone { color: var(--green-dark); font-weight: 600; font-size: 17px; }
+  .total { text-align: right; }
+  .total .amount { font-size: 30px; font-weight: 600; }
+  .total .amount sup { font-size: 15px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+  .tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 12px 14px; font-size: 14px; font-weight: 500; color: #666; display: flex; align-items: center; gap: 8px; margin-bottom: -1px; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--green-dark); border-bottom-color: var(--green); }
+  .tab .count { background: var(--bg-soft); color: #777; font-size: 12px; padding: 1px 8px; border-radius: 10px; }
+  .tab.active .count { background: var(--green-soft); color: var(--green-dark); }
+
+  /* ---------- Overview grid ---------- */
+  .grid { display: grid; grid-template-columns: minmax(360px, 1fr) 2fr; gap: 24px; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+
+  /* At a glance */
+  .glance { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .tile { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; text-align: left; display: flex; flex-direction: column; gap: 6px; transition: border-color .15s, box-shadow .15s; }
+  .tile:hover { border-color: var(--green); box-shadow: 0 2px 10px rgba(124,194,66,.12); }
+  .tile .t-head { display: flex; align-items: center; justify-content: space-between; color: #666; font-size: 13px; font-weight: 500; }
+  .tile .t-val { font-size: 20px; font-weight: 600; }
+  .tile .t-sub { font-size: 12px; color: var(--muted); }
+  .tile .t-sub.warn { color: #c77c00; }
+
+  /* AI assistant — visually distinct from data widgets */
+  .ai { border: 1px solid #d9d3f7; background: linear-gradient(180deg, var(--violet-soft) 0%, #fff 60%); border-radius: 12px; overflow: hidden; }
+  .ai-head { display: flex; align-items: center; gap: 12px; padding: 16px 20px 6px; }
+  .ai-avatar { width: 40px; height: 40px; border-radius: 12px; background: var(--violet); color: #fff; display: grid; place-items: center; }
+  .ai-head h3 { font-size: 17px; font-weight: 600; }
+  .ai-head p { font-size: 13px; color: #6b6b7b; }
+  .ai-thread { padding: 10px 20px; display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; }
+  .msg { max-width: 88%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+  .msg.bot { background: #fff; border: 1px solid #e6e2fa; border-top-left-radius: 4px; }
+  .msg.me { background: var(--violet); color: #fff; align-self: flex-end; border-top-right-radius: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 20px 12px; }
+  .chip { background: #fff; border: 1px solid #d9d3f7; color: var(--violet); border-radius: 16px; padding: 6px 12px; font-size: 13px; }
+  .chip:hover { background: var(--violet-soft); }
+  .ai-input { display: flex; gap: 8px; padding: 12px 20px 16px; border-top: 1px solid #eee9fb; background: #fff; }
+  .ai-input input { flex: 1; height: 42px; border: 1px solid #d9d3f7; border-radius: 10px; padding: 0 14px; font-size: 14px; outline: 0; }
+  .ai-input input:focus { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(109,91,208,.12); }
+  .ai-send { width: 42px; height: 42px; border-radius: 10px; border: 0; background: var(--violet); color: #fff; display: grid; place-items: center; }
+  .typing span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #b7addf; margin-right: 3px; animation: blink 1s infinite; }
+  .typing span:nth-child(2) { animation-delay: .15s; } .typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes blink { 50% { opacity: .2; } }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; padding: 10px 12px; background: #fcfcfc; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 14px; }
+  tr:last-child td { border-bottom: 0; }
+  th.num, td.num { text-align: right; }
+  td .sub { color: var(--muted); font-size: 12px; }
+  .col-hidden { display: none; }
+  .proj-name { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .icon-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid transparent; background: none; display: grid; place-items: center; color: #666; }
+  .icon-btn:hover { background: var(--bg-soft); border-color: var(--border); }
+  .toolbar { display: flex; align-items: center; gap: 8px; }
+  .divider-v { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+
+  /* Agenda */
+  .task-done-cell { width: 44px; }
+  .check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #cfcfcf; background: #fff; display: grid; place-items: center; color: transparent; padding: 0; }
+  .check:hover { border-color: var(--green); }
+  .check.on { background: var(--green); border-color: var(--green); color: #fff; }
+  tr.is-done .task-title { text-decoration: line-through; color: var(--muted); }
+  .task-title { font-weight: 500; }
+  .empty { text-align: center; color: var(--muted); padding: 28px; }
+  .card-foot { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 13px; }
+
+  /* Agreement section (unchanged content) */
+  .agree-note { font-size: 13px; color: #777; line-height: 1.6; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .acc-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; font-weight: 500; font-size: 15px; background: #fcfcfc; border-bottom: 1px solid var(--border); cursor: pointer; }
+  .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .field > span { font-size: 13px; color: #777; }
+  .field input[type=date], .field input[type=number] { height: 44px; border: 1px solid var(--border); border-radius: 8px; padding: 0 12px; font-size: 14px; }
+  .range { display: flex; align-items: center; gap: 10px; }
+  .range input { flex: 1; min-width: 0; }
+  .cbx { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: #555; margin-bottom: 12px; line-height: 1.5; }
+  .cbx input { accent-color: var(--green); width: 16px; height: 16px; margin-top: 3px; }
+
+  /* ---------- Working tabs ---------- */
+  .tab-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab-head h2 { font-size: 20px; font-weight: 600; }
+  .tab-head p { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .seg { display: inline-flex; background: var(--bg-soft); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; color: #666; }
+  .seg button.on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .cell-input { width: 100%; border: 1px solid transparent; background: none; border-radius: 6px; padding: 6px 8px; font-size: 14px; color: var(--text); }
+  .cell-input:hover { border-color: var(--border); background: #fff; }
+  .cell-input:focus { outline: 0; border-color: var(--green); background: #fff; box-shadow: 0 0 0 3px rgba(124,194,66,.15); }
+  .cell-input.num { text-align: right; }
+  .add-row td { background: #fcfcfc; }
+  .add-row input { width: 100%; height: 36px; border: 1px dashed #d6d6d6; border-radius: 6px; padding: 0 10px; font-size: 14px; background: #fff; }
+  .add-row input:focus { outline: 0; border: 1px solid var(--green); }
+  .add-row input.num { text-align: right; }
+  tfoot td { background: #fcfcfc; font-weight: 600; border-top: 1px solid var(--border); }
+  .sum-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .sum { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .sum .v { font-size: 20px; font-weight: 600; margin-top: 4px; }
+  .progress { height: 8px; background: var(--bg-soft); border-radius: 4px; overflow: hidden; margin-top: 10px; }
+  .progress i { display: block; height: 100%; background: var(--green); border-radius: 4px; }
+
+  /* Files */
+  .dropzone { border: 2px dashed #d6d6d6; border-radius: 12px; padding: 24px; display: flex; align-items: center; justify-content: center; gap: 14px; color: #777; background: #fff; margin-bottom: 16px; transition: .15s; }
+  .dropzone.over { border-color: var(--green); background: var(--green-soft); }
+  .files { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  .file { background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: visible; position: relative; }
+  .thumb { height: 130px; border-radius: 12px 12px 0 0; display: grid; place-items: center; background-size: cover; background-position: center; }
+  .thumb.photo { background-color: #e9efe3; color: #8aa876; }
+  .thumb.plan { background-color: var(--blue-soft); color: #5a9fbf; }
+  .thumb.doc { background-color: #f3f3f3; color: #999; }
+  .file-meta { padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+  .file-meta b { font-size: 13px; font-weight: 500; display: block; word-break: break-all; }
+  .file-meta span { font-size: 12px; color: var(--muted); }
+
+  /* Messages */
+  .chat { display: flex; flex-direction: column; height: 560px; }
+  .chat-thread { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; background: #fcfcfc; }
+  .bubble { max-width: 60%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; background: #fff; border: 1px solid var(--border); }
+  .bubble.out { align-self: flex-end; background: var(--green-soft); border-color: #d7ebc4; }
+  .bubble .when { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .composer { border-top: 1px solid var(--border); padding: 12px 16px; display: flex; gap: 10px; align-items: flex-end; }
+  .composer textarea { flex: 1; resize: none; height: 44px; border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; font-size: 14px; }
+  .composer textarea:focus { outline: 0; border-color: var(--green); }
+
+  /* Forms */
+  .form-list { display: flex; flex-direction: column; gap: 12px; }
+  .form-item { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; display: grid; grid-template-columns: 44px 1fr 200px auto; gap: 16px; align-items: center; }
+  .form-ico { width: 44px; height: 44px; border-radius: 10px; background: var(--green-soft); color: var(--green-dark); display: grid; place-items: center; }
+  .form-item h4 { font-size: 15px; font-weight: 500; }
+  .form-item p { font-size: 13px; color: var(--muted); }
+  .form-actions { display: flex; gap: 8px; }
+  .toast { position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%) translateY(20px); background: #1f1f1f; color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 14px; opacity: 0; transition: .2s; pointer-events: none; z-index: 60; }
+  .toast.show { opacity: 1; transform: translateX(-50%); }
+  /* Footer */
+  footer { margin-top: auto; background: var(--bg-soft); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 32px; font-size: 17px; }
+  .foot-right { display: flex; align-items: center; gap: 24px; }
+  .foot-right a { text-decoration: none; }
+  .clock { color: var(--green); font-size: 15px; border-left: 1px solid #ddd; padding-left: 24px; }
+  .online { background: var(--green); color: #fff; border-radius: 6px; padding: 8px 18px; font-weight: 500; }
+
+  /* ---------- UX notes layer ---------- */
+  .notes-toggle { position: fixed; right: 24px; bottom: 84px; z-index: 50; background: #1f1f1f; color: #fff; border: 0; border-radius: 24px; padding: 12px 18px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+  .notes-toggle.on { background: var(--violet); }
+  .pin { display: none; width: 24px; height: 24px; border-radius: 50%; background: var(--violet); color: #fff; font-size: 12px; font-weight: 600; place-items: center; box-shadow: 0 0 0 3px rgba(109,91,208,.25); flex-shrink: 0; cursor: pointer; }
+  body.show-notes .pin { display: grid; }
+  .notes-panel { position: fixed; right: 24px; bottom: 140px; z-index: 50; width: 380px; max-height: 60vh; overflow-y: auto; background: #fff; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.2); padding: 18px 20px; display: none; }
+  body.show-notes .notes-panel { display: block; }
+  .notes-panel h4 { font-size: 15px; margin-bottom: 12px; }
+  .notes-panel ol { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .notes-panel li { display: flex; gap: 10px; font-size: 13px; line-height: 1.5; color: #444; padding: 6px; border-radius: 8px; }
+  .notes-panel li.flash { background: var(--violet-soft); }
+  .notes-panel li .pin { display: grid; cursor: default; }
+  .notes-panel b { color: var(--text); font-weight: 600; }
+
+  /* Responsive */
+  @media (max-width: 1500px) {
+    .grid { grid-template-columns: 1fr; }
+    .lead-info { grid-template-columns: 1fr 1fr; }
+    .lead-info > div:nth-child(2) { border-right: 0; }
+    .lead-info > div:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+    .sum-row { grid-template-columns: 1fr 1fr; }
+    .form-item { grid-template-columns: 44px 1fr; }
+    .form-item > div:nth-child(n+3) { grid-column: 2; }
+  }
+  @media (max-width: 1100px) {
+    .glance { grid-template-columns: 1fr 1fr !important; }
+    .card-head { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="rail">
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1v-9Z"/></svg></span>Home</button>
+  <button class="rail-item active"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span>Operations</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span>Calendar</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg></span>Price Check</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 4v16h16M8 16v-5M12 16V8M16 16v-3"/></svg></span>Reports</button>
+  <button class="rail-item"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 5h6a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H3V5ZM21 5h-6a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h7V5Z"/></svg></span>Library</button>
+</nav>
+
+<aside class="subnav" id="subnav">
+  <div class="subnav-head">
+    <h2>Operations</h2>
+    <button class="icon-plain" id="collapseNav" title="Collapse sidebar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg></button>
+  </div>
+  <a href="#">Follow up Leads <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+  <a href="index.html" class="active">Leads <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+  <a href="#">Productions <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+  <a href="#">Service Calls <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3h6M10 3v6l-3 4h10l-3-4V3M12 13v8"/></svg></a>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="add-circle" title="New"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <label class="top-search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" placeholder="Search" /></label>
+    <div class="top-icons">
+      <button title="Inbox"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 12h5l1 2h6l1-2h5M8 7V5h8v2"/></svg></button>
+      <button title="Gifts"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="1"/><path d="M12 8v13M3 12h18M12 8S10 3 7.5 4 9 8 12 8Zm0 0s2-5 4.5-4S15 8 12 8Z"/></svg><span class="badge">21</span></button>
+      <button title="Calendar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></button>
+      <button title="Report a bug"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="7" y="7" width="10" height="13" rx="5"/><path d="M9 7a3 3 0 0 1 6 0M3 13h4M17 13h4M12 11v9"/></svg></button>
+      <button title="Feedback"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 4h16v12H9l-5 4V4Z"/></svg></button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Header -->
+    <div>
+      <a class="back" href="index.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Back to Leads</a>
+      <div class="title-row">
+        <h1>Cheryl Isaac: Kitchen <span class="pill pending"><span class="dot"></span>Pending Leads</span></h1>
+        <div class="title-actions">
+          <!-- Archive demoted from a full-width primary button to a secondary action -->
+          <button class="btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4"/></svg>Send to archive</button>
+          <span class="pin" data-note="7">7</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card lead-card" id="leadCard">
+      <div class="lead-bar" id="leadBar">VKB, Bethesda, MD / no designer assigned
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 15 6-6 6 6"/></svg>
+      </div>
+      <div class="lead-info">
+        <div>
+          <span class="label">Created / Scheduled</span>
+          <div class="status-big">Pending Leads <button class="icon-btn" title="Edit status"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7cc242" stroke-width="1.8" stroke-linejoin="round"><path d="m15 5 4 4L8 20H4v-4L15 5Z"/></svg></button></div>
+          <div class="kv" style="color:var(--text)">Created: September 4, 2026 at 12:18 AM GMT+5</div>
+          <div class="kv">Consult: —</div>
+          <button class="btn link" style="align-self:flex-start">Show me pipeline status</button>
+        </div>
+        <div>
+          <span class="label">Contact</span>
+          <div class="kv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/></svg><span class="phone">+1 (202) 999-9962</span></div>
+          <div class="kv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>cherylisaac@gmail.com</div>
+          <div class="kv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>4605 Reno Road NW, Washington, Washington DC, 20008</div>
+        </div>
+        <div>
+          <span class="label">Assignees</span>
+          <div class="kv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/></svg>No designer assigned</div>
+          <button class="btn" style="align-self:flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></svg>Assign designer</button>
+        </div>
+        <div class="total">
+          <span class="label">Total cost</span>
+          <div class="amount" id="headTotal"><sup>$</sup>0.00</div>
+          <div class="kv" style="justify-content:flex-end">Kitchen estimate</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="agenda">Agenda <span class="count" data-count="agenda"></span></button>
+      <button class="tab" data-tab="files">Files & Photos <span class="count" data-count="files"></span></button>
+      <button class="tab" data-tab="labors">Labors <span class="count" data-count="labors"></span></button>
+      <button class="tab" data-tab="materials">Materials <span class="count" data-count="materials"></span></button>
+      <button class="tab" data-tab="countertops">Countertops <span class="count" data-count="countertops"></span></button>
+      <button class="tab" data-tab="payment">Payment Plan</button>
+      <button class="tab" data-tab="agreements">Agreements <span class="count" data-count="agreements"></span></button>
+      <button class="tab" data-tab="messages">Messages <span class="count" data-count="messages"></span></button>
+      <button class="tab" data-tab="forms">Forms <span class="count" data-count="forms"></span></button>
+    </div>
+
+    <!-- ================= OVERVIEW ================= -->
+    <section class="view grid" data-view="overview">
+      <div class="col">
+        <div class="ai">
+          <div class="ai-head">
+            <div class="ai-avatar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 4.9L19 9.5l-5.2 1.6L12 16l-1.8-4.9L5 9.5l5.2-1.6L12 3Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg></div>
+            <div style="flex:1"><h3>Lead Assistant</h3><p>Ask anything about this lead: history, budget, next steps</p></div>
+            <span class="pin" data-note="2">2</span>
+          </div>
+          <div class="ai-thread" id="thread">
+            <div class="msg bot">Hi! I've read Cheryl's lead. It's a <b>Kitchen</b> project, created Sep 4, with <b>no designer</b> and <b>no consultation</b> booked yet. What would you like to know?</div>
+          </div>
+          <div class="chips" id="chips">
+            <button class="chip">Summarize this lead</button>
+            <button class="chip">What's the next step?</button>
+            <button class="chip">Draft a follow-up email</button>
+          </div>
+          <form class="ai-input" id="aiForm">
+            <input id="aiInput" placeholder="Ask about Cheryl's lead…" autocomplete="off" />
+            <button class="ai-send" title="Send"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          </form>
+        </div>
+
+        <!-- Agreement section — kept as is (client decision) -->
+        <div class="card">
+          <div class="card-head"><h3>Signed documents</h3><span class="meta">PiSign</span></div>
+          <div class="agree-note" id="signedNote">No signed documents from PiSign yet. Use <b>Sign</b> on an agreement file to send it for signature.</div>
+          <div class="acc-head" id="accHead">Agreement Settings <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="card-body" id="accBody">
+            <label class="field"><span>Estimated Job Start Date</span><input type="date" /></label>
+            <div class="field"><span>Estimated Job Duration (business days)</span>
+              <div class="range"><input type="number" value="30" /> – <input type="number" value="35" /></div>
+            </div>
+            <label class="cbx"><input type="checkbox" /> Buyer is older than 65 years old</label>
+            <label class="cbx"><input type="checkbox" /> Please confirm if you expect the Company to pull the permits</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <h3 style="font-size:17px;font-weight:600">At a glance</h3>
+            <span style="color:var(--muted);font-size:13px">Click a card to open its tab</span>
+            <span class="pin" data-note="1">1</span>
+          </div>
+          <div class="glance" id="glance" style="grid-template-columns:repeat(3,1fr)"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Project details <span class="pin" data-note="3">3</span></h3>
+            <div class="toolbar">
+              <div class="menu-wrap">
+                <button class="btn ghost" data-menu="colsMenu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>Columns <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+                <div class="menu" id="colsMenu" style="left:0;right:auto">
+                  <div class="menu-title label">Show columns in this table</div>
+                  <label><input type="checkbox" data-col="materials" checked> Materials</label>
+                  <label><input type="checkbox" data-col="labors" checked> Labors</label>
+                  <label><input type="checkbox" data-col="countertops" checked> Countertops</label>
+                </div>
+              </div>
+              <div class="divider-v"></div>
+              <button class="btn ghost" data-toast="Opening estimate preview (PDF)…"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Preview estimate (PDF)</button>
+              <span class="pin" data-note="4">4</span>
+              <div class="divider-v"></div>
+              <button class="btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z"/></svg>Add from wishlist</button>
+              <button class="btn primary"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add project</button>
+            </div>
+          </div>
+          <table id="projTable">
+            <thead><tr>
+              <th>Project</th>
+              <th class="num" data-c="materials">Materials</th>
+              <th class="num" data-c="labors">Labors</th>
+              <th class="num" data-c="countertops">Countertops</th>
+              <th class="num">Total cost</th>
+              <th>Status</th>
+              <th style="width:48px"></th>
+            </tr></thead>
+            <tbody id="projBody"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Upcoming tasks <span class="pin" data-note="5">5</span></h3>
+            <button class="btn" data-add-task><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add task</button>
+          </div>
+          <table>
+            <thead><tr><th class="task-done-cell" style="white-space:nowrap">Done <span class="pin" data-note="6" style="margin-left:6px">6</span></th><th>Task</th><th>Due date</th><th>Status</th><th style="width:60px">Actions</th></tr></thead>
+            <tbody id="agendaMini"></tbody>
+          </table>
+          <div class="card-foot"><span id="doneInfo"></span><button class="btn link" data-go="agenda">View all in Agenda →</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= AGENDA ================= -->
+    <section class="view" data-view="agenda" hidden>
+      <div class="tab-head">
+        <div><h2>Agenda</h2><p>Tasks and appointments for this lead</p></div>
+        <div class="toolbar">
+          <div class="seg" id="agendaFilter">
+            <button class="on" data-f="all">All</button><button data-f="open">Open</button><button data-f="overdue">Overdue</button><button data-f="done">Done</button>
+          </div>
+          <button class="btn primary" data-add-task><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add task</button>
+        </div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th class="task-done-cell">Done</th><th>Task</th><th>Assignee</th><th>Due date</th><th>Status</th><th style="width:60px">Actions</th></tr></thead>
+          <tbody id="agendaFull"></tbody>
+          <tbody><tr class="add-row">
+            <td></td>
+            <td><input id="newTaskTitle" placeholder="New task, e.g. Confirm cabinet colour" /></td>
+            <td><input id="newTaskWho" placeholder="Assignee" /></td>
+            <td><input id="newTaskDue" type="date" /></td>
+            <td colspan="2"><button class="btn" id="newTaskAdd">Add task</button></td>
+          </tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= FILES & PHOTOS ================= -->
+    <section class="view" data-view="files" hidden>
+      <div class="tab-head">
+        <div><h2>Files & Photos</h2><p>Site photos, plans and documents shared on this lead</p></div>
+        <div class="toolbar">
+          <div class="seg" id="fileFilter">
+            <button class="on" data-f="all">All</button><button data-f="photo">Photos</button><button data-f="plan">Plans</button><button data-f="doc">Documents</button>
+          </div>
+          <label class="btn primary" style="cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>Upload<input type="file" id="fileInput" multiple hidden /></label>
+        </div>
+      </div>
+      <div class="dropzone" id="dropzone">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
+        <span>Drag files here to upload. Photos, PDF and Office files up to 25 MB</span>
+      </div>
+      <div class="files" id="fileGrid"></div>
+    </section>
+
+    <!-- ================= LABORS / MATERIALS / COUNTERTOPS ================= -->
+    <section class="view" data-view="labors" hidden><div class="tab-head"><div><h2>Labors</h2><p>Work items and hours for the Kitchen project</p></div><button class="btn" data-toast="Opening labor price list…">Price list</button></div><div class="card" id="labors-table"></div></section>
+    <section class="view" data-view="materials" hidden><div class="tab-head"><div><h2>Materials</h2><p>Products and quantities for the Kitchen project</p></div><button class="btn" data-toast="Opening product catalog…">Browse catalog</button></div><div class="card" id="materials-table"></div></section>
+    <section class="view" data-view="countertops" hidden><div class="tab-head"><div><h2>Countertops</h2><p>Surfaces, material and area</p></div><button class="btn" data-toast="Opening slab inventory…">Slab inventory</button></div><div class="card" id="countertops-table"></div></section>
+
+    <!-- ================= PAYMENT PLAN ================= -->
+    <section class="view" data-view="payment" hidden>
+      <div class="tab-head">
+        <div><h2>Payment Plan</h2><p>Milestones are calculated from the project total</p></div>
+        <div class="toolbar">
+          <button class="btn" data-toast="Payment plan sent to cherylisaac@gmail.com">Send plan to customer</button>
+          <button class="btn primary" id="addMilestone"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add milestone</button>
+        </div>
+      </div>
+      <div class="sum-row" id="paySummary"></div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Milestone</th><th class="num">Share</th><th class="num">Amount</th><th>Due date</th><th>Status</th><th style="width:60px">Actions</th></tr></thead>
+          <tbody id="payBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= AGREEMENTS ================= -->
+    <section class="view" data-view="agreements" hidden>
+      <div class="tab-head">
+        <div><h2>Agreements</h2><p>Contracts sent for e-signature through PiSign</p></div>
+        <button class="btn primary" id="newAgreement"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New agreement</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Document</th><th>Template</th><th>Last updated</th><th>Status</th><th style="width:320px">Actions</th></tr></thead>
+          <tbody id="agrBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= MESSAGES ================= -->
+    <section class="view" data-view="messages" hidden>
+      <div class="tab-head">
+        <div><h2>Messages</h2><p>Conversation with Cheryl Isaac · +1 (202) 999-9962 · cherylisaac@gmail.com</p></div>
+        <div class="seg" id="msgChannel"><button class="on" data-f="SMS">SMS</button><button data-f="Email">Email</button></div>
+      </div>
+      <div class="card chat">
+        <div class="chat-thread" id="chatThread"></div>
+        <form class="composer" id="composer">
+          <textarea id="composerText" placeholder="Write an SMS to Cheryl…"></textarea>
+          <button class="btn primary" style="height:44px">Send</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= FORMS ================= -->
+    <section class="view" data-view="forms" hidden>
+      <div class="tab-head">
+        <div><h2>Forms</h2><p>Questionnaires and checklists sent to the customer or filled in by the team</p></div>
+      </div>
+      <div class="form-list" id="formList"></div>
+    </section>
+  </div>
+
+  <footer>
+    <div>© 2023 – Confidential and Proprietary</div>
+    <div class="foot-right">
+      <a href="#">Documentation</a><a href="#">Support</a>
+      <span class="clock" id="clock"></span>
+      <span class="online">1 user online</span>
+    </div>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- UX notes layer for the review -->
+<button class="notes-toggle" id="notesToggle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h0M11 12h1v5h1"/></svg><span>Show UX changes</span></button>
+<div class="notes-panel" id="notesPanel">
+  <h4>What changed on Lead Overview</h4>
+  <ol>
+    <li data-n="1"><span class="pin">1</span><div><b>Overview is a summary.</b> Before, it repeated every tab as a full working block. Now it shows summary cards that open their tab, where the real work happens. The numbers come from the tabs themselves.</div></li>
+    <li data-n="2"><span class="pin">2</span><div><b>The AI chat looks like a chat.</b> It is renamed to "Lead Assistant" and has its own colour and avatar, so it doesn't blend in with the data cards. Suggested questions and an input field show that you can ask about the lead.</div></li>
+    <li data-n="3"><span class="pin">3</span><div><b>The column toggles have a label.</b> The unlabelled filter icons are replaced by a "Columns" menu with the heading "Show columns in this table", so it's clear what they affect.</div></li>
+    <li data-n="4"><span class="pin">4</span><div><b>Preview is separated from the column controls.</b> It is now a labelled button, "Preview estimate (PDF)", set apart by a divider.</div></li>
+    <li data-n="5"><span class="pin">5</span><div><b>Agenda actions are clear.</b> The "Edit" column with five unlabelled icons becomes "Actions", with a ⋯ menu of named items: Edit, Reschedule, Reassign, Duplicate, Delete.</div></li>
+    <li data-n="6"><span class="pin">6</span><div><b>Completing a task uses a checkbox.</b> The warning icon is replaced by a "Done" checkbox at the start of each row. A done task is crossed out and its status changes to "Done".</div></li>
+    <li data-n="7"><span class="pin">7</span><div><b>One primary action per area.</b> "Send to archive" becomes a secondary button in the header. Green is kept for the main action in each block. The Agreement section is unchanged, as the client asked.</div></li>
+  </ol>
+</div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => document.querySelectorAll(s);
+  const money = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmtDate = (iso) => new Date(iso + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const TODAY = "2026-09-29";
+  const ICON = {
+    dots: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+    check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>',
+    chev: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>',
+    photo: '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>',
+    plan: '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 12h8V3M11 12v9M15 12h6"/></svg>',
+    doc: '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>',
+    form: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v2h6V3M9 10h6M9 14h6M9 18h3"/></svg>',
+  };
+  const menu = (id, items) => `<div class="menu-wrap"><button class="icon-btn" data-menu="${id}" title="Actions">${ICON.dots}</button>
+    <div class="menu" id="${id}">${items.map((i) => i === "-" ? "<hr>" : `<button ${i.act ? `data-act="${i.act}"` : ""} class="${i.danger ? "danger" : ""}">${i.label}</button>`).join("")}</div></div>`;
+  function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("show"), 2200); }
+
+  // ================= Data (one model for Overview + tabs) =================
+  const D = {
+    tasks: [
+      { id: 1, title: "Call to book in-home consultation", who: "Unassigned", due: "2026-09-26", done: false },
+      { id: 2, title: "Send kitchen questionnaire", who: "Unassigned", due: "2026-09-30", done: false },
+      { id: 3, title: "Assign a designer", who: "Store manager", due: "2026-10-02", done: false },
+      { id: 4, title: "First contact with customer", who: "Store manager", due: "2026-09-04", done: true },
+    ],
+    files: [
+      { id: 1, name: "kitchen-current-1.jpg", type: "photo", size: "2.4 MB", date: "2026-09-05", tint: "linear-gradient(135deg,#d9cbb4,#a88f6c)" },
+      { id: 2, name: "kitchen-current-2.jpg", type: "photo", size: "2.1 MB", date: "2026-09-05", tint: "linear-gradient(135deg,#cfd8dc,#8ea3ad)" },
+      { id: 3, name: "floor-plan.pdf", type: "plan", size: "640 KB", date: "2026-09-06" },
+      { id: 4, name: "inspiration-board.pdf", type: "doc", size: "5.8 MB", date: "2026-09-07" },
+    ],
+    labors: [
+      { id: 1, name: "Demolition & haul-away", qty: 12, price: 65 },
+      { id: 2, name: "Cabinet installation", qty: 24, price: 75 },
+      { id: 3, name: "Plumbing: sink & faucet hook-up", qty: 6, price: 95 },
+    ],
+    materials: [
+      { id: 1, name: "Shaker cabinet set, white", sku: "CAB-SHK-WH", qty: 1, price: 8450 },
+      { id: 2, name: "Cabinet pulls, brushed brass", sku: "HW-PL-BB", qty: 32, price: 12.5 },
+      { id: 3, name: "Undermount sink, 32\"", sku: "SNK-UM-32", qty: 1, price: 389 },
+      { id: 4, name: "Pull-down faucet", sku: "FCT-PD-01", qty: 1, price: 265 },
+    ],
+    countertops: [
+      { id: 1, name: "Perimeter counters", sku: "Quartz · Calacatta Laza", qty: 42, price: 78 },
+      { id: 2, name: "Island top", sku: "Quartz · Calacatta Laza", qty: 24, price: 78 },
+    ],
+    milestones: [
+      { id: 1, name: "Deposit", share: 30, due: "2026-10-05", status: "invoiced" },
+      { id: 2, name: "Cabinet delivery", share: 40, due: "2026-11-02", status: "scheduled" },
+      { id: 3, name: "Project completion", share: 30, due: "2026-12-01", status: "scheduled" },
+    ],
+    agreements: [
+      { id: 1, name: "Design retainer agreement", tpl: "Design retainer", date: "2026-09-08", status: "draft" },
+      { id: 2, name: "Kitchen remodel contract", tpl: "Remodel contract v3", date: "2026-09-10", status: "draft" },
+    ],
+    messages: [
+      { out: true, ch: "SMS", text: "Hi Cheryl, this is VKB Bethesda. Thanks for your kitchen request! When is a good time for a quick call?", when: "Sep 4, 10:12 AM" },
+      { out: false, ch: "SMS", text: "Hi! Weekday evenings after 6 work best for me.", when: "Sep 4, 1:40 PM" },
+    ],
+    forms: [
+      { id: 1, name: "Kitchen questionnaire", desc: "Style, budget and how the customer uses the kitchen", sent: "2026-09-05", progress: 40 },
+      { id: 2, name: "Site measurement checklist", desc: "Filled in by the designer during the visit", sent: null, progress: 0 },
+    ],
+  };
+  const LINE = {
+    labors: { cols: ["Work item", null, "Hours", "Rate / hour"], unit: "h", place: "e.g. Electrical: under-cabinet lights" },
+    materials: { cols: ["Product", "SKU", "Qty", "Unit price"], unit: "", place: "e.g. Tile backsplash" },
+    countertops: { cols: ["Surface", "Material", "Area, sq ft", "Price / sq ft"], unit: "sq ft", place: "e.g. Bar top" },
+  };
+  const sumLines = (k) => D[k].reduce((a, i) => a + i.qty * i.price, 0);
+  const total = () => sumLines("materials") + sumLines("labors") + sumLines("countertops");
+  const taskStatus = (t) => t.done ? "done" : t.due < TODAY ? "overdue" : "upcoming";
+  const nextId = (arr) => Math.max(0, ...arr.map((x) => x.id)) + 1;
+
+  // ================= Renderers =================
+  const statusLabel = { overdue: "Overdue", upcoming: "Upcoming", done: "Done" };
+  function taskRow(t, full) {
+    const st = taskStatus(t);
+    return `<tr class="${t.done ? "is-done" : ""}">
+      <td class="task-done-cell"><button class="check ${t.done ? "on" : ""}" data-done="${t.id}" title="${t.done ? "Mark as not done" : "Mark as done"}" aria-pressed="${t.done}">${ICON.check}</button></td>
+      <td><span class="task-title">${esc(t.title)}</span></td>
+      ${full ? `<td>${esc(t.who)}</td>` : ""}
+      <td>${fmtDate(t.due)}</td>
+      <td><span class="pill ${st}"><span class="dot"></span>${statusLabel[st]}</span></td>
+      <td>${menu(`tm-${full ? "f" : "m"}-${t.id}`, [{ label: "Edit task" }, { label: "Reschedule" }, { label: "Reassign" }, { label: "Duplicate", act: `dup-task-${t.id}` }, "-", { label: "Delete task", danger: 1, act: `del-task-${t.id}` }])}</td>
+    </tr>`;
+  }
+  let agendaFilter = "all";
+  function renderAgenda() {
+    const open = D.tasks.filter((t) => !t.done).sort((a, b) => a.due.localeCompare(b.due));
+    $("#agendaMini").innerHTML = open.length ? open.slice(0, 3).map((t) => taskRow(t, false)).join("") : `<tr><td colspan="5" class="empty">All tasks are done</td></tr>`;
+    $("#doneInfo").textContent = `${D.tasks.length - open.length} of ${D.tasks.length} tasks done`;
+    const list = D.tasks.filter((t) => agendaFilter === "all" || (agendaFilter === "open" ? !t.done : taskStatus(t) === agendaFilter)).sort((a, b) => a.due.localeCompare(b.due));
+    $("#agendaFull").innerHTML = list.length ? list.map((t) => taskRow(t, true)).join("") : `<tr><td colspan="6" class="empty">No tasks in this view</td></tr>`;
+  }
+
+  function renderLines(k) {
+    const c = LINE[k];
+    const rows = D[k].map((i) => `<tr>
+      <td><input class="cell-input" data-edit="${k}.${i.id}.name" value="${esc(i.name)}"></td>
+      ${c.cols[1] ? `<td><input class="cell-input" data-edit="${k}.${i.id}.sku" value="${esc(i.sku)}"></td>` : ""}
+      <td style="width:120px"><input class="cell-input num" type="number" min="0" step="any" data-edit="${k}.${i.id}.qty" value="${i.qty}"></td>
+      <td style="width:150px"><input class="cell-input num" type="number" min="0" step="any" data-edit="${k}.${i.id}.price" value="${i.price}"></td>
+      <td class="num" style="width:140px"><b>${money(i.qty * i.price)}</b></td>
+      <td style="width:60px">${menu(`lm-${k}-${i.id}`, [{ label: "Duplicate", act: `dup-${k}-${i.id}` }, "-", { label: "Remove item", danger: 1, act: `del-${k}-${i.id}` }])}</td>
+    </tr>`).join("");
+    const span = c.cols[1] ? 4 : 3;
+    $(`#${k}-table`).innerHTML = `<table>
+      <thead><tr><th>${c.cols[0]}</th>${c.cols[1] ? `<th>${c.cols[1]}</th>` : ""}<th class="num">${c.cols[2]}</th><th class="num">${c.cols[3]}</th><th class="num">Line total</th><th></th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="${span + 2}" class="empty">No items yet. Add the first one below.</td></tr>`}</tbody>
+      <tbody><tr class="add-row">
+        <td><input data-new="${k}.name" placeholder="${c.place}"></td>
+        ${c.cols[1] ? `<td><input data-new="${k}.sku" placeholder="${c.cols[1]}"></td>` : ""}
+        <td><input class="num" type="number" min="0" step="any" data-new="${k}.qty" placeholder="0"></td>
+        <td><input class="num" type="number" min="0" step="any" data-new="${k}.price" placeholder="0.00"></td>
+        <td colspan="2"><button class="btn" data-add-line="${k}">Add item</button></td>
+      </tr></tbody>
+      <tfoot><tr><td colspan="${span}">Subtotal · ${D[k].length} item${D[k].length === 1 ? "" : "s"}</td><td class="num">${money(sumLines(k))}</td><td></td></tr></tfoot>
+    </table>`;
+  }
+
+  function renderProject() {
+    const cell = (k) => `<td class="num" data-c="${k}">${money(sumLines(k))}<div class="sub">${D[k].length} item${D[k].length === 1 ? "" : "s"}</div></td>`;
+    $("#projBody").innerHTML = `<tr>
+      <td><div class="proj-name">Kitchen</div><div class="sub">Created Sep 4, 2026</div></td>
+      ${cell("materials")}${cell("labors")}${cell("countertops")}
+      <td class="num"><b>${money(total())}</b></td>
+      <td><span class="pill pending"><span class="dot"></span>Pending Leads</span></td>
+      <td>${menu("projMenu", [{ label: "Edit project" }, { label: "Open materials", act: "go-materials" }, { label: "Open labors", act: "go-labors" }, { label: "Open countertops", act: "go-countertops" }, "-", { label: "Recalculate prices" }, { label: "Duplicate project" }, { label: "Save to wishlist" }, "-", { label: "Delete project", danger: 1 }])}</td>
+    </tr>`;
+    $$("[data-col]").forEach((cb) => $$(`#projTable [data-c="${cb.dataset.col}"]`).forEach((c) => c.classList.toggle("col-hidden", !cb.checked)));
+    $("#headTotal").innerHTML = `<sup>$</sup>${total().toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+  }
+
+  const payLabel = { paid: ["Paid", "done"], invoiced: ["Invoice sent", "pending"], scheduled: ["Scheduled", "upcoming"] };
+  function renderPayment() {
+    const T = total();
+    const sumShare = D.milestones.reduce((a, m) => a + m.share, 0);
+    const paid = D.milestones.filter((m) => m.status === "paid").reduce((a, m) => a + T * m.share / 100, 0);
+    const next = D.milestones.find((m) => m.status !== "paid");
+    $("#paySummary").innerHTML = `
+      <div class="sum"><span class="label">Project total</span><div class="v">${money(T)}</div></div>
+      <div class="sum"><span class="label">Paid</span><div class="v">${money(paid)}</div><div class="progress"><i style="width:${T ? paid / T * 100 : 0}%"></i></div></div>
+      <div class="sum"><span class="label">Remaining</span><div class="v">${money(T - paid)}</div></div>
+      <div class="sum"><span class="label">Next payment</span><div class="v">${next ? money(T * next.share / 100) : "—"}</div><div class="sub" style="color:var(--muted);font-size:12px">${next ? `${next.name} · ${fmtDate(next.due)}` : "All paid"}</div></div>`;
+    $("#payBody").innerHTML = D.milestones.map((m) => {
+      const [lbl, cls] = payLabel[m.status];
+      return `<tr><td><b style="font-weight:500">${esc(m.name)}</b></td><td class="num">${m.share}%</td><td class="num">${money(T * m.share / 100)}</td><td>${fmtDate(m.due)}</td>
+        <td><span class="pill ${cls}"><span class="dot"></span>${lbl}</span></td>
+        <td>${menu(`pm-${m.id}`, [m.status !== "paid" ? { label: "Record payment", act: `pay-${m.id}` } : { label: "Undo payment", act: `unpay-${m.id}` }, m.status === "scheduled" ? { label: "Send invoice", act: `inv-${m.id}` } : null, { label: "Edit milestone" }, "-", { label: "Delete milestone", danger: 1, act: `del-ms-${m.id}` }].filter(Boolean))}</td></tr>`;
+    }).join("") + (sumShare !== 100 ? `<tr><td colspan="6" style="color:#c62828;font-size:13px">Milestones add up to ${sumShare}%. Adjust them to 100%.</td></tr>` : "");
+  }
+
+  const agrLabel = { draft: ["Draft", "upcoming"], sent: ["Sent for signature", "pending"], signed: ["Signed", "done"] };
+  function renderAgreements() {
+    $("#agrBody").innerHTML = D.agreements.map((a) => {
+      const [lbl, cls] = agrLabel[a.status];
+      const main = a.status === "draft" ? `<button class="btn" data-act="sign-${a.id}">Send for signature</button>` : a.status === "sent" ? `<button class="btn" data-act="remind-${a.id}">Send reminder</button>` : `<button class="btn" data-toast="Downloading signed PDF…">Download signed PDF</button>`;
+      return `<tr><td><b style="font-weight:500">${esc(a.name)}</b></td><td>${esc(a.tpl)}</td><td>${fmtDate(a.date)}</td>
+        <td><span class="pill ${cls}"><span class="dot"></span>${lbl}</span></td>
+        <td><div class="toolbar"><button class="btn ghost" data-toast="Opening ${esc(a.name)} preview…">Preview</button>${main}
+        ${menu(`am-${a.id}`, [{ label: "Edit" }, { label: "Duplicate", act: `dup-agr-${a.id}` }, a.status === "sent" ? { label: "Mark as signed (demo)", act: `signed-${a.id}` } : null, "-", { label: "Delete", danger: 1, act: `del-agr-${a.id}` }].filter(Boolean))}</div></td></tr>`;
+    }).join("");
+    const signed = D.agreements.filter((a) => a.status === "signed");
+    $("#signedNote").innerHTML = signed.length ? signed.map((a) => `<b>${esc(a.name)}</b> signed via PiSign`).join("<br>") : "No signed documents from PiSign yet. Use <b>Sign</b> on an agreement file to send it for signature.";
+  }
+
+  let fileFilter = "all";
+  function renderFiles() {
+    const list = D.files.filter((f) => fileFilter === "all" || f.type === fileFilter);
+    $("#fileGrid").innerHTML = list.length ? list.map((f) => `<div class="file">
+      <div class="thumb ${f.type}" style="${f.url ? `background-image:url(${f.url})` : f.tint ? `background-image:${f.tint};color:rgba(255,255,255,.85)` : ""}">${f.url ? "" : ICON[f.type]}</div>
+      <div class="file-meta"><div><b>${esc(f.name)}</b><span>${f.size} · ${fmtDate(f.date)}</span></div>
+      ${menu(`fm-${f.id}`, [{ label: "Download" }, { label: "Rename" }, { label: "Share with customer" }, "-", { label: "Delete file", danger: 1, act: `del-file-${f.id}` }])}</div>
+    </div>`).join("") : `<div class="card empty" style="grid-column:1/-1">No files in this category</div>`;
+  }
+  function addFiles(fileList) {
+    [...fileList].forEach((file) => {
+      const type = file.type.startsWith("image/") ? "photo" : /plan|floor/i.test(file.name) ? "plan" : "doc";
+      D.files.unshift({ id: nextId(D.files), name: file.name, type, size: file.size > 1e6 ? (file.size / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(file.size / 1e3)) + " KB", date: TODAY, url: type === "photo" ? URL.createObjectURL(file) : null });
+    });
+    renderAll(); toast(`${fileList.length} file${fileList.length === 1 ? "" : "s"} uploaded`);
+  }
+
+  let channel = "SMS";
+  function renderMessages() {
+    $("#chatThread").innerHTML = D.messages.map((m) => `<div class="bubble ${m.out ? "out" : ""}">${esc(m.text)}<span class="when">${m.out ? "You" : "Cheryl"} · ${m.ch} · ${m.when}</span></div>`).join("");
+    $("#chatThread").scrollTop = 1e9;
+  }
+
+  function renderForms() {
+    $("#formList").innerHTML = D.forms.map((f) => {
+      const st = f.progress === 100 ? ["Completed", "done"] : f.sent ? ["Waiting for customer", "pending"] : ["Not sent", "upcoming"];
+      return `<div class="form-item">
+        <div class="form-ico">${ICON.form}</div>
+        <div><h4>${esc(f.name)}</h4><p>${esc(f.desc)}${f.sent ? ` · Sent ${fmtDate(f.sent)}` : ""}</p></div>
+        <div><span class="pill ${st[1]}"><span class="dot"></span>${st[0]}</span><div class="progress"><i style="width:${f.progress}%"></i></div><span style="font-size:12px;color:var(--muted)">${f.progress}% answered</span></div>
+        <div class="form-actions">${f.sent ? `<button class="btn ghost" data-toast="Opening responses…">View responses</button><button class="btn" data-act="resend-${f.id}">Resend</button>` : `<button class="btn ghost" data-toast="Opening form…">Fill in</button><button class="btn" data-act="sendform-${f.id}">Send to customer</button>`}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function renderGlance() {
+    const open = D.tasks.filter((t) => !t.done), overdue = open.filter((t) => taskStatus(t) === "overdue").length;
+    const T = total(), next = D.milestones.find((m) => m.status !== "paid");
+    const signed = D.agreements.filter((a) => a.status === "signed").length, done = D.forms.filter((f) => f.progress === 100).length;
+    const photos = D.files.filter((f) => f.type === "photo").length;
+    const lastIn = [...D.messages].reverse().find((m) => !m.out);
+    const tile = (go, title, val, sub, warn) => `<button class="tile" data-go="${go}"><span class="t-head">${title} ${ICON.chev}</span><span class="t-val">${val}</span><span class="t-sub ${warn ? "warn" : ""}">${sub}</span></button>`;
+    $("#glance").innerHTML = [
+      tile("agenda", "Agenda", `${open.length} open`, overdue ? `${overdue} overdue` : "Nothing overdue", overdue),
+      tile("materials", "Estimate", money(T), `Materials ${money(sumLines("materials"))} · Labors ${money(sumLines("labors"))}`),
+      tile("payment", "Payment plan", next ? money(T * next.share / 100) : "Paid", next ? `${next.name} due ${fmtDate(next.due)}` : "All milestones paid"),
+      tile("files", "Files & Photos", `${D.files.length} files`, `${photos} photo${photos === 1 ? "" : "s"}`),
+      tile("messages", "Messages", `${D.messages.length}`, lastIn ? `Cheryl: “${lastIn.text.slice(0, 34)}…”` : "No replies yet"),
+      tile("agreements", "Agreements & forms", `${signed}/${D.agreements.length} signed`, `${done}/${D.forms.length} forms completed`, signed < D.agreements.length),
+    ].join("");
+  }
+
+  function renderCounts() {
+    const c = { agenda: D.tasks.filter((t) => !t.done).length, files: D.files.length, labors: D.labors.length, materials: D.materials.length, countertops: D.countertops.length, agreements: D.agreements.length, messages: D.messages.length, forms: `${D.forms.filter((f) => f.progress === 100).length}/${D.forms.length}` };
+    $$("[data-count]").forEach((el) => el.textContent = c[el.dataset.count]);
+  }
+
+  function renderAll() {
+    renderAgenda(); renderProject(); renderGlance(); renderCounts(); renderPayment(); renderAgreements(); renderFiles(); renderMessages(); renderForms();
+    ["labors", "materials", "countertops"].forEach(renderLines);
+  }
+
+  // ================= Events =================
+  document.addEventListener("click", (e) => {
+    // menus
+    const trg = e.target.closest("[data-menu]"), inside = e.target.closest(".menu");
+    $$(".menu.show").forEach((m) => { if (m !== inside && (!trg || m.id !== trg.dataset.menu)) m.classList.remove("show"); });
+    if (trg) $("#" + trg.dataset.menu).classList.toggle("show");
+    if (inside && e.target.tagName === "BUTTON") inside.classList.remove("show");
+
+    const done = e.target.closest("[data-done]");
+    if (done) { const t = D.tasks.find((x) => x.id === +done.dataset.done); t.done = !t.done; renderAll(); toast(t.done ? "Task marked as done" : "Task reopened"); }
+
+    const go = e.target.closest("[data-go]"); if (go) openTab(go.dataset.go);
+    const tst = e.target.closest("[data-toast]"); if (tst) toast(tst.dataset.toast);
+
+    const addLine = e.target.closest("[data-add-line]");
+    if (addLine) {
+      const k = addLine.dataset.addLine, v = (f) => document.querySelector(`[data-new="${k}.${f}"]`);
+      if (!v("name").value.trim()) { v("name").focus(); return; }
+      D[k].push({ id: nextId(D[k]), name: v("name").value.trim(), sku: v("sku") ? v("sku").value.trim() : "", qty: +v("qty").value || 1, price: +v("price").value || 0 });
+      renderAll(); document.querySelector(`[data-new="${k}.name"]`).focus(); toast("Item added");
+    }
+
+    if (e.target.closest("[data-add-task]")) { openTab("agenda"); $("#newTaskTitle").focus(); }
+
+    const act = e.target.closest("[data-act]"); if (!act) return;
+    const a = act.dataset.act; let m;
+    if ((m = a.match(/^go-(\w+)$/))) openTab(m[1]);
+    else if ((m = a.match(/^del-(labors|materials|countertops)-(\d+)$/))) { D[m[1]] = D[m[1]].filter((i) => i.id !== +m[2]); toast("Item removed"); }
+    else if ((m = a.match(/^dup-(labors|materials|countertops)-(\d+)$/))) { const i = D[m[1]].find((x) => x.id === +m[2]); D[m[1]].push({ ...i, id: nextId(D[m[1]]) }); }
+    else if ((m = a.match(/^del-task-(\d+)$/))) { D.tasks = D.tasks.filter((t) => t.id !== +m[1]); toast("Task deleted"); }
+    else if ((m = a.match(/^dup-task-(\d+)$/))) { const t = D.tasks.find((x) => x.id === +m[1]); D.tasks.push({ ...t, id: nextId(D.tasks), done: false }); }
+    else if ((m = a.match(/^del-file-(\d+)$/))) { D.files = D.files.filter((f) => f.id !== +m[1]); toast("File deleted"); }
+    else if ((m = a.match(/^pay-(\d+)$/))) { D.milestones.find((x) => x.id === +m[1]).status = "paid"; toast("Payment recorded"); }
+    else if ((m = a.match(/^unpay-(\d+)$/))) { D.milestones.find((x) => x.id === +m[1]).status = "invoiced"; }
+    else if ((m = a.match(/^inv-(\d+)$/))) { D.milestones.find((x) => x.id === +m[1]).status = "invoiced"; toast("Invoice sent to Cheryl"); }
+    else if ((m = a.match(/^del-ms-(\d+)$/))) { D.milestones = D.milestones.filter((x) => x.id !== +m[1]); }
+    else if ((m = a.match(/^sign-(\d+)$/))) { const g = D.agreements.find((x) => x.id === +m[1]); g.status = "sent"; g.date = TODAY; toast("Sent to Cheryl for signature via PiSign"); }
+    else if ((m = a.match(/^remind-(\d+)$/))) toast("Reminder sent");
+    else if ((m = a.match(/^signed-(\d+)$/))) { D.agreements.find((x) => x.id === +m[1]).status = "signed"; toast("Agreement signed"); }
+    else if ((m = a.match(/^dup-agr-(\d+)$/))) { const g = D.agreements.find((x) => x.id === +m[1]); D.agreements.push({ ...g, id: nextId(D.agreements), name: g.name + " (copy)", status: "draft", date: TODAY }); }
+    else if ((m = a.match(/^del-agr-(\d+)$/))) { D.agreements = D.agreements.filter((x) => x.id !== +m[1]); }
+    else if ((m = a.match(/^(sendform|resend)-(\d+)$/))) { D.forms.find((x) => x.id === +m[2]).sent = TODAY; toast("Form sent to Cheryl"); }
+    renderAll();
+  });
+
+  // Inline edits in line-item tables
+  document.addEventListener("change", (e) => {
+    const ed = e.target.dataset.edit; if (!ed) return;
+    const [k, id, f] = ed.split("."); const item = D[k].find((x) => x.id === +id);
+    item[f] = f === "qty" || f === "price" ? Math.max(0, +e.target.value || 0) : e.target.value;
+    renderAll();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.dataset.new) { e.target.closest("tr").querySelector("[data-add-line]").click(); }
+    if (e.key === "Enter" && e.target.id && e.target.id.startsWith("newTask")) $("#newTaskAdd").click();
+  });
+
+  // Columns
+  $$("[data-col]").forEach((cb) => cb.addEventListener("change", renderProject));
+
+  // Agenda
+  $("#newTaskAdd").onclick = () => {
+    const title = $("#newTaskTitle").value.trim(); if (!title) { $("#newTaskTitle").focus(); return; }
+    D.tasks.push({ id: nextId(D.tasks), title, who: $("#newTaskWho").value.trim() || "Unassigned", due: $("#newTaskDue").value || TODAY, done: false });
+    $("#newTaskTitle").value = $("#newTaskWho").value = $("#newTaskDue").value = "";
+    renderAll(); toast("Task added");
+  };
+  $$("#agendaFilter button").forEach((b) => b.onclick = () => { $$("#agendaFilter button").forEach((x) => x.classList.toggle("on", x === b)); agendaFilter = b.dataset.f; renderAgenda(); });
+
+  // Files
+  $$("#fileFilter button").forEach((b) => b.onclick = () => { $$("#fileFilter button").forEach((x) => x.classList.toggle("on", x === b)); fileFilter = b.dataset.f; renderFiles(); });
+  $("#fileInput").onchange = (e) => { if (e.target.files.length) addFiles(e.target.files); e.target.value = ""; };
+  const dz = $("#dropzone");
+  ["dragenter", "dragover"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("over"); }));
+  ["dragleave", "drop"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("over"); }));
+  dz.addEventListener("drop", (e) => { if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+
+  // Payment
+  $("#addMilestone").onclick = () => { D.milestones.push({ id: nextId(D.milestones), name: "New milestone", share: 0, due: TODAY, status: "scheduled" }); renderAll(); };
+  $("#newAgreement").onclick = () => { D.agreements.push({ id: nextId(D.agreements), name: "New agreement", tpl: "Remodel contract v3", date: TODAY, status: "draft" }); renderAll(); toast("Draft agreement created"); };
+
+  // Messages
+  $$("#msgChannel button").forEach((b) => b.onclick = () => { $$("#msgChannel button").forEach((x) => x.classList.toggle("on", x === b)); channel = b.dataset.f; $("#composerText").placeholder = `Write ${channel === "SMS" ? "an SMS" : "an email"} to Cheryl…`; });
+  $("#composer").addEventListener("submit", (e) => {
+    e.preventDefault(); const t = $("#composerText").value.trim(); if (!t) return;
+    D.messages.push({ out: true, ch: channel, text: t, when: new Date().toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) });
+    $("#composerText").value = ""; renderAll();
+  });
+  $("#composerText").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#composer").requestSubmit(); } });
+
+  // ================= Tabs =================
+  function openTab(name) {
+    $$(".tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === name));
+    $$(".view").forEach((v) => v.hidden = v.dataset.view !== name);
+    try { history.replaceState(null, "", "#" + name); } catch (_) {}
+  }
+  $$(".tab").forEach((t) => t.addEventListener("click", () => openTab(t.dataset.tab)));
+
+  // Collapsibles
+  $("#leadBar").onclick = () => $("#leadCard").classList.toggle("collapsed");
+  $("#accHead").onclick = () => { const b = $("#accBody"); b.hidden = !b.hidden; };
+
+  // ================= Lead Assistant (prototype answers) =================
+  const answers = [
+    [/summar/i, () => `Cheryl Isaac (Washington DC) asked about a <b>Kitchen</b> remodel on Sep 4. The estimate is <b>${money(total())}</b>, but no designer is assigned and no consultation is booked yet. ${D.tasks.filter((t) => taskStatus(t) === "overdue").length} task(s) are overdue.`],
+    [/next|step/i, () => "The next step is to <b>call Cheryl at +1 (202) 999-9962</b>, weekday evenings after 6 (her words), and book the in-home consultation. Then assign a designer so the contract can go out."],
+    [/email|follow/i, () => "Here's a draft:<br><br><i>Hi Cheryl, thanks for your interest in a new kitchen with VKB Bethesda! Would Thursday or Friday after 6 PM work for an in-home consultation?</i>"],
+  ];
+  function say(html, who) { const m = document.createElement("div"); m.className = "msg " + who; m.innerHTML = html; $("#thread").appendChild(m); $("#thread").scrollTop = 1e9; return m; }
+  function ask(q) {
+    if (!q.trim()) return;
+    say(esc(q), "me");
+    const t = say('<span class="typing"><span></span><span></span><span></span></span>', "bot");
+    setTimeout(() => { const hit = answers.find(([re]) => re.test(q)); t.innerHTML = hit ? hit[1]() : "In the real product I'd answer this from the lead's history, estimate and messages. Try one of the suggested questions to see an example."; }, 700);
+  }
+  $("#aiForm").addEventListener("submit", (e) => { e.preventDefault(); ask($("#aiInput").value); $("#aiInput").value = ""; });
+  $$("#chips .chip").forEach((c) => c.addEventListener("click", () => ask(c.textContent)));
+
+  // ================= UX notes =================
+  $("#notesToggle").onclick = () => {
+    const on = document.body.classList.toggle("show-notes");
+    $("#notesToggle").classList.toggle("on", on);
+    $("#notesToggle span").textContent = on ? "Hide UX changes" : "Show UX changes";
+  };
+  $$(".pin[data-note]").forEach((p) => p.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const li = document.querySelector(`.notes-panel li[data-n="${p.dataset.note}"]`);
+    $$(".notes-panel li").forEach((x) => x.classList.remove("flash"));
+    li.classList.add("flash"); li.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }));
+
+  // ================= Nav + clock =================
+  $("#collapseNav").onclick = () => $("#subnav").classList.add("collapsed");
+  $$(".rail-item").forEach((b) => b.addEventListener("click", () => { $$(".rail-item").forEach((x) => x.classList.remove("active")); b.classList.add("active"); $("#subnav").classList.remove("collapsed"); }));
+  function tick() { $("#clock").textContent = new Date().toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit", timeZoneName: "short" }).replace(/, (\d{4}),/, ", $1 at"); }
+  tick(); setInterval(tick, 1000);
+
+  renderAll();
+  const start = location.hash.slice(1);
+  if (start && document.querySelector(`[data-view="${start}"]`)) openTab(start);
+</script>
+</body>
+</html>

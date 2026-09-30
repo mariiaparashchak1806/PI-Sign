@@ -180,8 +180,8 @@ export default function LeadOverview() {
     { label: 'New project', icon: <Plus {...I} />, onSelect: () => setDialog({ kind: 'project' }) },
     { label: 'From wishlist', icon: <Heart {...I} />, meta: `${Object.values(wish).filter(Boolean).length} saved`, onSelect: () => setDialog({ kind: 'wishlist' }) },
   ], 220) })
-  // Columns filter: Total ("cost") = index 4, Sales = index 5 in the header, project rows and the total row
-  const colCells = (i: number) => [kidsOf(PD_COLHEAD)[i].id, ...PROJECT_ROWS.map((r) => kidsOf(r)[i].id), kidsOf('42:10684')[i].id]
+  // Columns filter: Total ("cost") = index 4, Sales = index 5 in the header and project rows (the summary footer has no columns)
+  const colCells = (i: number) => [kidsOf(PD_COLHEAD)[i].id, ...PROJECT_ROWS.map((r) => kidsOf(r)[i].id)]
   if (!showCost) colCells(4).forEach((id) => (patches[id] = { hidden: true }))
   if (!showSales) colCells(5).forEach((id) => (patches[id] = { hidden: true }))
   const liveProjects = projectRows.filter((r) => !deletedRows.includes(r.id))

@@ -19,3 +19,8 @@
 - Page is fixed-width 1440 px (replica of the desktop frame) — horizontal scroll below that
 - Totals don't recalculate when a line item/project is removed or a status changes (mock numbers are static)
 - Mock content questions → see Deviations in the hand-off message / DESIGN.md
+
+## 2026-09-30 — re-check against Figma 19:973
+- Only change found: Project Details "Total" row (42:10684) redesigned into a summary footer (Materials / Labor / Countertops with icons, spacer, Total $13,128 at 18px). Spliced into tree.json, 3 icons added.
+- Columns filter no longer hides cells in the footer (it has no columns now).
+- Diff vs new reference 0.75% (baseline: hover-only ⋯), controls 45/45 acting.

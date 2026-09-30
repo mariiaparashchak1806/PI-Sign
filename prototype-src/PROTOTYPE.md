@@ -20,7 +20,7 @@
 ## Screens
 - Lead Overview `/` → src/pages/LeadOverview.tsx → built, verified (diff 0.62 %)
   - fixtures: `?fixture=details` (drawn expanded Lead card 109:4952), `?fixture=kitchen-collapsed`
-  - Lead card = Figma `109:5225` (collapsed `109:3765` / expanded `109:4952`, updated 2026-09-30)
+  - Lead card = Figma `109:5225` (collapsed `109:3765` / expanded `109:6980`, updated 2026-09-30)
 
 ## Layout Rules
 - Fixed 1440 px page (as the frame); rail 80 + sidebar 240 + content 1116; content padding 20/24, gap 16; grid 732 + 320

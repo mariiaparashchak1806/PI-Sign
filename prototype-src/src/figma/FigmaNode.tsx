@@ -155,6 +155,8 @@ export function FigmaNode({ node, parent = null }: { node: FNode; parent?: FNode
     sizing(node, parent, s)
     s.whiteSpace = node.ar === 'WIDTH_AND_HEIGHT' ? 'pre' : 'pre-wrap'
     if (node.ar === 'NONE') { s.height = px(node.h); s.overflow = 'hidden' }
+    const lh0 = node.seg?.[0]?.lh
+    const clampLh = node.ar === 'NONE' && lh0 && !lh0.endsWith('%') && lh0 !== 'auto' && parseFloat(lh0) > node.h
     if (node.trunc === 'ENDING') Object.assign(s, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })
     s.textAlign = ({ LEFT: 'left', CENTER: 'center', RIGHT: 'right', JUSTIFIED: 'justify' } as const)[node.ta as 'LEFT'] ?? 'left'
     const shadow = node.fx?.find((e) => e.t === 'DROP_SHADOW')
@@ -162,7 +164,7 @@ export function FigmaNode({ node, parent = null }: { node: FNode; parent?: FNode
     const segs = node.seg ?? []
     const text = patch?.txt ?? node.txt ?? ''
     if (segs.length <= 1 || patch?.txt !== undefined) {
-      el = <div {...common} style={{ ...s, ...(segs[0] ? segStyle(segs[0], patch) : {}), ...patch?.style }}>{text}</div>
+      el = <div {...common} style={{ ...s, ...(segs[0] ? segStyle(segs[0], patch) : {}), ...(clampLh ? { lineHeight: px(node.h), overflow: 'visible' } : {}), ...patch?.style }}>{text}</div>
     } else {
       el = (
         // container carries the first segment's metrics so the line box matches Figma (no body strut)
@@ -176,7 +178,7 @@ export function FigmaNode({ node, parent = null }: { node: FNode; parent?: FNode
     if (s.width === undefined && s.flex === undefined) s.width = px(node.w)
     if (s.height === undefined && s.alignSelf !== 'stretch') s.height = px(node.h)
     if (node.op !== undefined) s.opacity = node.op
-    if (node.rot) s.transform = `rotate(${-node.rot}deg)`
+    // exported SVGs already include the node's rotation — don't rotate twice
     const svg = ICONS.svg[ICONS.ref[node.id]] ?? ''
     el = <div {...common} className={['fig-icon', cls].filter(Boolean).join(' ')} style={{ ...s, ...patch?.style }} dangerouslySetInnerHTML={{ __html: svg }} />
   } else if (node.t === 'LINE') {

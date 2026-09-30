@@ -20,7 +20,7 @@ const I = { size: 16, strokeWidth: 1.8 } as const
 const fixture = new URLSearchParams(location.search).get('fixture')
 
 // ---------- ids resolved from the Figma tree ----------
-const LEAD_WRAP = '109:5225', LEAD_COLLAPSED = '109:3765', LEAD_DETAILS = '109:4952'
+const LEAD_WRAP = '109:5225', LEAD_COLLAPSED = '109:3765', LEAD_DETAILS = '109:6980'
 const PD_HEAD = '93:8342', PD_COLHEAD = '93:8360', KITCHEN_EXPANDED = '42:10573'
 const PROJECT_ROWS = ['93:8375', '42:10700', '42:10752']
 const AGENDA = '42:10916', AGENDA_HEAD = '42:10917'

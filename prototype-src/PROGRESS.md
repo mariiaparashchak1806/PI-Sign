@@ -4,7 +4,7 @@
 | Screen | Route | Date | Verified vs Figma? | Notes |
 |---|---|---|---|---|
 | Lead Overview (19:973) | `/` | 2026-09-30 | Yes — Level 1: pixel diff 0.59 % (remainder: text anti-aliasing), DOM rects within 1 px; built output re-verified | 45/45 controls act; 0 console errors; fixture `details` |
-| ↳ Lead card v2 + edit dialogs + contact hover | `/` | 2026-09-30 | Yes — re-diffed against new export | Lead card re-extracted via official Figma MCP (Bridge was disconnected) |
+| ↳ Lead card v2 + edit dialogs + contact hover | `/` | 2026-09-30 | Yes — full tree re-exported via Desktop Bridge (653 visible nodes identical); expanded card `109:6980` diffed on its own: 1.96 % (text AA) | expanded state replaced 109:4952 → 109:6980 |
 
 ## Next Up
 - Client review of the clickable prototype

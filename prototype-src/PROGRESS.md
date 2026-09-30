@@ -36,3 +36,8 @@
 ## 2026-09-30 — polish
 - Contact ↔ Lead cards: 16 px gap (mock has 0 with 16 px spare on the right) — patch on 25:4990.
 - "Add" menu: removed the "1 saved" meta on "From wishlist".
+
+## 2026-09-30 — Add from catalog
+- "Add from catalog" (Materials / Labors / Countertops group headers) and item "Replace from catalog" open a catalog picker with the staging layout: toolbar ($ cost / sale toggles, + custom item disabled, filter, In Stock, Brand, Vendor, "Search from +200,000 materials…"; no toolbar for Labors), results, selected-items panel with Reset / OK (disabled until something is picked).
+- Instead of staging's "Insufficient permissions", both panes show empty states ("No materials found" / "No item selected").
+- scripts/catalog-check.mjs screenshots the three pickers.

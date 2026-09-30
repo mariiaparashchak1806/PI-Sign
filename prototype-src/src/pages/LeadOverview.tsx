@@ -8,6 +8,7 @@ import { ContactDialog, LeadInfoDialog, type Contact, type LeadInfo } from '../c
 import { aiAnswers, aiFallback, designers, projectManagers, projectStatuses, projectTypes } from '../lib/mockData'
 import { AssignDialog, MessagesDialog, type Assignees, type Msg } from '../components/LeadDialogs'
 import { FILES0, FilesTab, type FileCounts } from '../components/FilesTab'
+import { CatalogDialog, type CatalogKind } from '../components/CatalogDialog'
 
 const root = tree as unknown as FNode
 const T = indexTree(root)
@@ -116,6 +117,7 @@ export default function LeadOverview() {
   const setTab = (t: TabKey) => { setTabState(t); setMenu(null); window.scrollTo({ top: 0 }) }
   const [newTasks, setNewTasks] = useState<NewTask[]>([])
   const [files, setFiles] = useState<FileCounts>(FILES0)
+  const [catalog, setCatalog] = useState<CatalogKind | null>(null)
 
   const say = useCallback((text: string, undo?: () => void) => setToastState({ id: Date.now(), text, undo }), [])
   const open = (key: string, anchorId: string, items: MenuItem[], width?: number, align?: 'left' | 'right') => setMenu((m) => (m?.key === key ? null : { key, anchorId, items, width, align }))
@@ -238,14 +240,17 @@ export default function LeadOverview() {
     on(it.id, { className: 'hover-row' }); on(it.more, { className: moreCls(it.more) })
     on(it.more, { onClick: () => open(`item-${it.id}`, it.more, [
       { label: 'Edit quantity & price', icon: <Pencil {...I} />, onSelect: () => notInPrototype('Inline quantity editing') },
-      { label: 'Replace from catalog', icon: <RefreshCw {...I} />, onSelect: () => notInPrototype('The catalog') },
+      { label: 'Replace from catalog', icon: <RefreshCw {...I} />, onSelect: () => setCatalog(groupOf(it.id)) },
       { label: 'Duplicate', icon: <CopyPlus {...I} />, onSelect: () => say(`${it.name} duplicated (demo)`) },
       { label: 'Move to project', icon: <MoveRight {...I} />, meta: '›', onSelect: () => open(`move-${it.id}`, it.more, projectRows.filter((p) => p.name !== 'Kitchen').map((p) => ({ label: p.name, onSelect: () => say(`${it.name} moved to ${p.name} (demo)`) })), 200) },
       '-',
       { label: 'Remove item', danger: true, icon: <Trash2 {...I} />, onSelect: () => { patchesState.remove(it.id); say(`${it.name} removed`, () => patchesState.restore(it.id)) } },
     ], 248), title: 'Item actions' })
   })
-  T.findAll(node(KITCHEN_EXPANDED), (n) => n.n === 'Link Button').forEach((b) => on(b.id, { onClick: () => notInPrototype('The catalog') }))
+  // "Add from catalog" per group (Materials · Labors · Countertops, in drawn order)
+  const CATALOG_GROUPS: CatalogKind[] = ['Materials', 'Labors', 'Countertops']
+  kidsOf(KITCHEN_EXPANDED).forEach((g, i) => T.findAll(g, (n) => n.n === 'Link Button').forEach((b) => on(b.id, { onClick: () => setCatalog(CATALOG_GROUPS[i]), title: `Add ${CATALOG_GROUPS[i].toLowerCase()} from catalog` })))
+  const groupOf = (id: string) => CATALOG_GROUPS[kidsOf(KITCHEN_EXPANDED).findIndex((g) => !!T.find(g, (n) => n.id === id))] ?? 'Materials'
 
   // Agenda
   const [removedItems, setRemovedItems] = useState<string[]>([])
@@ -362,6 +367,7 @@ export default function LeadOverview() {
     <OverridesProvider value={{ patches, handlers }}>
       <FigmaNode node={root} />
       <Menu state={menu?.key === 'cols' ? { ...menu, items: colsItems() } : menu} onClose={() => setMenu(null)} />
+      <CatalogDialog kind={catalog} onClose={() => setCatalog(null)} />
       <Toast toast={toast} onDone={() => setToastState(null)} />
       <LeadInfoDialog open={editing === 'lead'} value={leadInfo} onClose={() => setEditing(null)} onSave={(v) => { const prev = leadInfo; setLeadInfo(v); setEditing(null); say('Lead info saved', () => setLeadInfo(prev)) }} />
       <ContactDialog open={editing === 'contact'} value={contact} onClose={() => setEditing(null)} onSave={(v) => { const prev = contact; setContact(v); setEditing(null); say('Contact saved', () => setContact(prev)) }} />

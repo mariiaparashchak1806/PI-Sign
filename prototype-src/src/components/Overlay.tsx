@@ -9,7 +9,7 @@ import { spring } from '../lib/springs'
 export type MenuItem =
   | '-'
   | { title: string }
-  | { label: string; icon?: ReactNode; meta?: string; danger?: boolean; checked?: boolean; dot?: string; onSelect: () => void }
+  | { label: string; icon?: ReactNode; meta?: string; danger?: boolean; checked?: boolean; dot?: string; onSelect: () => void; checkbox?: boolean; keepOpen?: boolean; link?: boolean }
 
 export type MenuState = { key: string; anchorId: string; items: MenuItem[]; width?: number; align?: 'left' | 'right' } | null
 
@@ -52,11 +52,12 @@ export function Menu({ state, onClose }: { state: MenuState; onClose: () => void
           {state.items.map((it, i) =>
             it === '-' ? <div key={i} className="menu-divider" /> :
             'title' in it ? <div key={i} className="menu-title">{it.title}</div> :
-            <button key={i} role="menuitem" className={`menu-item${it.danger ? ' danger' : ''}`} onClick={() => { onClose(); it.onSelect() }}>
-              {it.dot ? <span className="menu-dot" style={{ background: it.dot }} /> : it.icon}
+            <button key={i} role={it.checkbox ? 'menuitemcheckbox' : 'menuitem'} aria-checked={it.checkbox ? !!it.checked : undefined}
+              className={`menu-item${it.danger ? ' danger' : ''}${it.link ? ' link' : ''}`} onClick={() => { if (!it.keepOpen) onClose(); it.onSelect() }}>
+              {it.checkbox ? <span className={`menu-checkbox${it.checked ? ' on' : ''}`}>{it.checked && '✓'}</span> : it.dot ? <span className="menu-dot" style={{ background: it.dot }} /> : it.icon}
               <span className="menu-label">{it.label}</span>
               {it.meta && <span className="menu-meta">{it.meta}</span>}
-              {it.checked && <span className="menu-check">✓</span>}
+              {it.checked && !it.checkbox && <span className="menu-check">✓</span>}
             </button>,
           )}
         </motion.div>

@@ -183,3 +183,55 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .more-on-hover { opacity: 0; transition: opacity .12s; }
 .hover-row:hover .more-on-hover, .more-on-hover.is-open, .more-on-hover:focus-visible { opacity: 1; }
 @media (hover: none) { .more-on-hover { opacity: 1; } }
+
+/* Columns filter (Project Details) */
+.menu-item.link { color: var(--color-success); font-weight: 600; font-size: 13px; }
+.menu-checkbox { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--color-border-control); display: grid; place-items: center; font-size: 11px; line-height: 1; color: var(--color-surface); flex-shrink: 0; }
+.menu-checkbox.on { background: var(--color-success); border-color: var(--color-success); }
+.no-dot svg circle { display: none; }
+.cols-open svg rect:first-child { fill: var(--color-bg-subtle); }
+.count-badge { position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--color-success); color: var(--color-surface); border: 1.5px solid var(--color-surface); font-size: 11px; font-weight: 600; display: grid; place-items: center; }
+
+/* Selects & inputs: 16 px side padding, own chevron (designer request) */
+.input { padding: 0 16px; }
+.select { appearance: none; -webkit-appearance: none; padding-right: 44px; background-color: var(--color-surface); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7068' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; background-size: 16px; cursor: pointer; }
+.textarea { padding: 10px 16px; }
+
+/* Pick Assignees — person select */
+.person-select { position: relative; }
+.person-trigger { display: flex; align-items: center; gap: 10px; text-align: left; cursor: pointer; }
+.person-trigger.is-open { border-color: var(--color-brand-dark); }
+.person-name { flex: 1; font-weight: 500; }
+.person-placeholder { flex: 1; color: var(--color-text-secondary); }
+.person-clear { display: grid; place-items: center; width: 24px; height: 24px; border-radius: var(--radius-sm); color: var(--color-text-secondary); }
+.person-clear:hover { background: var(--color-bg-subtle); }
+.person-chev { color: var(--color-text-secondary); flex-shrink: 0; }
+.avatar-sm { width: 28px; height: 28px; border-radius: 50%; background: var(--color-bg-subtle); color: var(--color-text-secondary); font-size: 12px; font-weight: 600; display: grid; place-items: center; flex-shrink: 0; }
+.person-list { top: calc(100% + 6px); left: 0; right: 0; width: auto; }
+
+/* Messages (neutral take on the staging chat) */
+.dialog.chat { width: 720px; height: min(760px, calc(100vh - 48px)); display: flex; flex-direction: column; overflow: hidden; }
+.chat-head { padding: 18px 24px 16px; border-bottom: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 12px; }
+.chat-id { display: flex; align-items: center; gap: 12px; }
+.chat-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--color-bg-subtle); color: var(--color-text-secondary); display: grid; place-items: center; }
+.chat-tools { margin-left: auto; display: flex; gap: 4px; }
+.chat-meta { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--color-text-primary); }
+.chat-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.chat-meta svg { color: var(--color-text-secondary); }
+.chat-meta em { font-style: normal; color: var(--color-text-secondary); }
+.seg { display: inline-flex; gap: 4px; background: var(--color-bg-subtle); padding: 3px; border-radius: 8px; align-self: flex-start; }
+.seg button { padding: 6px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--color-text-secondary); cursor: pointer; }
+.seg button.on { background: var(--color-surface); color: var(--color-text-primary); box-shadow: 0 1px 2px var(--c-000000-a008); }
+.chat-thread { flex: 1; overflow-y: auto; background: var(--color-bg-table-header); padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+.chat-empty { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--color-text-secondary); font-size: 14px; }
+.bubble { max-width: 70%; align-self: flex-start; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
+.bubble.out { align-self: flex-end; background: var(--color-brand-dark); border-color: var(--color-brand-dark); color: var(--color-surface); }
+.bubble .when { display: block; margin-top: 4px; font-size: 11px; opacity: .7; }
+.chat-compose { border-top: 1px solid var(--color-border); padding: 10px 24px 18px; }
+.chat-compose-top { display: flex; justify-content: space-between; font-size: 12px; color: var(--color-text-secondary); margin-bottom: 8px; }
+.link-btn { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text-secondary); cursor: pointer; font-size: 12px; }
+.chat-compose-row { display: flex; gap: 10px; align-items: flex-end; }
+.chat-compose-row .textarea { flex: 1; resize: none; }
+.icon-box { width: 44px; height: 44px; border-radius: var(--radius-md); border: 1px solid var(--color-border); display: grid; place-items: center; color: var(--color-text-secondary); cursor: pointer; flex-shrink: 0; background: var(--color-surface); }
+.icon-box.send { background: var(--color-brand-dark); border-color: var(--color-brand-dark); color: var(--color-surface); }
+.icon-box.send:disabled { background: var(--color-bg-subtle); border-color: var(--color-bg-subtle); color: var(--color-text-secondary); cursor: not-allowed; }

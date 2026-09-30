@@ -1,5 +1,6 @@
 // Prototype data that is not drawn in the mock (menus, options, AI replies). Names reuse people from the mock's Activity.
-export const designers = ['Anna Kovalenko', 'Mark Evans', 'Jeffrey Lindon', 'Test Designer']
+export const designers = ['Anna Kovalenko', 'Mark Evans', 'Jeffrey Lindon', 'Test Designer', 'Test Designer 2']
+export const projectManagers = ['Laura Chen', 'David Park', 'Olena Moroz']
 
 // Project statuses as seen in the PiSuite staging "Change Status" dialog / lead pipeline.
 // Only "Scheduled Leads" and "Pending Leads" colours are drawn in the mock; the rest reuse existing tokens.

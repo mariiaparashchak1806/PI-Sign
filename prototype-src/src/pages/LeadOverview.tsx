@@ -5,7 +5,8 @@ import { FigmaNode, OverridesProvider, indexTree, type FNode, type Handler, type
 import { Btn, Dialog, Menu, Toast, type MenuItem, type MenuState, type ToastState } from '../components/Overlay'
 import { Field, Select, TextArea, TextInput } from '../components/Form'
 import { ContactDialog, LeadInfoDialog, type Contact, type LeadInfo } from '../components/EditDialogs'
-import { aiAnswers, aiFallback, designers, projectStatuses, projectTypes } from '../lib/mockData'
+import { aiAnswers, aiFallback, designers, projectManagers, projectStatuses, projectTypes } from '../lib/mockData'
+import { AssignDialog, MessagesDialog, type Assignees, type Msg } from '../components/LeadDialogs'
 
 const root = tree as unknown as FNode
 const T = indexTree(root)
@@ -74,9 +75,12 @@ export default function LeadOverview() {
   const [toast, setToastState] = useState<ToastState>(null)
   const [dialog, setDialog] = useState<null | { kind: 'project' | 'wishlist' | 'task' | 'attach' | 'confirm'; data?: Record<string, unknown> }>(null)
   const [showDetails, setShowDetails] = useState(fixture === 'details')
-  const [designer, setDesigner] = useState<string | null>(null)
+  const [assignees, setAssignees] = useState<Assignees>({ designer: null, pm: null })
+  const designer = assignees.designer
+  const [messages, setMessages] = useState<Msg[]>([{ out: false, ch: 'SMS', text: 'Thanks, see you tomorrow!', when: '5:02 PM' }])
   const [kitchenOpen, setKitchenOpen] = useState(fixture !== 'kitchen-collapsed')
   const [showSales, setShowSales] = useState(true)
+  const [showCost, setShowCost] = useState(true)
   const [activityOpen, setActivityOpen] = useState(true)
   const [projStatus, setProjStatus] = useState<Record<string, string>>({})
   const [deletedRows, setDeletedRows] = useState<string[]>([])
@@ -88,7 +92,7 @@ export default function LeadOverview() {
   const [aiText, setAiText] = useState('')
   const [leadInfo, setLeadInfo] = useState<LeadInfo>(LEAD_INFO0)
   const [contact, setContact] = useState<Contact>(CONTACT0)
-  const [editing, setEditing] = useState<null | 'lead' | 'contact'>(null)
+  const [editing, setEditing] = useState<null | 'lead' | 'contact' | 'assign' | 'messages'>(null)
 
   const say = useCallback((text: string, undo?: () => void) => setToastState({ id: Date.now(), text, undo }), [])
   const open = (key: string, anchorId: string, items: MenuItem[], width?: number, align?: 'left' | 'right') => setMenu((m) => (m?.key === key ? null : { key, anchorId, items, width, align }))
@@ -113,7 +117,7 @@ export default function LeadOverview() {
   if (designer) notAssignedTexts.forEach((id) => (patches[id] = { txt: designer }))
   leadButtons.forEach((b) => {
     on(b.edit, { onClick: () => setEditing('lead'), title: 'Edit lead' })
-    on(b.assign, { onClick: () => open('assign', b.assign, [{ title: 'Assign designer' }, ...designers.map((d) => ({ label: d, checked: d === designer, onSelect: () => { const prev = designer; setDesigner(d); say(`${d} assigned as designer`, () => setDesigner(prev)) } }))], 240) })
+    on(b.assign, { onClick: () => setEditing('assign'), title: 'Assign designer' })
     on(b.more, { onClick: () => open('lead-more', b.more, [
       { label: 'Copy lead link', icon: <Link2 {...I} />, onSelect: () => { navigator.clipboard?.writeText(location.href); say('Lead link copied') } },
       { label: 'Send to archive', icon: <Archive {...I} />, onSelect: () => confirm({ title: 'Send Cheryl Isaac to archive?', body: 'The lead leaves the active pipeline. You can restore it from Archive.', ok: 'Send to archive', run: () => say('Lead sent to archive (demo)') }) },
@@ -148,7 +152,7 @@ export default function LeadOverview() {
   on(named('85:5281', 'Actions').id, { after: copyBtn('phone', contact.phone, 'Phone number', named('85:5281', 'Actions').id) })
   on('85:5385', { className: 'contact-row', after: copyBtn('address', contact.address, 'Address', '85:5385') })
   on(named('85:5281', 'Icon button / Call').id, { onClick: () => { say(`Calling ${contact.phone}…`); location.href = `tel:${contact.phone.replace(/[^+\d]/g, '')}` }, title: 'Call' })
-  on(named('85:5281', 'Icon button / Copy').id, { onClick: () => notInPrototype('The Messages tab'), title: 'Send SMS' })
+  on(named('85:5281', 'Icon button / Copy').id, { onClick: () => setEditing('messages'), title: 'Messages' })
 
   // Top bar search → real input
   const searchText = textIn('19:1071')
@@ -157,14 +161,29 @@ export default function LeadOverview() {
   // Project Details — header
   const headActions = named(PD_HEAD, 'Actions')
   const colsBtn = named(headActions.id, 'Icon button / cols').id
-  on(colsBtn, { onClick: () => open('cols', colsBtn, [{ title: 'Show in table' }, { label: 'Cost', checked: true, onSelect: () => say('Cost is always shown') }, { label: 'Sales price', checked: showSales, onSelect: () => setShowSales((v) => !v) }], 220), title: 'Columns' })
+  const colsOpen = menu?.key === 'cols'
+  const colsCount = Number(showCost) + Number(showSales)
+  const colsItems = (): MenuItem[] => [
+    { label: 'Show cost', checkbox: true, checked: showCost, keepOpen: true, onSelect: () => setShowCost((v) => !v) },
+    { label: 'Show sale', checkbox: true, checked: showSales, keepOpen: true, onSelect: () => setShowSales((v) => !v) },
+    '-',
+    { label: 'Show all columns', link: true, keepOpen: true, onSelect: () => { setShowCost(true); setShowSales(true) } },
+  ]
+  on(colsBtn, {
+    onClick: () => open('cols', colsBtn, colsItems(), 268), title: 'Columns',
+    className: [colsOpen ? 'cols-open' : '', colsCount === 0 || colsOpen ? 'no-dot' : ''].filter(Boolean).join(' '),
+    render: (_n, el) => <span key="cols" style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>{el}{colsOpen && colsCount > 0 && <span className="count-badge">{colsCount}</span>}</span>,
+  })
   on(named(headActions.id, 'Icon button / doc').id, { onClick: () => say('Downloading summary PDF…'), title: 'Download summary PDF' })
   const addBtn = named(headActions.id, /^Button \/ Add/).id
   on(addBtn, { onClick: () => open('add', addBtn, [
     { label: 'New project', icon: <Plus {...I} />, onSelect: () => setDialog({ kind: 'project' }) },
     { label: 'From wishlist', icon: <Heart {...I} />, meta: `${Object.values(wish).filter(Boolean).length} saved`, onSelect: () => setDialog({ kind: 'wishlist' }) },
   ], 220) })
-  if (!showSales) { patches[kidsOf(PD_COLHEAD)[5].id] = { hidden: true }; projectRows.forEach((r) => (patches[r.sales] = { hidden: true })) }
+  // Columns filter: Total ("cost") = index 4, Sales = index 5 in the header, project rows and the total row
+  const colCells = (i: number) => [kidsOf(PD_COLHEAD)[i].id, ...PROJECT_ROWS.map((r) => kidsOf(r)[i].id), kidsOf('42:10684')[i].id]
+  if (!showCost) colCells(4).forEach((id) => (patches[id] = { hidden: true }))
+  if (!showSales) colCells(5).forEach((id) => (patches[id] = { hidden: true }))
   const liveProjects = projectRows.filter((r) => !deletedRows.includes(r.id))
   patches[named(PD_HEAD, 'Sub').id] = { txt: `${liveProjects.length} project${liveProjects.length === 1 ? '' : 's'}` }
 
@@ -259,15 +278,18 @@ export default function LeadOverview() {
   on(aiPlaceholder.id, { render: () => <input key="ai-field" className="bare-input" style={{ flex: '1 1 0', minWidth: 0, fontSize: 13, lineHeight: '19px' }} value={aiText} onChange={(e) => setAiText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { ask(aiText); setAiText('') } }} placeholder={aiPlaceholder.txt} aria-label="Ask the AI assistant" /> })
   on(named(AI_INPUT, 'Send').id, { onClick: () => { if (!aiText.trim()) { say('Type a question or pick a suggestion'); return } ask(aiText); setAiText('') }, title: 'Send' })
   on(AI, { after: ai.length ? <div className="ai-thread">{ai.map((m, i) => <div key={i}><div className="ai-q">{m.q}</div><div className="ai-a">{m.a}</div></div>)}</div> : undefined })
-  ;[['93:6004', 'The Signed documents tab'], ['93:7192', 'The Files & Photos tab'], ['93:6062', 'The Messages tab']].forEach(([id, w]) => on(id, { onClick: () => notInPrototype(w) }))
+  on('93:6062', { onClick: () => setEditing('messages') })
+  ;[['93:6004', 'The Signed documents tab'], ['93:7192', 'The Files & Photos tab']].forEach(([id, w]) => on(id, { onClick: () => notInPrototype(w) }))
 
   return (
     <OverridesProvider value={{ patches, handlers }}>
       <FigmaNode node={root} />
-      <Menu state={menu} onClose={() => setMenu(null)} />
+      <Menu state={menu?.key === 'cols' ? { ...menu, items: colsItems() } : menu} onClose={() => setMenu(null)} />
       <Toast toast={toast} onDone={() => setToastState(null)} />
       <LeadInfoDialog open={editing === 'lead'} value={leadInfo} onClose={() => setEditing(null)} onSave={(v) => { const prev = leadInfo; setLeadInfo(v); setEditing(null); say('Lead info saved', () => setLeadInfo(prev)) }} />
       <ContactDialog open={editing === 'contact'} value={contact} onClose={() => setEditing(null)} onSave={(v) => { const prev = contact; setContact(v); setEditing(null); say('Contact saved', () => setContact(prev)) }} />
+      <AssignDialog open={editing === 'assign'} value={assignees} designers={designers} managers={projectManagers} onClose={() => setEditing(null)} onSave={(v) => { const prev = assignees; setAssignees(v); setEditing(null); say(v.designer ? `${v.designer} assigned as designer` : 'Assignees updated', () => setAssignees(prev)) }} />
+      <MessagesDialog open={editing === 'messages'} name={fullName} phone={contact.phone} email={contact.email} store={leadInfo.store} status="Pending Leads" created="Sep 29, 2026, 2:17 PM" messages={messages} onSend={(m) => setMessages((x) => [...x, m])} onClose={() => setEditing(null)} />
       <Dialogs dialog={dialog} close={() => setDialog(null)} say={say} onRenameTask={(id, name) => setTask((t) => ({ ...t, [id]: { ...t[id], name } }))} wish={wish} />
     </OverridesProvider>
   )

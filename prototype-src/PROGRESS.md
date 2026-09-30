@@ -63,3 +63,4 @@
 - Tabs keep the left lead column (tab content replaces the right column).
 - App: presenter switch "Concept 1 / Concept 2" (bottom-left, over the sidebar); `?concept=2` in the URL.
 - Checks: controls concept 1 54/54, concept 2 40/40 (+ agenda 27/27, files 19/19, materials 19/19), 0 console errors. No 1:1 pixel diff for concept 2 (only a 0.47× Figma preview was available).
+- 2026-09-30: concept 2 is Overview-only — other tabs are drawn but inert (no click, default cursor); links into tabs (View all ×4, Payment plan) are inert there too. Concept 1 keeps all tabs.

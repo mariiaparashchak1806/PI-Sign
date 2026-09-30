@@ -122,7 +122,10 @@ export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
   const [leadInfo, setLeadInfo] = useState<LeadInfo>(LEAD_INFO0)
   const [contact, setContact] = useState<Contact>(CONTACT0)
   const [editing, setEditing] = useState<null | 'lead' | 'contact' | 'assign' | 'messages'>(null)
-  const [tab, setTabState] = useState<TabKey>((new URLSearchParams(location.search).get('tab') as TabKey) || 'overview')
+  const [tabState, setTabState] = useState<TabKey>((new URLSearchParams(location.search).get('tab') as TabKey) || 'overview')
+  // Concept 2 is presented on Overview only: other tabs are drawn but inert, and links into them are off
+  const tabsOn = concept === 1
+  const tab: TabKey = tabsOn ? tabState : 'overview'
   const setTab = (t: TabKey) => { setTabState(t); setMenu(null); window.scrollTo({ top: 0 }) }
   const [newTasks, setNewTasks] = useState<NewTask[]>([])
   const [files, setFiles] = useState<FileCounts>(FILES0)
@@ -167,7 +170,7 @@ export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
       { label: 'Delete lead', danger: true, icon: <Trash2 {...I} />, onSelect: () => confirm({ title: 'Delete Cheryl Isaac?', body: 'The lead, its 3 projects, tasks and files are removed for everyone. You can’t undo this.', ok: 'Delete lead', danger: true, run: () => say('Lead deleted (demo)') }) },
     ], 220) })
   })
-  if (tab !== 'payment') paymentLinks.forEach((id) => on(id, { onClick: () => setTab('payment'), title: 'Open the Payment Plan tab' }))
+  if (tabsOn && tab !== 'payment') paymentLinks.forEach((id) => on(id, { onClick: () => setTab('payment'), title: 'Open the Payment Plan tab' }))
 
   // Lead info values (edited through the "Info" dialog)
   const leadText: [string, string][] = [[LEAD_INFO0.store, leadInfo.store], [LEAD_INFO0.source, leadInfo.source], [LEAD_INFO0.start, leadInfo.start], [houseLabel(LEAD_INFO0), houseLabel(leadInfo)]]
@@ -309,7 +312,7 @@ export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
   on(named(AGENDA_HEAD, 'Secondary Button').id, { onClick: () => setDialog({ kind: 'task', data: {} }) })
   const agendaViewAll = named(AGENDA_HEAD, 'Link Button').id
   if (tab === 'agenda') patches[agendaViewAll] = { hidden: true }
-  else on(agendaViewAll, { onClick: () => setTab('agenda'), title: 'Open the Agenda tab' })
+  else if (tabsOn) on(agendaViewAll, { onClick: () => setTab('agenda'), title: 'Open the Agenda tab' })
   // Agenda tab: the same card at full width — the Task column takes the extra space
   const growCell = (id: string) => { const n = node(id), par = T.parentOf.get(id)!; return { style: { width: `calc(100% - ${par.w - par.al!.p[1] - par.al!.p[3] - n.w}px)` } } }
   if (tab === 'agenda') ['42:11146', ...taskRows.map((t) => named(t.id, 'Cell / p').id)].forEach((id) => (patches[id] = { ...patches[id], ...growCell(id) }))
@@ -351,9 +354,9 @@ export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
   on(aiPlaceholder.id, { render: () => <input key="ai-field" className="bare-input" style={{ flex: '1 1 0', minWidth: 0, fontSize: 13, lineHeight: '19px' }} value={aiText} onChange={(e) => setAiText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { ask(aiText); setAiText('') } }} placeholder={aiPlaceholder.txt} aria-label="Ask the AI assistant" /> })
   on(named(AI_INPUT, 'Send').id, { onClick: () => { if (!aiText.trim()) { say('Type a question or pick a suggestion'); return } ask(aiText); setAiText('') }, title: 'Send' })
   on(AI, { after: ai.length ? <div className="ai-thread">{ai.map((m, i) => <div key={i}><div className="ai-q">{m.q}</div><div className="ai-a">{m.a}</div></div>)}</div> : undefined })
-  on('93:6062', { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
-  on('93:6004', { onClick: () => setTab('agreements'), title: 'Open the Signed documents tab' })
-  on('93:7192', { onClick: () => setTab('files'), title: 'Open the Files & Photos tab' })
+  if (tabsOn) on('93:6062', { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
+  if (tabsOn) on('93:6004', { onClick: () => setTab('agreements'), title: 'Open the Signed documents tab' })
+  if (tabsOn) on('93:7192', { onClick: () => setTab('files'), title: 'Open the Files & Photos tab' })
   FILE_SUMMARY.forEach(([p, id]) => { const n = Object.values(files[p] ?? {}).reduce((a, b) => a + b, 0); patches[id] = { txt: `${n} file${n === 1 ? '' : 's'}` } })
   if (files.Bathroom?.['Before Photos']) patches['93:7471'] = { hidden: true }
 
@@ -361,7 +364,8 @@ export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
   tabs.forEach((t) => {
     const active = (t.key ?? '') === tab, c = active ? t.on : t.off
     patches[active ? t.onLabel : t.offLabel] = { txt: t.label }
-    if (!active) on(c.id, { onClick: () => (t.key ? setTab(t.key) : notInPrototype(`The ${t.label} tab`)), title: t.key ? undefined : `${t.label} — not in this prototype`, className: t.key ? undefined : 'tab-inactive' })
+    if (!active && !tabsOn) on(c.id, { className: 'tab-inactive' })
+    else if (!active) on(c.id, { onClick: () => (t.key ? setTab(t.key) : notInPrototype(`The ${t.label} tab`)), title: t.key ? undefined : `${t.label} — not in this prototype`, className: t.key ? undefined : 'tab-inactive' })
     on(t.id, { render: () => <FigmaNode node={c} parent={RT.byId.get(TABS)!} /> })
   })
   if (tab !== 'overview') {
@@ -394,7 +398,7 @@ export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
     // Designer: no Assign button in this layout — the "Not assigned" value opens Pick Assignees
     on('124:2748', { onClick: () => setEditing('assign'), title: designer ? 'Change assignees' : 'Assign designer', className: 'value-hover' })
     if (designer) patches['124:2755'] = { txt: designer, color: 'var(--color-text-primary)' }
-    if (tab !== 'payment') on('124:2704', { onClick: () => setTab('payment'), title: 'Open the Payment Plan tab' })
+    if (tabsOn && tab !== 'payment') on('124:2704', { onClick: () => setTab('payment'), title: 'Open the Payment Plan tab' })
     patches['124:2805'] = { txt: contact.phone }; patches['124:2818'] = { txt: contact.email }; patches['124:2829'] = { txt: contact.address }
     ;[['124:2797', contact.phone, 'Phone number'], ['124:2810', contact.email, 'Email'], ['124:2819', contact.address, 'Address']].forEach(([id, v, l]) => on(id, { onClick: copy(v, l), title: `Copy ${l.toLowerCase()}`, className: 'value-hover' }))
     const lead2: [string, string][] = [['124:2741', leadInfo.store], ['124:2769', leadInfo.source], ['124:2780', leadInfo.start], ['124:2789', houseLabel(leadInfo)]]

@@ -51,3 +51,4 @@
 - Files & Photos: per-project folders, list/grid toggle, required Before Photos warning, "+" → Add files (counts update here and in the Overview summary).
 - Deviation: the designer's task menu says "Delete project" — shown as "Delete task" (it deletes the task).
 - Assumption: Basement's "2 files" from the Overview summary are placed in Before Photos (the mock doesn't say which folder).
+- Deviation: 16 px gap between the Contact and Lead cards (0 in the mock), per designer.

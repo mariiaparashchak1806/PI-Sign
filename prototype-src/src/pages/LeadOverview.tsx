@@ -132,6 +132,9 @@ export default function LeadOverview() {
   // ⋯ row actions are revealed on row hover (kept visible while their menu is open)
   const moreCls = (id: string) => `more-on-hover${menu?.anchorId === id ? ' is-open' : ''}`
 
+  // Contact + Lead cards: 16 px gap like the rest of the page (0 in the mock); the Lead card gives up the 16 px
+  patches['25:4990'] = { style: { gap: 16 } }
+  patches[LEAD_WRAP] = { style: { flex: '1 1 0', minWidth: 0 } }
   // Lead card — "Show details" is the drawn alternate state (hidden frame in the mock)
   patches[LEAD_COLLAPSED] = { hidden: showDetails }
   patches[LEAD_DETAILS] = { hidden: !showDetails }
@@ -201,7 +204,7 @@ export default function LeadOverview() {
   const addBtn = named(headActions.id, /^Button \/ Add/).id
   on(addBtn, { onClick: () => open('add', addBtn, [
     { label: 'New project', icon: <Plus {...I} />, onSelect: () => setDialog({ kind: 'project' }) },
-    { label: 'From wishlist', icon: <Heart {...I} />, meta: `${Object.values(wish).filter(Boolean).length} saved`, onSelect: () => setDialog({ kind: 'wishlist' }) },
+    { label: 'From wishlist', icon: <Heart {...I} />, onSelect: () => setDialog({ kind: 'wishlist' }) },
   ], 220) })
   // Columns filter: Total ("cost") = index 4, Sales = index 5 in the header and project rows (the summary footer has no columns)
   const colCells = (i: number) => [kidsOf(PD_COLHEAD)[i].id, ...PROJECT_ROWS.map((r) => kidsOf(r)[i].id)]

@@ -55,3 +55,11 @@
 - Columns filter icon shows the count badge (2) by default whenever a column is on (dot replaced by badge).
 - Left menu (rail + Operations sidebar) is sticky on every tab; root uses overflow: clip so sticky works.
 - Page height = content height on every tab (Content height auto, 48 px bottom padding; root min-height 100vh). Overview is now 2444 px instead of the frame's fixed 2653 — full-page diff vs Figma no longer comparable 1:1 below the content.
+
+## 2026-09-30 — Concept 2 (Figma 124:1753, "Sidebar layout") + concept switch
+- Export via the official Figma MCP in 12 chunks (Bridge offline): extraction/assemble_c2.py rebuilds extraction/concept2-export.json from the transcript; scripts/build_concept2.py writes src/figma/tree2.json.
+  - Identical widgets (Agenda, Bathroom row) are copied from concept 1; similar ones (sidebar, tabs, search, breadcrumbs, Project Details header/rows/footer, Activity, Messages + Signed documents summaries, Files header) get concept-1 ids by a name-matched walk → every existing handler works unchanged. 40 new icons merged into icons.json.
+- LeadOverview takes `concept`; concept-2-only bindings: lead ⋯ menu, Lead edit → Info, Contact edit, Designer value → Pick Assignees, Payment plan → Payment Plan tab, contact values copy on click, Files summary counts (Laundry room kept as drawn), Kitchen row expands into the concept-1 line items, AI Assistant button → assistant card in a side panel.
+- Tabs keep the left lead column (tab content replaces the right column).
+- App: presenter switch "Concept 1 / Concept 2" (bottom-left, over the sidebar); `?concept=2` in the URL.
+- Checks: controls concept 1 54/54, concept 2 40/40 (+ agenda 27/27, files 19/19, materials 19/19), 0 console errors. No 1:1 pixel diff for concept 2 (only a 0.47× Figma preview was available).

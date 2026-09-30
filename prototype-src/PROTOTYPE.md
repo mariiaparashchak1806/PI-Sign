@@ -55,3 +55,7 @@
 - Add from catalog: picker shell with empty states (catalog not connected); staging's permission error deliberately not shown.
 - All tabs are built (see PROGRESS.md 2026-09-30). Not itemised in the mock → not invented: Bathroom lines, payment amounts/dates.
 - Deviation: page ends where content ends (Figma frame has a fixed 2653 px height with empty space); left menu is sticky.
+
+## Concepts
+- Switch at bottom-left (or `?concept=2`). Same state and actions in both; concept 2 = Figma 124:1753 (lead/price/contact column on the left, AI Assistant in the top bar → side panel).
+- Concept 2 deviations: Designer has no Assign button in the design — clicking the value opens Pick Assignees; Kitchen starts collapsed (as drawn) and expands into concept 1's line items.

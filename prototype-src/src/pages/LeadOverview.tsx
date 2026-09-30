@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { CircleX, CopyPlus, Download, FileText, Heart, Info, MoveRight, Paperclip, Pencil, Plus, RefreshCw, SquareCheck, Trash2, Archive, Link2 } from 'lucide-react'
+import { X, CircleX, CopyPlus, Download, FileText, Heart, Info, MoveRight, Paperclip, Pencil, Plus, RefreshCw, SquareCheck, Trash2, Archive, Link2 } from 'lucide-react'
 import tree from '../figma/tree.json'
+import tree2 from '../figma/tree2.json'
 import { FigmaNode, OverridesProvider, indexTree, type FNode, type Handler, type Patch } from '../figma/FigmaNode'
 import { Btn, Dialog, Menu, Toast, type MenuItem, type MenuState, type ToastState } from '../components/Overlay'
 import { Field, Select, TextArea, TextInput } from '../components/Form'
@@ -13,6 +14,10 @@ import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab } from '.
 
 const root = tree as unknown as FNode
 const T = indexTree(root)
+// Concept 2 (Figma 124:1753): shared widgets carry concept-1 ids (scripts/build_concept2.py), so the same handlers apply
+const root2 = tree2 as unknown as FNode
+const T2 = indexTree(root2)
+export type Concept = 1 | 2
 const node = (id: string) => T.byId.get(id)!
 const find = (fromId: string, pred: (n: FNode) => boolean) => T.find(node(fromId), pred)
 const named = (fromId: string, name: string | RegExp) => find(fromId, (n) => (typeof name === 'string' ? n.n === name : name.test(n.n)))!
@@ -78,11 +83,12 @@ const cloneAs = (n: FNode, sfx: string): FNode => ({ ...n, id: `${n.id}#${sfx}`,
 const TABS = '19:1210', GRID = '19:1231', CONTENT = '19:1099', LEFT_COL = '19:1232'
 type TabKey = 'overview' | 'agenda' | 'files' | 'labors' | 'materials' | 'countertops' | 'payment' | 'agreements' | 'messages' | 'forms'
 const TAB_KEYS: Record<string, TabKey> = { Overview: 'overview', Agenda: 'agenda', 'Files & Photos': 'files', Labors: 'labors', Materials: 'materials', Countertops: 'countertops', 'Payment Plan': 'payment', 'Signed documents': 'agreements', Messages: 'messages', Forms: 'forms' }
-const tabs = kidsOf(TABS).map((t) => {
-  const label = textIn(t.id).txt!.trim()
-  const on = cloneAs(node('19:1211'), `on-${t.id}`), off = cloneAs(node('19:1215'), `off-${t.id}`)
-  return { id: t.id, label, key: TAB_KEYS[label] as TabKey | undefined, on, off, onLabel: T.find(on, (n) => n.t === 'TEXT')!.id, offLabel: T.find(off, (n) => n.t === 'TEXT')!.id }
+const makeTabs = (TT: typeof T) => (TT.byId.get(TABS)!.k ?? []).filter((k) => !k.hidden).map((t) => {
+  const label = TT.find(t, (n) => n.t === 'TEXT')!.txt!.trim()
+  const on = cloneAs(TT.byId.get('19:1211')!, `on-${t.id}`), off = cloneAs(TT.byId.get('19:1215')!, `off-${t.id}`)
+  return { id: t.id, label, key: TAB_KEYS[label] as TabKey | undefined, on, off, onLabel: TT.find(on, (n) => n.t === 'TEXT')!.id, offLabel: TT.find(off, (n) => n.t === 'TEXT')!.id }
 })
+const TABS_BY_CONCEPT = { 1: makeTabs(T), 2: makeTabs(T2) }
 const TASK_TPL = node(taskRows.find((t) => t.initial === 'upcoming')!.id)
 const taskTypes = ['In-home Consultation', 'Measurement', 'Quote Preparation', 'Follow-up']
 type NewTask = { id: string; name: string; due: string; status: TaskStatus; deleted?: boolean }
@@ -91,7 +97,8 @@ const fmtDue = (v: string) => new Date(v).toLocaleDateString('en-US', { month: '
 const FILE_SUMMARY: [string, string][] = [['Kitchen', '93:7332'], ['Bathroom', '93:7378'], ['Basement', find('93:7343', (n) => n.t === 'TEXT' && /files?$/.test(n.txt ?? ''))!.id]]
 
 // ---------- page ----------
-export default function LeadOverview() {
+export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
+  const R = concept === 2 ? root2 : root, RT = concept === 2 ? T2 : T, tabs = TABS_BY_CONCEPT[concept]
   const [menu, setMenu] = useState<MenuState>(null)
   const [toast, setToastState] = useState<ToastState>(null)
   const [dialog, setDialog] = useState<null | { kind: 'project' | 'wishlist' | 'task' | 'attach' | 'confirm'; data?: Record<string, unknown> }>(null)
@@ -99,7 +106,8 @@ export default function LeadOverview() {
   const [assignees, setAssignees] = useState<Assignees>({ designer: null, pm: null })
   const designer = assignees.designer
   const [messages, setMessages] = useState<Msg[]>([{ out: false, ch: 'SMS', text: 'Thanks, see you tomorrow!', when: '5:02 PM' }])
-  const [kitchenOpen, setKitchenOpen] = useState(fixture !== 'kitchen-collapsed')
+  const [kitchenOpen, setKitchenOpen] = useState(fixture !== 'kitchen-collapsed' && concept === 1)
+  const [aiOpen, setAiOpen] = useState(false)
   const [showSales, setShowSales] = useState(true)
   const [showCost, setShowCost] = useState(true)
   const [activityOpen, setActivityOpen] = useState(true)
@@ -142,7 +150,7 @@ export default function LeadOverview() {
   patches['19:974'] = { style: { position: 'sticky', top: 0, height: '100vh', alignSelf: 'flex-start' } }
   // Page ends where the content ends (the Figma frame has fixed heights); overflow: clip keeps sticky working
   patches[root.id] = { style: { minHeight: '100vh', overflow: 'clip' } }
-  patches[CONTENT] = { style: { height: 'auto', padding: node(CONTENT).al!.p.map((v, i) => `${i === 2 ? 48 : v}px`).join(' ') } }
+  patches[CONTENT] = { style: { height: 'auto', padding: RT.byId.get(CONTENT)!.al!.p.map((v, i) => `${i === 2 ? 48 : v}px`).join(' ') } }
   // Lead card — "Show details" is the drawn alternate state (hidden frame in the mock)
   patches[LEAD_COLLAPSED] = { hidden: showDetails }
   patches[LEAD_DETAILS] = { hidden: !showDetails }
@@ -354,7 +362,7 @@ export default function LeadOverview() {
     const active = (t.key ?? '') === tab, c = active ? t.on : t.off
     patches[active ? t.onLabel : t.offLabel] = { txt: t.label }
     if (!active) on(c.id, { onClick: () => (t.key ? setTab(t.key) : notInPrototype(`The ${t.label} tab`)), title: t.key ? undefined : `${t.label} — not in this prototype`, className: t.key ? undefined : 'tab-inactive' })
-    on(t.id, { render: () => <FigmaNode node={c} parent={node(TABS)} /> })
+    on(t.id, { render: () => <FigmaNode node={c} parent={RT.byId.get(TABS)!} /> })
   })
   if (tab !== 'overview') {
     on(GRID, { render: () => (
@@ -370,9 +378,48 @@ export default function LeadOverview() {
     ) })
   }
 
+  // ---------- concept 2: lead column + AI Assistant button (ids from Figma 124:1753) ----------
+  if (concept === 2) {
+    const n2 = (id: string) => T2.byId.get(id)!
+    const LEAD2 = '124:2658'
+    patches['124:2673'] = { txt: fullName }
+    on('124:2680', { onClick: () => open('lead-more', '124:2680', [
+      { label: 'Copy lead link', icon: <Link2 {...I} />, onSelect: () => { navigator.clipboard?.writeText(location.href); say('Lead link copied') } },
+      { label: 'Send to archive', icon: <Archive {...I} />, onSelect: () => confirm({ title: `Send ${fullName} to archive?`, body: 'The lead leaves the active pipeline. You can restore it from Archive.', ok: 'Send to archive', run: () => say('Lead sent to archive (demo)') }) },
+      '-',
+      { label: 'Delete lead', danger: true, icon: <Trash2 {...I} />, onSelect: () => confirm({ title: `Delete ${fullName}?`, body: 'The lead, its 3 projects, tasks and files are removed for everyone. You can’t undo this.', ok: 'Delete lead', danger: true, run: () => say('Lead deleted (demo)') }) },
+    ], 220), title: 'Lead actions' })
+    on('124:2714', { onClick: () => setEditing('lead'), title: 'Edit lead' })
+    on('124:2795', { onClick: () => setEditing('contact'), title: 'Edit contact' })
+    // Designer: no Assign button in this layout — the "Not assigned" value opens Pick Assignees
+    on('124:2748', { onClick: () => setEditing('assign'), title: designer ? 'Change assignees' : 'Assign designer', className: 'value-hover' })
+    if (designer) patches['124:2755'] = { txt: designer, color: 'var(--color-text-primary)' }
+    if (tab !== 'payment') on('124:2704', { onClick: () => setTab('payment'), title: 'Open the Payment Plan tab' })
+    patches['124:2805'] = { txt: contact.phone }; patches['124:2818'] = { txt: contact.email }; patches['124:2829'] = { txt: contact.address }
+    ;[['124:2797', contact.phone, 'Phone number'], ['124:2810', contact.email, 'Email'], ['124:2819', contact.address, 'Address']].forEach(([id, v, l]) => on(id, { onClick: copy(v, l), title: `Copy ${l.toLowerCase()}`, className: 'value-hover' }))
+    const lead2: [string, string][] = [['124:2741', leadInfo.store], ['124:2769', leadInfo.source], ['124:2780', leadInfo.start], ['124:2789', houseLabel(leadInfo)]]
+    lead2.forEach(([id, v]) => n2(id).txt !== v && (patches[id] = { txt: v }))
+    void LEAD2
+    // Files and photos summary (4 rows in this concept, incl. Laundry room as drawn)
+    ;[['Kitchen', '124:3722'], ['Bathroom', '124:3736'], ['Basement', '109:10739']].forEach(([p, id]) => { const k = Object.values(files[p] ?? {}).reduce((a, b) => a + b, 0); patches[id] = { txt: `${k} file${k === 1 ? '' : 's'}` } })
+    if (files.Bathroom?.['Before Photos']) patches['124:3730'] = { hidden: true }
+    if (files.Basement?.['Before Photos']) patches['109:10756'] = { hidden: true }
+    // Kitchen row expands into the drawn line items (the same block as concept 1)
+    patches['124:3023'] = { style: { transform: kitchenOpen ? 'rotate(90deg)' : 'none', transition: 'transform .18s var(--spring-snappy)' } }
+    on('93:8375', { render: (_n, el) => <>{el}{kitchenOpen && !deletedRows.includes('93:8375') && <FigmaNode key="kx" node={node(KITCHEN_EXPANDED)} parent={n2('42:10511')} />}</> })
+    // AI Assistant lives in the top bar here → opens the same assistant card in a side panel
+    on('124:3631', { onClick: () => setAiOpen((v) => !v), title: 'AI Assistant' })
+  }
+
   return (
     <OverridesProvider value={{ patches, handlers }}>
-      <FigmaNode node={root} />
+      <FigmaNode node={R} />
+      {concept === 2 && aiOpen && (
+        <aside className="ai-drawer" aria-label="AI Assistant">
+          <button className="icon-plain ai-drawer-close" aria-label="Close AI Assistant" onClick={() => setAiOpen(false)}><X size={18} /></button>
+          <FigmaNode node={node(AI)} parent={node('19:1233')} />
+        </aside>
+      )}
       <Menu state={menu?.key === 'cols' ? { ...menu, items: colsItems() } : menu} onClose={() => setMenu(null)} />
       <CatalogDialog kind={catalog} onClose={() => setCatalog(null)} />
       <Toast toast={toast} onDone={() => setToastState(null)} />

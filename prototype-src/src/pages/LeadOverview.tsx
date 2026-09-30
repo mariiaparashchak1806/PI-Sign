@@ -138,6 +138,9 @@ export default function LeadOverview() {
   // Contact + Lead cards: 16 px gap like the rest of the page (0 in the mock); the Lead card gives up the 16 px
   patches['25:4990'] = { style: { gap: 16 } }
   patches[LEAD_WRAP] = { style: { flex: '1 1 0', minWidth: 0 } }
+  // Left menu is always pinned to the viewport
+  patches['19:974'] = { style: { position: 'sticky', top: 0, height: '100vh', alignSelf: 'flex-start' } }
+  patches[root.id] = { style: { overflow: 'clip' } } // hidden would break sticky
   // Lead card — "Show details" is the drawn alternate state (hidden frame in the mock)
   patches[LEAD_COLLAPSED] = { hidden: showDetails }
   patches[LEAD_DETAILS] = { hidden: !showDetails }
@@ -200,8 +203,8 @@ export default function LeadOverview() {
   ]
   on(colsBtn, {
     onClick: () => open('cols', colsBtn, colsItems(), 268), title: 'Columns',
-    className: [colsOpen ? 'cols-open' : '', colsCount === 0 || colsOpen ? 'no-dot' : ''].filter(Boolean).join(' '),
-    render: (_n, el) => <span key="cols" style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>{el}{colsOpen && colsCount > 0 && <span className="count-badge">{colsCount}</span>}</span>,
+    className: [colsOpen ? 'cols-open' : '', 'no-dot'].filter(Boolean).join(' '),
+    render: (_n, el) => <span key="cols" style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>{el}{colsCount > 0 && <span className="count-badge">{colsCount}</span>}</span>,
   })
   on(named(headActions.id, 'Icon button / doc').id, { onClick: () => say('Downloading summary PDF…'), title: 'Download summary PDF' })
   const addBtn = named(headActions.id, /^Button \/ Add/).id
@@ -353,8 +356,7 @@ export default function LeadOverview() {
   })
   if (tab !== 'overview') {
     patches[CONTENT] = { style: { height: 'auto' } }
-    patches[root.id] = { style: { minHeight: '100vh' } }
-    patches['19:974'] = { style: { position: 'sticky', top: 0, height: '100vh', alignSelf: 'flex-start' } } // shorter tabs: sidebar pinned to the viewport
+    patches[root.id] = { style: { minHeight: '100vh', overflow: 'clip' } }
     on(GRID, { render: () => (
       <div className="tab-content">
         {tab === 'agenda' ? <FigmaNode node={node(AGENDA)} parent={node(LEFT_COL)} />

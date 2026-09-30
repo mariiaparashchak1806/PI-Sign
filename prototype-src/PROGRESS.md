@@ -50,3 +50,7 @@
 - Forms: Credit Card Form with email action (confirm → toast).
 - Overview links now open tabs: "2 payments" → Payment Plan, Signed documents / Messages "View all" → their tabs.
 - All staging "Insufficient permissions" errors replaced by data or empty states. Controls: every tab 100% acting, 0 console errors; Overview diff 0.62%.
+
+## 2026-09-30 — columns badge + sticky menu
+- Columns filter icon shows the count badge (2) by default whenever a column is on (dot replaced by badge).
+- Left menu (rail + Operations sidebar) is sticky on every tab; root uses overflow: clip so sticky works.

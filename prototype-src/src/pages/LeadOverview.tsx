@@ -9,6 +9,7 @@ import { aiAnswers, aiFallback, designers, projectManagers, projectStatuses, pro
 import { AssignDialog, MessagesDialog, type Assignees, type Msg } from '../components/LeadDialogs'
 import { FILES0, FilesTab, type FileCounts } from '../components/FilesTab'
 import { CatalogDialog, type CatalogKind } from '../components/CatalogDialog'
+import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab } from '../components/OtherTabs'
 
 const root = tree as unknown as FNode
 const T = indexTree(root)
@@ -71,12 +72,12 @@ const houseLabel = (i: LeadInfo) => `${i.houseType.charAt(0)}${i.houseType.slice
 const textsIn = (fromId: string, txt: string) => T.findAll(node(fromId), (n) => n.t === 'TEXT' && n.txt === txt).map((n) => n.id)
 const CONTACT_ROWS = ['85:5281', '85:5353', '85:5385']
 
-// Tabs — Overview, Agenda and Files & Photos are built; the rest stay inactive.
+// Tabs — all built (Overview is the Figma frame; the others follow the staging tabs with the lead's data).
 // Every tab renders as a clone of the drawn active / idle tab so the state can move between them.
 const cloneAs = (n: FNode, sfx: string): FNode => ({ ...n, id: `${n.id}#${sfx}`, k: n.k?.map((c) => cloneAs(c, sfx)) })
 const TABS = '19:1210', GRID = '19:1231', CONTENT = '19:1099', LEFT_COL = '19:1232'
-type TabKey = 'overview' | 'agenda' | 'files'
-const TAB_KEYS: Record<string, TabKey> = { Overview: 'overview', Agenda: 'agenda', 'Files & Photos': 'files' }
+type TabKey = 'overview' | 'agenda' | 'files' | 'labors' | 'materials' | 'countertops' | 'payment' | 'agreements' | 'messages' | 'forms'
+const TAB_KEYS: Record<string, TabKey> = { Overview: 'overview', Agenda: 'agenda', 'Files & Photos': 'files', Labors: 'labors', Materials: 'materials', Countertops: 'countertops', 'Payment Plan': 'payment', 'Signed documents': 'agreements', Messages: 'messages', Forms: 'forms' }
 const tabs = kidsOf(TABS).map((t) => {
   const label = textIn(t.id).txt!.trim()
   const on = cloneAs(node('19:1211'), `on-${t.id}`), off = cloneAs(node('19:1215'), `off-${t.id}`)
@@ -153,7 +154,7 @@ export default function LeadOverview() {
       { label: 'Delete lead', danger: true, icon: <Trash2 {...I} />, onSelect: () => confirm({ title: 'Delete Cheryl Isaac?', body: 'The lead, its 3 projects, tasks and files are removed for everyone. You can’t undo this.', ok: 'Delete lead', danger: true, run: () => say('Lead deleted (demo)') }) },
     ], 220) })
   })
-  paymentLinks.forEach((id) => on(id, { onClick: () => notInPrototype('The Payment Plan tab') }))
+  if (tab !== 'payment') paymentLinks.forEach((id) => on(id, { onClick: () => setTab('payment'), title: 'Open the Payment Plan tab' }))
 
   // Lead info values (edited through the "Info" dialog)
   const leadText: [string, string][] = [[LEAD_INFO0.store, leadInfo.store], [LEAD_INFO0.source, leadInfo.source], [LEAD_INFO0.start, leadInfo.start], [houseLabel(LEAD_INFO0), houseLabel(leadInfo)]]
@@ -337,8 +338,8 @@ export default function LeadOverview() {
   on(aiPlaceholder.id, { render: () => <input key="ai-field" className="bare-input" style={{ flex: '1 1 0', minWidth: 0, fontSize: 13, lineHeight: '19px' }} value={aiText} onChange={(e) => setAiText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { ask(aiText); setAiText('') } }} placeholder={aiPlaceholder.txt} aria-label="Ask the AI assistant" /> })
   on(named(AI_INPUT, 'Send').id, { onClick: () => { if (!aiText.trim()) { say('Type a question or pick a suggestion'); return } ask(aiText); setAiText('') }, title: 'Send' })
   on(AI, { after: ai.length ? <div className="ai-thread">{ai.map((m, i) => <div key={i}><div className="ai-q">{m.q}</div><div className="ai-a">{m.a}</div></div>)}</div> : undefined })
-  on('93:6062', { onClick: () => setEditing('messages') })
-  on('93:6004', { onClick: () => notInPrototype('The Signed documents tab') })
+  on('93:6062', { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
+  on('93:6004', { onClick: () => setTab('agreements'), title: 'Open the Signed documents tab' })
   on('93:7192', { onClick: () => setTab('files'), title: 'Open the Files & Photos tab' })
   FILE_SUMMARY.forEach(([p, id]) => { const n = Object.values(files[p] ?? {}).reduce((a, b) => a + b, 0); patches[id] = { txt: `${n} file${n === 1 ? '' : 's'}` } })
   if (files.Bathroom?.['Before Photos']) patches['93:7471'] = { hidden: true }
@@ -356,9 +357,13 @@ export default function LeadOverview() {
     patches['19:974'] = { style: { position: 'sticky', top: 0, height: '100vh', alignSelf: 'flex-start' } } // shorter tabs: sidebar pinned to the viewport
     on(GRID, { render: () => (
       <div className="tab-content">
-        {tab === 'agenda'
-          ? <FigmaNode node={node(AGENDA)} parent={node(LEFT_COL)} />
-          : <FilesTab projects={liveProjects.map((p) => p.name)} counts={files} onAdd={(p, f) => setDialog({ kind: 'attach', data: { p, f } })} />}
+        {tab === 'agenda' ? <FigmaNode node={node(AGENDA)} parent={node(LEFT_COL)} />
+          : tab === 'files' ? <FilesTab projects={liveProjects.map((p) => p.name)} counts={files} onAdd={(p, f) => setDialog({ kind: 'attach', data: { p, f } })} />
+          : tab === 'labors' || tab === 'materials' || tab === 'countertops' ? <EstimateTab key={tab} kind={(tab.charAt(0).toUpperCase() + tab.slice(1)) as CatalogKind} projects={liveProjects.map((p) => p.name)} onCatalog={setCatalog} say={say} />
+          : tab === 'payment' ? <PaymentTab />
+          : tab === 'agreements' ? <AgreementsTab say={say} confirm={confirm} />
+          : tab === 'messages' ? <MessagesTab name={fullName} messages={messages} onSend={(m) => setMessages((x) => [...x, m])} />
+          : <FormsTab email={contact.email} say={say} confirm={confirm} />}
       </div>
     ) })
   }

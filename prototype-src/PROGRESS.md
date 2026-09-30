@@ -41,3 +41,12 @@
 - "Add from catalog" (Materials / Labors / Countertops group headers) and item "Replace from catalog" open a catalog picker with the staging layout: toolbar ($ cost / sale toggles, + custom item disabled, filter, In Stock, Brand, Vendor, "Search from +200,000 materials…"; no toolbar for Labors), results, selected-items panel with Reset / OK (disabled until something is picked).
 - Instead of staging's "Insufficient permissions", both panes show empty states ("No materials found" / "No item selected").
 - scripts/catalog-check.mjs screenshots the three pickers.
+
+## 2026-09-30 — remaining tabs
+- Labors / Materials / Countertops: staging structure (price toggles, title, List/Edit; Project select + Add from catalog; groups per project). Kitchen lines from the mock; Bathroom shows only its drawn totals (3 items $1,850 etc.), not itemised; Basement empty. Edit mode = quantity inputs + remove (with Undo); subtotals recompute.
+- Payment Plan: plan select pre-set to "2 payments" (from the lead card) + empty state for the schedule (amounts/dates aren't in the mock).
+- Signed documents: Agreement · Awaiting signature (from mock/Activity), Agreement Settings (start Oct 3, 2026, 30–35 business days, two checkboxes, notes editor), View agreement / Send with PiSign / Save changes (disabled until changed), Agreement Files (1) → Agreement.pdf.
+- Messages: thread shared with the SMS modal (Cheryl's "Thanks, see you tomorrow!"), composer.
+- Forms: Credit Card Form with email action (confirm → toast).
+- Overview links now open tabs: "2 payments" → Payment Plan, Signed documents / Messages "View all" → their tabs.
+- All staging "Insufficient permissions" errors replaced by data or empty states. Controls: every tab 100% acting, 0 console errors; Overview diff 0.62%.

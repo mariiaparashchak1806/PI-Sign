@@ -237,7 +237,7 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .icon-box.send:disabled { background: var(--color-bg-subtle); border-color: var(--color-bg-subtle); color: var(--color-text-secondary); cursor: not-allowed; }
 
 /* Tabs */
-.tab-content { align-self: stretch; margin-bottom: 48px; display: flex; flex-direction: column; gap: 16px; }
+.tab-content { align-self: stretch; display: flex; flex-direction: column; gap: 16px; }
 .tab-content > [data-id] { width: 100% !important; }
 
 /* Files & Photos tab (card = same shell as the Agenda / Project Details cards) */

@@ -54,3 +54,4 @@
 ## 2026-09-30 — columns badge + sticky menu
 - Columns filter icon shows the count badge (2) by default whenever a column is on (dot replaced by badge).
 - Left menu (rail + Operations sidebar) is sticky on every tab; root uses overflow: clip so sticky works.
+- Page height = content height on every tab (Content height auto, 48 px bottom padding; root min-height 100vh). Overview is now 2444 px instead of the frame's fixed 2653 — full-page diff vs Figma no longer comparable 1:1 below the content.

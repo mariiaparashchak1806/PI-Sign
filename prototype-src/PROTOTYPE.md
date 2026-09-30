@@ -54,3 +54,4 @@
 - Deviation: 16 px gap between the Contact and Lead cards (0 in the mock), per designer.
 - Add from catalog: picker shell with empty states (catalog not connected); staging's permission error deliberately not shown.
 - All tabs are built (see PROGRESS.md 2026-09-30). Not itemised in the mock → not invented: Bathroom lines, payment amounts/dates.
+- Deviation: page ends where content ends (Figma frame has a fixed 2653 px height with empty space); left menu is sticky.

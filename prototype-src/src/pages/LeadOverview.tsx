@@ -140,7 +140,9 @@ export default function LeadOverview() {
   patches[LEAD_WRAP] = { style: { flex: '1 1 0', minWidth: 0 } }
   // Left menu is always pinned to the viewport
   patches['19:974'] = { style: { position: 'sticky', top: 0, height: '100vh', alignSelf: 'flex-start' } }
-  patches[root.id] = { style: { overflow: 'clip' } } // hidden would break sticky
+  // Page ends where the content ends (the Figma frame has fixed heights); overflow: clip keeps sticky working
+  patches[root.id] = { style: { minHeight: '100vh', overflow: 'clip' } }
+  patches[CONTENT] = { style: { height: 'auto', padding: node(CONTENT).al!.p.map((v, i) => `${i === 2 ? 48 : v}px`).join(' ') } }
   // Lead card — "Show details" is the drawn alternate state (hidden frame in the mock)
   patches[LEAD_COLLAPSED] = { hidden: showDetails }
   patches[LEAD_DETAILS] = { hidden: !showDetails }
@@ -355,8 +357,6 @@ export default function LeadOverview() {
     on(t.id, { render: () => <FigmaNode node={c} parent={node(TABS)} /> })
   })
   if (tab !== 'overview') {
-    patches[CONTENT] = { style: { height: 'auto' } }
-    patches[root.id] = { style: { minHeight: '100vh', overflow: 'clip' } }
     on(GRID, { render: () => (
       <div className="tab-content">
         {tab === 'agenda' ? <FigmaNode node={node(AGENDA)} parent={node(LEFT_COL)} />

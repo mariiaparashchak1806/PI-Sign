@@ -29,6 +29,7 @@
 ## Interactions
 - Springs: `snappy` (menus, toasts), `calm` (dialogs) → src/lib/springs.ts; reduced-motion respected
 - Menus anchor under their trigger, close on outside click / Esc; destructive items last + red + confirmation dialog
+- Row ⋯ (project, line item, task) appear only on row hover (`.hover-row` / `.more-on-hover`), stay visible while their menu is open, show on keyboard focus, always visible on touch (`hover: none`). Card-level ⋯ (Lead header) and Agenda header ⋯ stay visible
 - Reversible actions (done, idle, wishlist, status, remove item) → toast with Undo, no dialog
 - Project row: click toggles Kitchen line items; status pill = dropdown; ⋯ = project menu (edit, info, PDF, duplicate, wishlist, delete)
 - Line item ⋯: edit qty/price, replace, duplicate, move to project, remove

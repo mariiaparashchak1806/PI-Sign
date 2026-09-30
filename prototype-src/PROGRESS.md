@@ -6,11 +6,14 @@
 | Lead Overview (19:973) | `/` | 2026-09-30 | Yes — Level 1: pixel diff 0.59 % (remainder: text anti-aliasing), DOM rects within 1 px; built output re-verified | 45/45 controls act; 0 console errors; fixture `details` |
 | ↳ Lead card v2 + edit dialogs + contact hover | `/` | 2026-09-30 | Yes — full tree re-exported via Desktop Bridge (653 visible nodes identical); expanded card `109:6980` diffed on its own: 1.96 % (text AA) | expanded state replaced 109:4952 → 109:6980 |
 
+| ↳ Hover-only row ⋯ + re-sync (breadcrumbs, status pill colour) | `/` | 2026-09-30 | Yes — `scripts/sync.py` diff: +6/−5 nodes (breadcrumbs), 3 changed | |
+
 ## Next Up
 - Client review of the clickable prototype
 - Tabs (Agenda, Files & Photos, …) once designed
 
 ## Known Issues
+- Row ⋯ are drawn permanently in the mock; prototype reveals them on hover (designer request 2026-09-30) — part of the remaining pixel diff
 - Mail row: the mock draws its hover fill permanently; prototype shows it on hover only (designer request)
 - Page is fixed-width 1440 px (replica of the desktop frame) — horizontal scroll below that
 - Totals don't recalculate when a line item/project is removed or a status changes (mock numbers are static)

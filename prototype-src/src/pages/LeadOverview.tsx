@@ -97,7 +97,13 @@ export default function LeadOverview() {
 
   const patches: Record<string, Patch | undefined> = {}
   const handlers: Record<string, Handler | undefined> = {}
-  const on = (id: string | undefined, h: Handler) => { if (id) handlers[id] = { ...handlers[id], ...h } }
+  const on = (id: string | undefined, h: Handler) => {
+    if (!id) return
+    const prev = handlers[id]
+    handlers[id] = { ...prev, ...h, className: [prev?.className, h.className].filter(Boolean).join(' ') || undefined }
+  }
+  // ⋯ row actions are revealed on row hover (kept visible while their menu is open)
+  const moreCls = (id: string) => `more-on-hover${menu?.anchorId === id ? ' is-open' : ''}`
 
   // Lead card — "Show details" is the drawn alternate state (hidden frame in the mock)
   patches[LEAD_COLLAPSED] = { hidden: showDetails }
@@ -125,7 +131,7 @@ export default function LeadOverview() {
   on(named('85:3793', 'Secondary Button').id, { onClick: () => setEditing('contact'), title: 'Edit contact' })
   const fullName = `${contact.first} ${contact.last}`.trim()
   patches['85:3794'] = { txt: fullName }
-  patches['19:1107'] = { txt: fullName }
+  textsIn('19:1100', 'Cheryl Isaac').forEach((id) => (patches[id] = { txt: fullName }))
   patches[named('85:5281', 'Value').id] = { txt: contact.phone }
   patches[named('85:5353', 'Value').id] = { txt: contact.email }
   patches[named('85:5385', 'Value').id] = { txt: contact.address }
@@ -168,8 +174,9 @@ export default function LeadOverview() {
   on('93:8375', { onClick: () => setKitchenOpen((v) => !v), title: kitchenOpen ? 'Collapse Kitchen' : 'Expand Kitchen', className: 'row-hover' })
   projectRows.forEach((r) => {
     if (deletedRows.includes(r.id)) { patches[r.id] = { hidden: true }; return }
+    on(r.id, { className: 'hover-row' }); on(r.more, { className: moreCls(r.more) })
     const st = projStatus[r.id]
-    if (r.pill && st) { const s = projectStatuses.find((p) => p.label === st)!; patches[r.pill] = { bg: s.bg }; patches[r.pillLabel!] = { txt: st, color: s.fg } }
+    if (r.pill && st) { const s = st === 'Scheduled Leads' ? { bg: `rgba(${(node(r.pill).fill![0] as number[]).join(',')})`, fg: segColor(textIn(r.pill)) } : projectStatuses.find((p) => p.label === st)!; patches[r.pill] = { bg: s.bg }; patches[r.pillLabel!] = { txt: st, color: s.fg } }
     if (r.pill) on(r.pill, { onClick: stop(() => open(`status-${r.id}`, r.pill!, [{ title: `${r.name} status` }, ...projectStatuses.map((s) => ({ label: s.label, dot: s.dot, checked: (st ?? 'Scheduled Leads') === s.label, onSelect: () => { const prev = st; setProjStatus((p) => ({ ...p, [r.id]: s.label })); say(`${r.name} → ${s.label}`, () => setProjStatus((p) => ({ ...p, [r.id]: prev! }))) } }))], 232, 'left')), title: 'Change status' })
     on(r.more, { onClick: stop(() => open(`proj-${r.id}`, r.more, [
       { label: 'Edit project', icon: <Pencil {...I} />, onSelect: () => setDialog({ kind: 'project', data: { edit: r.name } }) },
@@ -183,6 +190,7 @@ export default function LeadOverview() {
     ], 232)), title: 'Project actions' })
   })
   lineItems.forEach((it) => {
+    on(it.id, { className: 'hover-row' }); on(it.more, { className: moreCls(it.more) })
     on(it.more, { onClick: () => open(`item-${it.id}`, it.more, [
       { label: 'Edit quantity & price', icon: <Pencil {...I} />, onSelect: () => notInPrototype('Inline quantity editing') },
       { label: 'Replace from catalog', icon: <RefreshCw {...I} />, onSelect: () => notInPrototype('The catalog') },
@@ -208,6 +216,7 @@ export default function LeadOverview() {
     patches[t.pillLabel] = { txt: statusLabel[s.status], color: ps.fg }
     patches[t.name.id] = { txt: s.name, decoration: closed ? 'line-through' : 'none', color: closed ? segColor(doneName) : segColor(t.name) }
     const title = s.name ?? t.name.txt!
+    on(t.id, { className: 'hover-row' }); on(t.more, { className: moreCls(t.more) })
     on(t.checkbox, {
       render: () => (
         <span key={t.checkbox} role="checkbox" aria-checked={done} aria-label={done ? 'Mark as not done' : 'Mark as done'} tabIndex={0} className={`check-hit${s.status === 'cancelled' ? ' is-disabled' : ''}`}

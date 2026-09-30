@@ -74,6 +74,8 @@
   --c-fcfcfc: rgba(252,252,252,1);
   --c-fff5e5: rgba(255,245,229,1);
   --c-ffffff-a045: rgba(255,255,255,0.45);
+  --c-d8e6ee: rgba(216,230,238,1);
+  --c-ddeec8: rgba(221,238,200,1);
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 10px;
@@ -178,3 +180,6 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .dialog .field-label { font-weight: 400; color: var(--color-text-secondary); }
 .dialog .input { height: 44px; }
 .btn-primary:disabled { opacity: 1; background: var(--color-button-disabled); border-color: transparent; }
+.more-on-hover { opacity: 0; transition: opacity .12s; }
+.hover-row:hover .more-on-hover, .more-on-hover.is-open, .more-on-hover:focus-visible { opacity: 1; }
+@media (hover: none) { .more-on-hover { opacity: 1; } }

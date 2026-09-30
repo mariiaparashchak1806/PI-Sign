@@ -22,3 +22,12 @@ export const aiAnswers: Record<string, string> = {
     '“Hi Cheryl, thanks again for the consultation! Your kitchen and bathroom estimate is ready — could you send a few photos of the bathroom so we can finalise the quote?”',
 }
 export const aiFallback = 'In the real product I’d answer from the lead’s history, estimate and messages. Try one of the suggestions above to see an example.'
+
+// Options for the lead "Info" dialog (values shown in the card are pre-selected).
+export const leadOptions = {
+  stores: ['VKB, Bethesda, MD', 'VKB, Rockville, MD', 'VKB, Arlington, VA'],
+  sources: ['Google', 'Facebook/Instagram', 'Referral', 'Home show', 'Yelp'],
+  starts: ['ASAP', '1–3 months', '3–6 months', '6+ months'],
+  houseTypes: ['Single House', 'Townhouse', 'Condo', 'Apartment'],
+  houseAges: ['Under 1 year', '1-5 years', '5-10 years', '10-20 years', '20+ years'],
+}

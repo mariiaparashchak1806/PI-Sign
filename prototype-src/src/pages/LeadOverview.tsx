@@ -4,6 +4,7 @@ import tree from '../figma/tree.json'
 import { FigmaNode, OverridesProvider, indexTree, type FNode, type Handler, type Patch } from '../figma/FigmaNode'
 import { Btn, Dialog, Menu, Toast, type MenuItem, type MenuState, type ToastState } from '../components/Overlay'
 import { Field, Select, TextArea, TextInput } from '../components/Form'
+import { ContactDialog, LeadInfoDialog, type Contact, type LeadInfo } from '../components/EditDialogs'
 import { aiAnswers, aiFallback, designers, projectStatuses, projectTypes } from '../lib/mockData'
 
 const root = tree as unknown as FNode
@@ -19,7 +20,7 @@ const I = { size: 16, strokeWidth: 1.8 } as const
 const fixture = new URLSearchParams(location.search).get('fixture')
 
 // ---------- ids resolved from the Figma tree ----------
-const LEAD_WRAP = '93:11414', LEAD_COLLAPSED = '93:9454', LEAD_DETAILS = '93:11163'
+const LEAD_WRAP = '109:5225', LEAD_COLLAPSED = '109:3765', LEAD_DETAILS = '109:4952'
 const PD_HEAD = '93:8342', PD_COLHEAD = '93:8360', KITCHEN_EXPANDED = '42:10573'
 const PROJECT_ROWS = ['93:8375', '42:10700', '42:10752']
 const AGENDA = '42:10916', AGENDA_HEAD = '42:10917'
@@ -60,6 +61,13 @@ const showDetailsToggle = named(LEAD_COLLAPSED, /^Toggle \/ Show details/).id
 const hideDetailsToggle = named(LEAD_DETAILS, /^Toggle \/ Show details/).id
 const paymentLinks = T.findAll(node(LEAD_WRAP), (n) => n.n === 'Link / Open').map((n) => n.id)
 
+// Values shown in the cards → initial values of the edit dialogs
+const LEAD_INFO0: LeadInfo = { store: 'VKB, Bethesda, MD', source: 'Google', start: 'ASAP', houseType: 'Single House', houseAge: '1-5 years' }
+const CONTACT0: Contact = { first: 'Cheryl', last: 'Isaac', phone: '+1 (131) 231-2321', email: 'onur@blackstonedata.ai', address: '4605 Reno Road NW, Washington DC 20008' }
+const houseLabel = (i: LeadInfo) => `${i.houseType.charAt(0)}${i.houseType.slice(1).toLowerCase()}, ${i.houseAge.replace(' years', ' yrs').replace(' year', ' yr').replace('-', '–')}`
+const textsIn = (fromId: string, txt: string) => T.findAll(node(fromId), (n) => n.t === 'TEXT' && n.txt === txt).map((n) => n.id)
+const CONTACT_ROWS = ['85:5281', '85:5353', '85:5385']
+
 // ---------- page ----------
 export default function LeadOverview() {
   const [menu, setMenu] = useState<MenuState>(null)
@@ -78,6 +86,9 @@ export default function LeadOverview() {
   const [hideDone, setHideDone] = useState(false)
   const [ai, setAi] = useState<{ q: string; a: string }[]>([])
   const [aiText, setAiText] = useState('')
+  const [leadInfo, setLeadInfo] = useState<LeadInfo>(LEAD_INFO0)
+  const [contact, setContact] = useState<Contact>(CONTACT0)
+  const [editing, setEditing] = useState<null | 'lead' | 'contact'>(null)
 
   const say = useCallback((text: string, undo?: () => void) => setToastState({ id: Date.now(), text, undo }), [])
   const open = (key: string, anchorId: string, items: MenuItem[], width?: number, align?: 'left' | 'right') => setMenu((m) => (m?.key === key ? null : { key, anchorId, items, width, align }))
@@ -95,7 +106,7 @@ export default function LeadOverview() {
   on(hideDetailsToggle, { onClick: () => setShowDetails(false), title: 'Hide details' })
   if (designer) notAssignedTexts.forEach((id) => (patches[id] = { txt: designer }))
   leadButtons.forEach((b) => {
-    on(b.edit, { onClick: () => notInPrototype('The lead edit form') })
+    on(b.edit, { onClick: () => setEditing('lead'), title: 'Edit lead' })
     on(b.assign, { onClick: () => open('assign', b.assign, [{ title: 'Assign designer' }, ...designers.map((d) => ({ label: d, checked: d === designer, onSelect: () => { const prev = designer; setDesigner(d); say(`${d} assigned as designer`, () => setDesigner(prev)) } }))], 240) })
     on(b.more, { onClick: () => open('lead-more', b.more, [
       { label: 'Copy lead link', icon: <Link2 {...I} />, onSelect: () => { navigator.clipboard?.writeText(location.href); say('Lead link copied') } },
@@ -106,12 +117,32 @@ export default function LeadOverview() {
   })
   paymentLinks.forEach((id) => on(id, { onClick: () => notInPrototype('The Payment Plan tab') }))
 
-  // Contact card
-  on(named('85:3793', 'Secondary Button').id, { onClick: () => notInPrototype('The contact edit form') })
-  on(named('85:5281', 'Icon button / Call').id, { onClick: () => { say('Calling +1 (131) 231-2321…'); location.href = 'tel:+11312312321' }, title: 'Call' })
+  // Lead info values (edited through the "Info" dialog)
+  const leadText: [string, string][] = [[LEAD_INFO0.store, leadInfo.store], [LEAD_INFO0.source, leadInfo.source], [LEAD_INFO0.start, leadInfo.start], [houseLabel(LEAD_INFO0), houseLabel(leadInfo)]]
+  leadText.forEach(([from, to]) => from !== to && textsIn(LEAD_WRAP, from).forEach((id) => (patches[id] = { txt: to })))
+
+  // Contact card — edit dialog, values, hover-only copy
+  on(named('85:3793', 'Secondary Button').id, { onClick: () => setEditing('contact'), title: 'Edit contact' })
+  const fullName = `${contact.first} ${contact.last}`.trim()
+  patches['85:3794'] = { txt: fullName }
+  patches['19:1107'] = { txt: fullName }
+  patches[named('85:5281', 'Value').id] = { txt: contact.phone }
+  patches[named('85:5353', 'Value').id] = { txt: contact.email }
+  patches[named('85:5385', 'Value').id] = { txt: contact.address }
+  CONTACT_ROWS.forEach((id) => on(id, { className: 'contact-row' }))
+  patches['85:5353'] = { bg: 'transparent' } // grey fill in the mock is the hover state
   const copy = (text: string, label: string) => () => { navigator.clipboard?.writeText(text); say(`${label} copied`) }
-  on(named('85:5281', 'Icon button / Copy').id, { onClick: copy('+1 (131) 231-2321', 'Phone number'), title: 'Copy phone number' })
-  on(named('85:5353', 'Icon button / Copy').id, { onClick: copy('onur@blackstonedata.ai', 'Email'), title: 'Copy email' })
+  const mailCopy = named('85:5353', 'Icon button / Copy')
+  on(mailCopy.id, { onClick: copy(contact.email, 'Email'), title: 'Copy email', className: 'copy-on-hover' })
+  const copyBtn = (key: string, text: string, label: string, parentId: string) => (
+    <span key={key} className="copy-on-hover clickable ghost" role="button" tabIndex={0} title={`Copy ${label.toLowerCase()}`} onClick={copy(text, label)} style={{ display: 'inline-flex', borderRadius: 6, flexShrink: 0 }}>
+      <FigmaNode node={{ ...mailCopy, id: `${mailCopy.id}#${key}` }} parent={node(parentId)} />
+    </span>
+  )
+  on(named('85:5281', 'Actions').id, { after: copyBtn('phone', contact.phone, 'Phone number', named('85:5281', 'Actions').id) })
+  on('85:5385', { className: 'contact-row', after: copyBtn('address', contact.address, 'Address', '85:5385') })
+  on(named('85:5281', 'Icon button / Call').id, { onClick: () => { say(`Calling ${contact.phone}…`); location.href = `tel:${contact.phone.replace(/[^+\d]/g, '')}` }, title: 'Call' })
+  on(named('85:5281', 'Icon button / Copy').id, { onClick: () => notInPrototype('The Messages tab'), title: 'Send SMS' })
 
   // Top bar search → real input
   const searchText = textIn('19:1071')
@@ -226,6 +257,8 @@ export default function LeadOverview() {
       <FigmaNode node={root} />
       <Menu state={menu} onClose={() => setMenu(null)} />
       <Toast toast={toast} onDone={() => setToastState(null)} />
+      <LeadInfoDialog open={editing === 'lead'} value={leadInfo} onClose={() => setEditing(null)} onSave={(v) => { const prev = leadInfo; setLeadInfo(v); setEditing(null); say('Lead info saved', () => setLeadInfo(prev)) }} />
+      <ContactDialog open={editing === 'contact'} value={contact} onClose={() => setEditing(null)} onSave={(v) => { const prev = contact; setContact(v); setEditing(null); say('Contact saved', () => setContact(prev)) }} />
       <Dialogs dialog={dialog} close={() => setDialog(null)} say={say} onRenameTask={(id, name) => setTask((t) => ({ ...t, [id]: { ...t[id], name } }))} wish={wish} />
     </OverridesProvider>
   )

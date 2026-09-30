@@ -15,10 +15,12 @@
 - FigmaNode (tree renderer, patches/handlers) → src/figma/FigmaNode.tsx
 - Menu · Dialog · Toast · Btn (secondary/primary/danger) → src/components/Overlay.tsx
 - Field · TextInput · Select · TextArea → src/components/Form.tsx
+- LeadInfoDialog ("Info") · ContactDialog ("Edit contact") — prefilled from the cards, Save disabled until dirty → src/components/EditDialogs.tsx
 
 ## Screens
 - Lead Overview `/` → src/pages/LeadOverview.tsx → built, verified (diff 0.62 %)
-  - fixtures: `?fixture=details` (drawn "Show details" state), `?fixture=kitchen-collapsed`
+  - fixtures: `?fixture=details` (drawn expanded Lead card 109:4952), `?fixture=kitchen-collapsed`
+  - Lead card = Figma `109:5225` (collapsed `109:3765` / expanded `109:4952`, updated 2026-09-30)
 
 ## Layout Rules
 - Fixed 1440 px page (as the frame); rail 80 + sidebar 240 + content 1116; content padding 20/24, gap 16; grid 732 + 320
@@ -31,9 +33,10 @@
 - Project row: click toggles Kitchen line items; status pill = dropdown; ⋯ = project menu (edit, info, PDF, duplicate, wishlist, delete)
 - Line item ⋯: edit qty/price, replace, duplicate, move to project, remove
 - Tasks: checkbox = done/reopen; ⋯ = edit, attach, idle/resume, cancel, delete; closed tasks → reopen/delete; header ⋯ = hide completed
-- Lead card: Show/Hide details, Assign designer (menu → updates "Not assigned"), ⋯ (copy link, archive, delete)
+- Lead card: Show/Hide details (footer toggle), Edit → "Info" dialog (store, source, start, house type/age → updates the card), Assign designer (menu → updates "Not assigned"), ⋯ (copy link, archive, delete)
+- Contact card: Edit → "Edit contact" dialog (name, phone, email, address → updates card + breadcrumb); rows get grey fill + copy button only on hover; call → tel:, SMS → toast
 - AI Assistant: suggestions + input answer inline (canned answers in src/lib/mockData.ts)
 
 ### Intentionally static (controls audit)
 - Rail, sidebar nav, tabs other than Overview (user decision 2026-09-30), breadcrumbs, lead status pill, Bathroom/Basement chevrons (no line items drawn), right-column summary rows, header checkbox in Agenda
-- "View all", Payment plan link, Edit lead/contact, catalog, inline qty edit → toast "isn't part of this prototype"
+- "View all", Payment plan link, SMS, catalog, inline qty edit → toast "isn't part of this prototype"

@@ -107,6 +107,7 @@ button { font: inherit; color: inherit; background: none; border: 0; }
   --color-idle: rgba(71, 85, 105, 1);      /* Idle pill — from "Agenda — Task actions" spec */
   --color-idle-bg: rgba(234, 240, 247, 1);
   --color-danger-solid: rgba(217, 45, 32, 1); /* destructive buttons/menu items — from action spec */
+  --color-button-disabled: rgba(142, 143, 148, 1); /* disabled Save — from the staging "Info" dialog */
 }
 .row-hover:hover { filter: none; background-color: var(--color-bg-table-header); }
 .bare-input { border: 0; outline: 0; background: transparent; font-family: var(--font-sans); color: var(--color-text-primary); }
@@ -169,3 +170,11 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .ai-thread { display: flex; flex-direction: column; gap: 10px; align-self: stretch; }
 .ai-q { font-size: 13px; font-weight: 500; color: var(--color-ai); margin-bottom: 4px; }
 .ai-a { font-size: 13px; line-height: 1.55; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-ai-border); border-radius: var(--radius-md); padding: 10px 12px; }
+.contact-row { transition: background-color .12s; border-radius: 4px; }
+.contact-row:hover { background-color: var(--color-bg-subtle) !important; }
+.copy-on-hover { opacity: 0; transition: opacity .12s; }
+.contact-row:hover .copy-on-hover, .copy-on-hover:focus-visible { opacity: 1; }
+.dialog { border-radius: var(--radius-md); }
+.dialog .field-label { font-weight: 400; color: var(--color-text-secondary); }
+.dialog .input { height: 44px; }
+.btn-primary:disabled { opacity: 1; background: var(--color-button-disabled); border-color: transparent; }

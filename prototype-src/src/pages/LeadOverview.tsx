@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { CopyPlus, Download, FileText, Heart, Info, MoveRight, Paperclip, Pause, Pencil, Play, Plus, RefreshCw, Ban, Trash2, Archive, Link2 } from 'lucide-react'
+import { CircleX, CopyPlus, Download, FileText, Heart, Info, MoveRight, Paperclip, Pencil, Plus, RefreshCw, SquareCheck, Trash2, Archive, Link2 } from 'lucide-react'
 import tree from '../figma/tree.json'
 import { FigmaNode, OverridesProvider, indexTree, type FNode, type Handler, type Patch } from '../figma/FigmaNode'
 import { Btn, Dialog, Menu, Toast, type MenuItem, type MenuState, type ToastState } from '../components/Overlay'
@@ -7,6 +7,7 @@ import { Field, Select, TextArea, TextInput } from '../components/Form'
 import { ContactDialog, LeadInfoDialog, type Contact, type LeadInfo } from '../components/EditDialogs'
 import { aiAnswers, aiFallback, designers, projectManagers, projectStatuses, projectTypes } from '../lib/mockData'
 import { AssignDialog, MessagesDialog, type Assignees, type Msg } from '../components/LeadDialogs'
+import { FILES0, FilesTab, type FileCounts } from '../components/FilesTab'
 
 const root = tree as unknown as FNode
 const T = indexTree(root)
@@ -69,6 +70,24 @@ const houseLabel = (i: LeadInfo) => `${i.houseType.charAt(0)}${i.houseType.slice
 const textsIn = (fromId: string, txt: string) => T.findAll(node(fromId), (n) => n.t === 'TEXT' && n.txt === txt).map((n) => n.id)
 const CONTACT_ROWS = ['85:5281', '85:5353', '85:5385']
 
+// Tabs — Overview, Agenda and Files & Photos are built; the rest stay inactive.
+// Every tab renders as a clone of the drawn active / idle tab so the state can move between them.
+const cloneAs = (n: FNode, sfx: string): FNode => ({ ...n, id: `${n.id}#${sfx}`, k: n.k?.map((c) => cloneAs(c, sfx)) })
+const TABS = '19:1210', GRID = '19:1231', CONTENT = '19:1099', LEFT_COL = '19:1232'
+type TabKey = 'overview' | 'agenda' | 'files'
+const TAB_KEYS: Record<string, TabKey> = { Overview: 'overview', Agenda: 'agenda', 'Files & Photos': 'files' }
+const tabs = kidsOf(TABS).map((t) => {
+  const label = textIn(t.id).txt!.trim()
+  const on = cloneAs(node('19:1211'), `on-${t.id}`), off = cloneAs(node('19:1215'), `off-${t.id}`)
+  return { id: t.id, label, key: TAB_KEYS[label] as TabKey | undefined, on, off, onLabel: T.find(on, (n) => n.t === 'TEXT')!.id, offLabel: T.find(off, (n) => n.t === 'TEXT')!.id }
+})
+const TASK_TPL = node(taskRows.find((t) => t.initial === 'upcoming')!.id)
+const taskTypes = ['In-home Consultation', 'Measurement', 'Quote Preparation', 'Follow-up']
+type NewTask = { id: string; name: string; due: string; status: TaskStatus; deleted?: boolean }
+const isPast = (v: string) => new Date(v).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0)
+const fmtDue = (v: string) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+const FILE_SUMMARY: [string, string][] = [['Kitchen', '93:7332'], ['Bathroom', '93:7378'], ['Basement', find('93:7343', (n) => n.t === 'TEXT' && /files?$/.test(n.txt ?? ''))!.id]]
+
 // ---------- page ----------
 export default function LeadOverview() {
   const [menu, setMenu] = useState<MenuState>(null)
@@ -93,6 +112,10 @@ export default function LeadOverview() {
   const [leadInfo, setLeadInfo] = useState<LeadInfo>(LEAD_INFO0)
   const [contact, setContact] = useState<Contact>(CONTACT0)
   const [editing, setEditing] = useState<null | 'lead' | 'contact' | 'assign' | 'messages'>(null)
+  const [tab, setTabState] = useState<TabKey>((new URLSearchParams(location.search).get('tab') as TabKey) || 'overview')
+  const setTab = (t: TabKey) => { setTabState(t); setMenu(null); window.scrollTo({ top: 0 }) }
+  const [newTasks, setNewTasks] = useState<NewTask[]>([])
+  const [files, setFiles] = useState<FileCounts>(FILES0)
 
   const say = useCallback((text: string, undo?: () => void) => setToastState({ id: Date.now(), text, undo }), [])
   const open = (key: string, anchorId: string, items: MenuItem[], width?: number, align?: 'left' | 'right') => setMenu((m) => (m?.key === key ? null : { key, anchorId, items, width, align }))
@@ -226,6 +249,16 @@ export default function LeadOverview() {
   const patchesState = { remove: (id: string) => setRemovedItems((r) => [...r, id]), restore: (id: string) => setRemovedItems((r) => r.filter((x) => x !== id)) }
   removedItems.forEach((id) => (patches[id] = { hidden: true }))
   const setTaskStatus = (id: string, status: TaskStatus, msg: string) => { const prev = task[id].status; setTask((t) => ({ ...t, [id]: { ...t[id], status } })); say(msg, () => setTask((t) => ({ ...t, [id]: { ...t[id], status: prev } }))) }
+  // Task ⋯ menu — exactly the designer's "Agenda — Task actions" spec
+  const taskMenu = (id: string, title: string, setStatus: (s: TaskStatus, msg: string) => void, remove: () => void): MenuItem[] => [
+    { label: 'Edit task', icon: <Pencil {...I} />, onSelect: () => setDialog({ kind: 'task', data: { id, title } }) },
+    { label: 'Attach file', icon: <Paperclip {...I} />, onSelect: () => setDialog({ kind: 'attach', data: { title } }) },
+    '-',
+    { label: 'Mark as idle', icon: <SquareCheck {...I} />, onSelect: () => setStatus('idle', `“${title}” marked as idle`) },
+    { label: 'Cancel task', icon: <CircleX {...I} />, onSelect: () => confirm({ title: `Cancel “${title}”?`, body: 'The task stays in Agenda as Cancelled and stops counting as overdue.', ok: 'Cancel task', run: () => setStatus('cancelled', `“${title}” cancelled`) }) },
+    '-',
+    { label: 'Delete task', danger: true, icon: <Trash2 {...I} />, onSelect: () => confirm({ title: `Delete “${title}”?`, body: 'The task and its attachments are removed for everyone. You can’t undo this.', ok: 'Delete task', danger: true, run: () => { remove(); say(`“${title}” deleted`) } }) },
+  ]
   taskRows.forEach((t) => {
     const s = task[t.id]
     if (s.deleted || (hideDone && s.status === 'done')) { patches[t.id] = { hidden: true }; return }
@@ -245,24 +278,42 @@ export default function LeadOverview() {
         </span>
       ),
     })
-    const items: MenuItem[] = closed
-      ? [{ label: 'Reopen task', icon: <Play {...I} />, onSelect: () => setTaskStatus(t.id, t.initial === 'done' || t.initial === 'cancelled' ? 'upcoming' : t.initial, `“${title}” reopened`) }]
-      : [
-          { label: 'Edit task', icon: <Pencil {...I} />, onSelect: () => setDialog({ kind: 'task', data: { id: t.id, title } }) },
-          { label: 'Attach file', icon: <Paperclip {...I} />, onSelect: () => setDialog({ kind: 'attach', data: { title } }) },
-          '-',
-          s.status === 'idle'
-            ? { label: 'Resume task', icon: <Play {...I} />, onSelect: () => setTaskStatus(t.id, t.initial === 'done' ? 'upcoming' : t.initial, `“${title}” resumed`) }
-            : { label: 'Mark as idle', icon: <Pause {...I} />, onSelect: () => setTaskStatus(t.id, 'idle', `“${title}” marked as idle`) },
-          { label: 'Cancel task', icon: <Ban {...I} />, onSelect: () => confirm({ title: `Cancel “${title}”?`, body: 'The task stays in Agenda as Cancelled and stops counting as overdue. You can reopen it later.', ok: 'Cancel task', run: () => setTaskStatus(t.id, 'cancelled', `“${title}” cancelled`) }) },
-        ]
-    on(t.more, { onClick: () => open(`task-${t.id}`, t.more, [...items, '-', { label: 'Delete task', danger: true, icon: <Trash2 {...I} />, onSelect: () => confirm({ title: `Delete “${title}”?`, body: 'The task and its attachments are removed for everyone. You can’t undo this.', ok: 'Delete task', danger: true, run: () => { setTask((x) => ({ ...x, [t.id]: { ...x[t.id], deleted: true } })); say(`“${title}” deleted`) } }) }], 232), title: 'Task actions' })
+    on(t.more, { onClick: () => open(`task-${t.id}`, t.more, taskMenu(t.id, title, (st, msg) => setTaskStatus(t.id, st, msg), () => setTask((x) => ({ ...x, [t.id]: { ...x[t.id], deleted: true } }))), 232), title: 'Task actions' })
   })
-  const openTasks = taskRows.filter((t) => !task[t.id].deleted && ['overdue', 'upcoming', 'idle'].includes(task[t.id].status))
-  const overdue = openTasks.filter((t) => task[t.id].status === 'overdue').length
+  const openStatuses = [...taskRows.filter((t) => !task[t.id].deleted).map((t) => task[t.id].status), ...newTasks.filter((t) => !t.deleted).map((t) => t.status)].filter((s) => ['overdue', 'upcoming', 'idle'].includes(s))
+  const openTasks = openStatuses
+  const overdue = openStatuses.filter((s) => s === 'overdue').length
   patches[find(AGENDA_HEAD, (n) => n.t === 'TEXT' && /open tasks/.test(n.txt ?? ''))!.id] = { txt: `${openTasks.length} open task${openTasks.length === 1 ? '' : 's'}${overdue ? ` · ${overdue} overdue` : ''}` }
   on(named(AGENDA_HEAD, 'Secondary Button').id, { onClick: () => setDialog({ kind: 'task', data: {} }) })
-  on(named(AGENDA_HEAD, 'Link Button').id, { onClick: () => notInPrototype('The Agenda tab') })
+  const agendaViewAll = named(AGENDA_HEAD, 'Link Button').id
+  if (tab === 'agenda') patches[agendaViewAll] = { hidden: true }
+  else on(agendaViewAll, { onClick: () => setTab('agenda'), title: 'Open the Agenda tab' })
+  // Agenda tab: the same card at full width — the Task column takes the extra space
+  const growCell = (id: string) => { const n = node(id), par = T.parentOf.get(id)!; return { style: { width: `calc(100% - ${par.w - par.al!.p[1] - par.al!.p[3] - n.w}px)` } } }
+  if (tab === 'agenda') ['42:11146', ...taskRows.map((t) => named(t.id, 'Cell / p').id)].forEach((id) => (patches[id] = { ...patches[id], ...growCell(id) }))
+  // Tasks added through "Add Task" — clones of a drawn row
+  const liveNew = newTasks.filter((t) => !t.deleted && !(hideDone && t.status === 'done'))
+  on(AGENDA, { after: liveNew.map((t) => {
+    const c = cloneAs(TASK_TPL, t.id), at = (name: string) => T.find(c, (n) => n.n === name)!.id
+    const ps = pillStyle(t.status), done = t.status === 'done'
+    const pill = T.find(c, (n) => n.n.startsWith('Pill'))!, more = (c.k ?? []).find((k) => k.n === 'Button')!.id, cb = at('Checkbox')
+    patches[at('Name')] = { txt: t.name, decoration: done ? 'line-through' : 'none', color: done ? segColor(doneName) : undefined }
+    patches[at('Created by')] = { txt: 'Test Designer' }
+    patches[at('Due date')] = { txt: fmtDue(t.due), color: t.status === 'overdue' ? segColor(node(taskRows.find((r) => r.initial === 'overdue')!.due)) : undefined }
+    patches[pill.id] = { bg: ps.bg }
+    patches[T.find(pill, (n) => n.t === 'TEXT')!.id] = { txt: statusLabel[t.status], color: ps.fg }
+    if (tab === 'agenda') patches[at('Cell / p')] = growCell(named(TASK_TPL.id, 'Cell / p').id)
+    const setSt = (status: TaskStatus) => setNewTasks((x) => x.map((y) => (y.id === t.id ? { ...y, status } : y)))
+    const reopen: TaskStatus = isPast(t.due) ? 'overdue' : 'upcoming'
+    on(c.id, { className: 'hover-row' }); on(more, { className: moreCls(more) })
+    on(cb, { render: () => (
+      <span key={cb} role="checkbox" aria-checked={done} aria-label={done ? 'Mark as not done' : 'Mark as done'} tabIndex={0} className="check-hit"
+        onClick={() => { setSt(done ? reopen : 'done'); say(done ? `“${t.name}” reopened` : `“${t.name}” marked as done`) }}>
+        <FigmaNode node={{ ...(done ? CHECK_ON : CHECK_OFF), id: `${cb}#${done ? 'on' : 'off'}` }} parent={node(named(TASK_TPL.id, 'Cell / p').id)} />
+      </span>) })
+    on(more, { onClick: () => open(`task-${t.id}`, more, taskMenu(t.id, t.name, (st, msg) => { setSt(st); say(msg) }, () => setNewTasks((x) => x.map((y) => (y.id === t.id ? { ...y, deleted: true } : y)))), 232), title: 'Task actions' })
+    return <FigmaNode key={c.id} node={c} parent={node(AGENDA)} />
+  }) })
   const agendaHeaderMore = kidsOf('42:11145').find((k) => k.n === 'Button')!.id
   on(agendaHeaderMore, { onClick: () => open('agenda-more', agendaHeaderMore, [{ label: hideDone ? 'Show completed tasks' : 'Hide completed tasks', checked: hideDone, onSelect: () => setHideDone((v) => !v) }], 230), title: 'List options' })
 
@@ -279,7 +330,30 @@ export default function LeadOverview() {
   on(named(AI_INPUT, 'Send').id, { onClick: () => { if (!aiText.trim()) { say('Type a question or pick a suggestion'); return } ask(aiText); setAiText('') }, title: 'Send' })
   on(AI, { after: ai.length ? <div className="ai-thread">{ai.map((m, i) => <div key={i}><div className="ai-q">{m.q}</div><div className="ai-a">{m.a}</div></div>)}</div> : undefined })
   on('93:6062', { onClick: () => setEditing('messages') })
-  ;[['93:6004', 'The Signed documents tab'], ['93:7192', 'The Files & Photos tab']].forEach(([id, w]) => on(id, { onClick: () => notInPrototype(w) }))
+  on('93:6004', { onClick: () => notInPrototype('The Signed documents tab') })
+  on('93:7192', { onClick: () => setTab('files'), title: 'Open the Files & Photos tab' })
+  FILE_SUMMARY.forEach(([p, id]) => { const n = Object.values(files[p] ?? {}).reduce((a, b) => a + b, 0); patches[id] = { txt: `${n} file${n === 1 ? '' : 's'}` } })
+  if (files.Bathroom?.['Before Photos']) patches['93:7471'] = { hidden: true }
+
+  // Tabs
+  tabs.forEach((t) => {
+    const active = (t.key ?? '') === tab, c = active ? t.on : t.off
+    patches[active ? t.onLabel : t.offLabel] = { txt: t.label }
+    if (!active) on(c.id, { onClick: () => (t.key ? setTab(t.key) : notInPrototype(`The ${t.label} tab`)), title: t.key ? undefined : `${t.label} — not in this prototype`, className: t.key ? undefined : 'tab-inactive' })
+    on(t.id, { render: () => <FigmaNode node={c} parent={node(TABS)} /> })
+  })
+  if (tab !== 'overview') {
+    patches[CONTENT] = { style: { height: 'auto' } }
+    patches[root.id] = { style: { minHeight: '100vh' } }
+    patches['19:974'] = { style: { position: 'sticky', top: 0, height: '100vh', alignSelf: 'flex-start' } } // shorter tabs: sidebar pinned to the viewport
+    on(GRID, { render: () => (
+      <div className="tab-content">
+        {tab === 'agenda'
+          ? <FigmaNode node={node(AGENDA)} parent={node(LEFT_COL)} />
+          : <FilesTab projects={liveProjects.map((p) => p.name)} counts={files} onAdd={(p, f) => setDialog({ kind: 'attach', data: { p, f } })} />}
+      </div>
+    ) })
+  }
 
   return (
     <OverridesProvider value={{ patches, handlers }}>
@@ -290,14 +364,17 @@ export default function LeadOverview() {
       <ContactDialog open={editing === 'contact'} value={contact} onClose={() => setEditing(null)} onSave={(v) => { const prev = contact; setContact(v); setEditing(null); say('Contact saved', () => setContact(prev)) }} />
       <AssignDialog open={editing === 'assign'} value={assignees} designers={designers} managers={projectManagers} onClose={() => setEditing(null)} onSave={(v) => { const prev = assignees; setAssignees(v); setEditing(null); say(v.designer ? `${v.designer} assigned as designer` : 'Assignees updated', () => setAssignees(prev)) }} />
       <MessagesDialog open={editing === 'messages'} name={fullName} phone={contact.phone} email={contact.email} store={leadInfo.store} status="Pending Leads" created="Sep 29, 2026, 2:17 PM" messages={messages} onSend={(m) => setMessages((x) => [...x, m])} onClose={() => setEditing(null)} />
-      <Dialogs dialog={dialog} close={() => setDialog(null)} say={say} onRenameTask={(id, name) => setTask((t) => ({ ...t, [id]: { ...t[id], name } }))} wish={wish} />
+      <Dialogs dialog={dialog} close={() => setDialog(null)} say={say} onRenameTask={(id, name) => (id.startsWith('new') ? setNewTasks((x) => x.map((y) => (y.id === id ? { ...y, name } : y))) : setTask((t) => ({ ...t, [id]: { ...t[id], name } })))} wish={wish}
+        onAddTask={(name, due) => { const id = `new${Date.now()}`; setNewTasks((x) => [...x, { id, name, due, status: isPast(due) ? 'overdue' : 'upcoming' }]); say(`“${name}” added`, () => setNewTasks((x) => x.filter((y) => y.id !== id))) }}
+        onUpload={(p, f, n) => { setFiles((x) => ({ ...x, [p]: { ...x[p], [f]: (x[p]?.[f] ?? 0) + n } })); say(`${n} file${n === 1 ? '' : 's'} added to ${p} · ${f}`, () => setFiles((x) => ({ ...x, [p]: { ...x[p], [f]: (x[p]?.[f] ?? n) - n } }))) }} />
     </OverridesProvider>
   )
 }
 
-function Dialogs({ dialog, close, say, onRenameTask, wish }: {
+function Dialogs({ dialog, close, say, onRenameTask, wish, onAddTask, onUpload }: {
   dialog: null | { kind: string; data?: Record<string, unknown> }; close: () => void; say: (t: string, undo?: () => void) => void
   onRenameTask: (id: string, name: string) => void; wish: Record<string, boolean>
+  onAddTask: (name: string, due: string) => void; onUpload: (project: string, folder: string, n: number) => void
 }) {
   const d = dialog?.data ?? {}
   const [form, setForm] = useState<Record<string, string>>({})
@@ -320,6 +397,17 @@ function Dialogs({ dialog, close, say, onRenameTask, wish }: {
     const saved = [{ n: 'Kitchen', d: 'White shaker kitchen', c: '5 items' }, { n: 'Bathroom', d: 'No description', c: 'Empty' }].filter((_, i) => i === 1 || wish['93:8375'])
     body = <div className="wish-list">{saved.map((s) => <div key={s.n} className="wish-row"><b>{s.n}</b><span className={s.d === 'No description' ? 'muted' : ''}>{s.d}</span><span className="chip">{s.c}</span><Btn onClick={() => { close(); say(`${s.n} added from wishlist (demo)`) }}>Add</Btn></div>)}</div>
     footer = <Btn onClick={close}>Close</Btn>
+  } else if (dialog?.kind === 'task' && !d.id) {
+    // "Add Task" — fields as in the PiSuite staging dialog: Task, Due Date, Description
+    const today = new Date(); const pad = (n: number) => String(n).padStart(2, '0')
+    const due0 = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}T08:00`
+    title = 'Add Task'
+    body = <>
+      <Field label="Task"><Select value={v('task')} onChange={set('task')}><option value="" disabled>Select task…</option>{taskTypes.map((t) => <option key={t}>{t}</option>)}</Select></Field>
+      <Field label="Due Date"><TextInput type="datetime-local" value={v('due', due0)} onChange={set('due')} /></Field>
+      <Field label="Description"><TextArea value={v('desc')} onChange={set('desc')} placeholder="Description" /></Field>
+    </>
+    footer = <><Btn onClick={close}>Cancel</Btn><Btn kind="primary" disabled={!v('task') || !v('due', due0)} onClick={() => { close(); onAddTask(v('task'), v('due', due0)) }}>Add</Btn></>
   } else if (dialog?.kind === 'task') {
     const editing = d.id as string | undefined
     title = editing ? 'Edit task' : 'Add task'
@@ -334,16 +422,17 @@ function Dialogs({ dialog, close, say, onRenameTask, wish }: {
     </>
     footer = <><Btn onClick={close}>Cancel</Btn><Btn kind="primary" disabled={!v('title', (d.title as string) ?? '').trim()} onClick={() => { const t = v('title', (d.title as string) ?? '').trim(); close(); if (editing) { onRenameTask(editing, t); say('Task updated') } else say(`“${t}” added (demo)`) }}>{editing ? 'Save changes' : 'Add task'}</Btn></>
   } else if (dialog?.kind === 'attach') {
-    title = 'Attach files'; subtitle = <>To “{d.title as string}”</>
+    title = d.p ? 'Add files' : 'Attach files'; subtitle = d.p ? undefined : <>To “{d.title as string}”</>
     body = <>
       <div className="field-row">
-        <Field label="Project"><Select value={v('p', 'Kitchen')} onChange={set('p')}>{['Kitchen', 'Bathroom', 'Basement'].map((t) => <option key={t}>{t}</option>)}</Select></Field>
-        <Field label="Folder"><Select value={v('f', 'Before Photos')} onChange={set('f')}>{['Before Photos', '3D Renderings', '2020 Files', 'Additional Material Photos'].map((t) => <option key={t}>{t}</option>)}</Select></Field>
+        <Field label="Project"><Select value={v('p', (d.p as string) ?? 'Kitchen')} onChange={set('p')}>{['Kitchen', 'Bathroom', 'Basement'].map((t) => <option key={t}>{t}</option>)}</Select></Field>
+        <Field label="Folder"><Select value={v('f', (d.f as string) ?? 'Before Photos')} onChange={set('f')}>{['Before Photos', '3D Renderings', '2020 Files', 'Additional Material Photos'].map((t) => <option key={t}>{t}</option>)}</Select></Field>
       </div>
       <label className="dropzone"><FileText size={22} strokeWidth={1.6} /><b>Drag files here or browse</b><span>Photos, PDF, 2020 files · up to 25 MB</span><input type="file" multiple hidden onChange={(e) => setForm((f) => ({ ...f, [`${key}:files`]: String(e.target.files?.length ?? 0) }))} /></label>
       {Number(v('files', '0')) > 0 && <div className="muted">{v('files')} file(s) selected</div>}
     </>
-    footer = <><Btn onClick={close}>Cancel</Btn><Btn kind="primary" onClick={() => { close(); say(`Files attached to “${d.title as string}” (demo)`) }}>Upload</Btn></>
+    const n = Number(v('files', '0'))
+    footer = <><Btn onClick={close}>Cancel</Btn><Btn kind="primary" disabled={!n} onClick={() => { close(); onUpload(v('p', (d.p as string) ?? 'Kitchen'), v('f', (d.f as string) ?? 'Before Photos'), n) }}>Upload</Btn></>
   } else if (dialog?.kind === 'confirm') {
     title = d.title as string; width = 440
     body = <p className="muted" style={{ lineHeight: 1.55 }}>{d.body as string}</p>

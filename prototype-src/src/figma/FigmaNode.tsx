@@ -179,7 +179,7 @@ export function FigmaNode({ node, parent = null }: { node: FNode; parent?: FNode
     if (s.height === undefined && s.alignSelf !== 'stretch') s.height = px(node.h)
     if (node.op !== undefined) s.opacity = node.op
     // exported SVGs already include the node's rotation — don't rotate twice
-    const svg = ICONS.svg[ICONS.ref[node.id]] ?? ''
+    const svg = ICONS.svg[ICONS.ref[node.id.split('#')[0]]] ?? ''
     el = <div {...common} className={['fig-icon', cls].filter(Boolean).join(' ')} style={{ ...s, ...patch?.style }} dangerouslySetInnerHTML={{ __html: svg }} />
   } else if (node.t === 'LINE') {
     sizing(node, parent, s)

@@ -44,3 +44,10 @@
 ### Intentionally static (controls audit)
 - Rail, sidebar nav, tabs other than Overview (user decision 2026-09-30), breadcrumbs, lead status pill, Bathroom/Basement chevrons (no line items drawn), right-column summary rows, header checkbox in Agenda
 - "View all" (Agenda, Signed documents, Files), Payment plan link, catalog, inline qty edit → toast "isn't part of this prototype"
+
+### Tabs
+- Overview · Agenda · Files & Photos are clickable; other tabs are inactive (toast).
+- Agenda: full-width Agenda card, Add Task modal (Task / Due Date / Description), task ⋯ menu: Edit task, Attach file, Mark as idle, Cancel task, Delete task.
+- Files & Photos: per-project folders, list/grid toggle, required Before Photos warning, "+" → Add files (counts update here and in the Overview summary).
+- Deviation: the designer's task menu says "Delete project" — shown as "Delete task" (it deletes the task).
+- Assumption: Basement's "2 files" from the Overview summary are placed in Before Photos (the mock doesn't say which folder).

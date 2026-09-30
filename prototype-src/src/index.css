@@ -235,3 +235,40 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .icon-box { width: 44px; height: 44px; border-radius: var(--radius-md); border: 1px solid var(--color-border); display: grid; place-items: center; color: var(--color-text-secondary); cursor: pointer; flex-shrink: 0; background: var(--color-surface); }
 .icon-box.send { background: var(--color-brand-dark); border-color: var(--color-brand-dark); color: var(--color-surface); }
 .icon-box.send:disabled { background: var(--color-bg-subtle); border-color: var(--color-bg-subtle); color: var(--color-text-secondary); cursor: not-allowed; }
+
+/* Tabs */
+.tab-content { align-self: stretch; margin-bottom: 48px; display: flex; flex-direction: column; gap: 16px; }
+.tab-content > [data-id] { width: 100% !important; }
+
+/* Files & Photos tab (card = same shell as the Agenda / Project Details cards) */
+.files-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+.files-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; }
+.files-head h2 { font-size: 16px; line-height: 23px; font-weight: 600; letter-spacing: -0.01em; color: var(--color-text-primary); }
+.seg-icons { align-self: center; }
+.seg-icons button { padding: 6px 10px; display: grid; place-items: center; }
+.files-group-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: var(--color-bg-table-header); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); cursor: pointer; text-align: left; }
+.files-group-head:hover { background: var(--color-bg-expanded); }
+.files-chev { color: var(--color-text-secondary); transition: transform .18s var(--spring-snappy); flex-shrink: 0; }
+.files-group-name { font-size: 14px; font-weight: 600; color: var(--color-text-primary); }
+.files-group-count { font-size: 14px; color: var(--color-text-secondary); }
+.files-required-pill { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 8px; background: var(--color-warning-bg); color: var(--color-warning); font-size: 14px; }
+.files-folder { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--color-text-primary); }
+.files-list .files-folder { padding: 10px 20px; min-height: 53px; border-bottom: 1px solid var(--color-border); }
+.files-list .files-folder:last-child { border-bottom: 0; }
+.files-folder-name { flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 6px; }
+.files-req { color: var(--color-danger); }
+.files-warn { color: var(--color-warning); }
+.files-folder-actions { display: inline-flex; align-items: center; gap: 8px; }
+.files-count { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px; border-radius: var(--radius-sm); background: var(--color-bg-subtle); color: var(--color-text-secondary); font-size: 14px; font-variant-numeric: tabular-nums; }
+.files-count.has { color: var(--color-text-primary); }
+.files-folder-actions .icon-box { width: 32px; height: 32px; border-radius: var(--radius-sm); }
+.files-folder-actions .icon-box:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+.files-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--color-border); }
+.files-grid .files-folder { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.files-grid .files-folder.is-missing { border-color: var(--c-eed6af); background: var(--c-fff5e5); }
+.files-grid .files-folder-name { flex: none; }
+.files-folder-icon { color: var(--color-text-secondary); }
+.files-grid .files-folder-actions { width: 100%; justify-content: space-between; }
+.files-group:last-child .files-grid { border-bottom: 0; }
+@media (max-width: 900px) { .files-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tab-inactive { cursor: default; }

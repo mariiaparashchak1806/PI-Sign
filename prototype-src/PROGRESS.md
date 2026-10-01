@@ -112,3 +112,7 @@
 - Lead card has layoutGrow 1 in an auto-height column → flex: none (otherwise it collapses in the browser).
 - Basement shows "Before photos required" in Concept 2's design → Concept 2 seeds Basement's 2 files in Additional Material Photos (FILES0_C2).
 - Checks: concept 2 30/30, files tab 9/9, concept 1 option 1 52/52, option 2 57/57, 0 console errors; visual compare matches.
+
+## 2026-10-01 — tables fixed in Figma + synced
+- Figma (designer's request): Project Details component 226:15063, Default variant — Project column FILL, Materials/Labors/Total/Sales 60, Countertops 84, gap 12, header Status 178 → every row fits and all rows share the same column widths. Agenda component 226:15876 — Created by 120, Due Date 110, Status 110, gap 16 → Task column 266, full task names fit.
+- Prototype: fresh Bridge dumps of 19:973 and 184:3568; build_option1 KEEP emptied (tables as drawn); option 2 and concept 2 rebuilt. Controls: option 1 52/52, option 2 57/57, concept 2 30/30, agenda tab 27/27, 0 console errors.

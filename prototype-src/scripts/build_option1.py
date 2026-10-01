@@ -1,7 +1,7 @@
 # Rebuild src/figma/tree.json — Concept 1 · Option 1 (Figma 19:973) from extraction/c1o1-export.json.
 # Re-created / moved nodes get their previous ids back by a name-matched walk against the last tree
 # (extraction/tree-c1o1-before.json), so every handler keeps working. The shared Project Details / Agenda
-# instances are taken from the last complete version kept for Option 2 (Figma edit of those tables is in progress).
+# instances can be pinned to an older version through KEEP (empty = as drawn).
 import json, copy, hashlib, re
 exp = json.load(open('extraction/c1o1-export.json'))
 old = json.load(open('extraction/tree-c1o1-before.json'))
@@ -13,7 +13,7 @@ def index(n, out):
 O, O2 = index(old, {}), index(o2['tree'], {})
 tree = exp['tree']
 # keep the last complete tables (same shared components as Option 2)
-KEEP = {'Project Details — Filled': '226:16902', 'Agenda': '226:16903'}
+KEEP = {}  # tables fixed in Figma (Oct 1) → use them as drawn; fill in name → Option 2 id to keep an older version
 def keep(n):
     for i, k in enumerate(n.get('k') or []):
         if k['t'] == 'INSTANCE' and k['n'] in KEEP: n['k'][i] = copy.deepcopy(O2[KEEP[k['n']]])

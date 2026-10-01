@@ -127,3 +127,9 @@
 - Estimate state lifted to the page (shared by the tab, the catalog and Overview's "Add/Replace from catalog"); Overview's Project Details numbers stay as drawn.
 - Concept 2 Overview: lead column (124:2656) sticky at full viewport height with its own scroll; Main/Content overflow hidden → clip so sticky works.
 - Checks: option 1 52/52, option 2 57/57, concept 2 30/30, labors tab 19/19, files (c2) 9/9, 0 console errors; add/replace/remove flows clicked through.
+
+## 2026-10-01 — AI Assistant = side panel from Figma 236:4266 (all concepts/variants)
+- New frame "AI chat panel — improved" exported via Bridge → src/figma/ai-panel.json (+12 icons); tree-c2base.json (old AI card source) removed.
+- Opens from the top bar "AI Assistant" (Option 1, Concept 2) / "Ask AI" (Option 2): full-height 400 px panel on the right, slides in, X / Esc closes; conversation scrolls, footer (prompts + input) stays at the bottom.
+- Drawn answer's actions are live: Assign → Pick Assignees (title follows the assigned designer), Open task → scrolls to the overdue task in Agenda and highlights it, Upload → Add files with Bathroom · Before Photos preselected ("N photos uploaded" follows the files). Copy / thumbs up / down work; prompts and the input add new Q&A turns (answers from mockData; "Which designers are free Oct 3?" lists the assignable designers, calendars aren't connected).
+- Checks: scripts/ai-panel-check.mjs 3/3; controls option 1 52/52, option 2 57/57, concept 2 30/30, 0 console errors.

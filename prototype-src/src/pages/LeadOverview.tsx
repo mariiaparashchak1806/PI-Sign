@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
-import { X, CircleX, CopyPlus, Download, FileText, Heart, Info, MoveRight, Paperclip, Pencil, Plus, RefreshCw, SquareCheck, Trash2, Archive, Link2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { spring } from '../lib/springs'
+import { CircleX, Copy, CopyPlus, Sparkles, Download, FileText, Heart, Info, MoveRight, Paperclip, Pencil, Plus, RefreshCw, SquareCheck, Trash2, Archive, Link2 } from 'lucide-react'
 import tree from '../figma/tree.json'
 import treeC1o2 from '../figma/tree-c1o2.json'
-import treeC2base from '../figma/tree-c2base.json'
+import aiPanelTree from '../figma/ai-panel.json'
 import tree2 from '../figma/tree2.json'
 import { FigmaNode, OverridesProvider, indexTree, type FNode, type Handler, type Patch } from '../figma/FigmaNode'
 import { Btn, Dialog, Menu, Toast, type MenuItem, type MenuState, type ToastState } from '../components/Overlay'
@@ -16,7 +18,7 @@ import { ESTIMATE0, type CatalogItem, type Estimate, type Line } from '../lib/es
 import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab } from '../components/OtherTabs'
 
 // Concept 2 (Figma 124:1753): shared widgets carry concept-1 ids (scripts/build_concept2.py), so the same handlers apply.
-// tree-c2base.json (the older 19:973 snapshot) is only the source of the AI Assistant card for the side panel.
+// ai-panel.json (Figma 236:4266 "AI chat panel — improved") is the AI Assistant side panel shared by every concept.
 const root2 = tree2 as unknown as FNode
 const T2 = indexTree(root2)
 export type Concept = 1 | 2
@@ -52,15 +54,11 @@ const PD_TOGGLES = T.find(node(PD), (n) => n.n === 'Table toolbar')?.id // curre
 const PROJECT_ROWS = ['93:8375', '42:10700', '42:10752']
 const AGENDA = '42:10916', AGENDA_HEAD = '42:10917'
 const ACTIVITY_HEAD = '93:4855', ACTIVITY_BODY = '93:5083'
-// AI Assistant card: on the page, or (Option 2: "Ask AI" button) taken from the 19:973 frame for the side panel
-const isAI = (n: FNode) => n.n === 'AI Assistant' && n.t !== 'TEXT'
-// the AI card is no longer drawn on the Concept 1 pages → the side panel uses the card from the 19:973 snapshot
-const TA = T.find(root, isAI) ? T : indexTree(treeC2base as unknown as FNode)
-const AI = TA.find(TA.byId.get(TA === T ? root.id : '19:973')!, isAI)!.id
-const aiNode = TA.byId.get(AI)!
-const AI_INPUT = TA.find(aiNode, (n) => n.n === 'Input')!.id
-const AI_SUGGESTIONS = TA.findAll(aiNode, (n) => n.n.startsWith('Suggestion /')).map((n) => n.id)
-const AI_INLINE = TA === T
+// AI Assistant side panel (Figma 236:4266) — opens from the top bar / "Ask AI" on every concept
+const TP = indexTree(aiPanelTree as unknown as FNode)
+const AIP = TP.byId.get('236:4266')!
+const AIP_THREAD = '236:4288', AIP_CONVO = '236:4284'
+const node2 = (id: string) => TP.byId.get(id)!
 const PD_TOTAL_ROW = (node(PD).k ?? []).find((k) => k.n === 'Row / Total' && !k.hidden)?.id
 const NEEDS = T.find(root, (n) => n.n === 'Section - Needs attention')
 // Signed documents card (summary in the old snapshot, "widget" in the current frame): every link/button opens its tab
@@ -147,6 +145,12 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const [hideDone, setHideDone] = useState(false)
   const [ai, setAi] = useState<{ q: string; a: string }[]>([])
   const [aiText, setAiText] = useState('')
+  const [aiVote, setAiVote] = useState<string | null>(null)
+  useEffect(() => {
+    if (!aiOpen) return
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && !document.querySelector('[role="dialog"]') && setAiOpen(false)
+    document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key)
+  }, [aiOpen])
   const [leadInfo, setLeadInfo] = useState<LeadInfo>(LEAD_INFO0)
   const [contact, setContact] = useState<Contact>(CONTACT0)
   const [editing, setEditing] = useState<null | 'lead' | 'contact' | 'assign' | 'messages'>(null)
@@ -447,12 +451,6 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   on(ACTIVITY_HEAD, { onClick: () => setActivityOpen((v) => !v), title: activityOpen ? 'Collapse activity' : 'Expand activity', className: 'row-hover' })
 
   // Right column
-  const ask = (q: string) => { if (!q.trim()) return; setAi((a) => [...a, { q, a: aiAnswers[q] ?? aiFallback }]) }
-  AI_SUGGESTIONS.forEach((id) => on(id, { onClick: () => ask(TA.find(TA.byId.get(id)!, (n) => n.t === 'TEXT')!.txt!) }))
-  const aiPlaceholder = TA.find(TA.byId.get(AI_INPUT)!, (n) => n.n === 'Placeholder')!
-  on(aiPlaceholder.id, { render: () => <input key="ai-field" className="bare-input" style={{ flex: '1 1 0', minWidth: 0, fontSize: 13, lineHeight: '19px' }} value={aiText} onChange={(e) => setAiText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { ask(aiText); setAiText('') } }} placeholder={aiPlaceholder.txt} aria-label="Ask the AI assistant" /> })
-  on(TA.find(TA.byId.get(AI_INPUT)!, (n) => n.n === 'Send')!.id, { onClick: () => { if (!aiText.trim()) { say('Type a question or pick a suggestion'); return } ask(aiText); setAiText('') }, title: 'Send' })
-  on(AI, { after: ai.length ? <div className="ai-thread">{ai.map((m, i) => <div key={i}><div className="ai-q">{m.q}</div><div className="ai-a">{m.a}</div></div>)}</div> : undefined })
   if (tabsOn) on('93:6062', { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
   if (tabsOn) SIGNED_LINKS.forEach((id) => on(id, { onClick: () => setTab('agreements'), title: 'Open the Signed documents tab' }))
   if (tab !== 'files') on('93:7192', { onClick: () => setTab('files'), title: 'Open the Files & Photos tab' })
@@ -481,7 +479,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     ) })
   }
 
-  const topAI = !AI_INLINE ? T.find(node('19:1070'), (n) => n.n === 'Primary Button' && !!T.find(n, (m) => m.t === 'TEXT' && m.txt === 'AI Assistant')) : undefined
+  const topAI = T.find(node('19:1070'), (n) => n.n === 'Primary Button' && !!T.find(n, (m) => m.t === 'TEXT' && m.txt === 'AI Assistant'))
   if (topAI) on(topAI.id, { onClick: () => setAiOpen((v) => !v), title: 'AI Assistant' })
 
   // ---------- Concept 1 · Option 2 (Figma 184:3568): merged lead card, stage, Needs attention, Ask AI ----------
@@ -569,15 +567,47 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     on('124:3631', { onClick: () => setAiOpen((v) => !v), title: 'AI Assistant' })
   }
 
+  // ---------- AI Assistant side panel (Figma 236:4266) ----------
+  const ask = (q: string) => { if (!q.trim()) return; setAi((a) => [...a, { q, a: aiAnswers[q] ?? aiFallback }]); setTimeout(() => { const c = document.querySelector(`[data-id="${AIP_CONVO}"]`); c?.scrollTo({ top: c.scrollHeight, behavior: 'smooth' }) }, 60) }
+  patches['236:4266'] = { style: { width: '100%', height: '100%', minHeight: 0, boxShadow: 'none' } }
+  patches[AIP_CONVO] = { style: { overflowY: 'auto', minHeight: 0 } }
+  patches['236:4273'] = { txt: fullName }
+  on('236:4282', { onClick: () => setAiOpen(false), title: 'Close AI Assistant', className: 'icon-hover' })
+  // blockers in the drawn answer → the real actions; their state follows the lead
+  if (designer) { patches['236:4297'] = { txt: `${designer} assigned` }; patches['I240:4403;72:6318'] = { txt: 'Change' } }
+  on('240:4403', { onClick: () => setEditing('assign'), title: designer ? 'Change assignees' : 'Assign designer' })
+  const overdueTask = taskRows.find((t) => t.initial === 'overdue')
+  on('240:4416', { onClick: () => { setTab('overview'); requestAnimationFrame(() => { const el = overdueTask ? document.querySelector(`[data-id="${CSS.escape(overdueTask.id)}"]`) : null; el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); el?.classList.add('flash'); setTimeout(() => el?.classList.remove('flash'), 1600) }) }, title: 'Show the task in Agenda' })
+  const bathBefore = files.Bathroom?.['Before Photos']?.length ?? 0
+  patches['236:4312'] = { txt: `${bathBefore} photo${bathBefore === 1 ? '' : 's'} uploaded` }
+  on('240:4429', { onClick: () => setDialog({ kind: 'attach', data: { p: 'Bathroom', f: 'Before Photos' } }), title: 'Upload Bathroom before photos' })
+  on('237:20577', { onClick: () => { navigator.clipboard?.writeText(TP.findAll(node2(AIP_THREAD), (n) => n.t === 'TEXT' && n.id !== '236:4292').map((n) => n.txt).join('\n')); say('Answer copied') }, title: 'Copy answer', className: 'icon-hover' })
+  ;[['237:20586', 'up'], ['237:20589', 'down']].forEach(([id, v]) => on(id, { onClick: () => { setAiVote((x) => (x === v ? null : v)); if (aiVote !== v) say('Thanks for the feedback') }, title: v === 'up' ? 'Helpful' : 'Not helpful', className: `icon-hover${aiVote === v ? ' voted' : ''}` }))
+  ;['236:4362', '236:4366'].forEach((id) => on(id, { onClick: () => ask(TP.find(node2(id), (n) => n.t === 'TEXT')!.txt!), className: 'chip-hover' }))
+  on('236:4371', { render: () => <input key="ai-field" className="bare-input" style={{ flex: '1 1 0', minWidth: 0, fontSize: 14, lineHeight: '21px' }} value={aiText} onChange={(e) => setAiText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { ask(aiText); setAiText('') } }} placeholder={`Ask about ${fullName}…`} aria-label="Ask the AI assistant" autoFocus /> })
+  on('236:4372', { onClick: () => { if (!aiText.trim()) { say('Type a question or pick a suggestion'); return } ask(aiText); setAiText('') }, title: 'Send' })
+  on(AIP_THREAD, { after: ai.length ? <div className="aip-thread">{ai.map((m, i) => (
+    <div key={i} className="aip-turn">
+      <div className="aip-q"><span>{m.q}</span></div>
+      <div className="aip-label"><Sparkles size={14} />AI Assistant</div>
+      <p className="aip-a">{m.a}</p>
+      <div className="aip-tools">
+        <button className="icon-plain" aria-label="Copy answer" onClick={() => { navigator.clipboard?.writeText(m.a); say('Answer copied') }}><Copy size={16} /></button>
+        <span>Just now</span>
+      </div>
+    </div>
+  ))}</div> : undefined })
+
   return (
     <OverridesProvider value={{ patches, handlers }}>
       <FigmaNode node={R} />
-      {(concept === 2 || !AI_INLINE) && aiOpen && (
-        <aside className="ai-drawer" aria-label="AI Assistant">
-          <button className="icon-plain ai-drawer-close" aria-label="Close AI Assistant" onClick={() => setAiOpen(false)}><X size={18} /></button>
-          <FigmaNode node={aiNode} parent={TA.byId.get('19:1233')!} />
-        </aside>
-      )}
+      <AnimatePresence>
+        {aiOpen && (
+          <motion.aside key="ai" className="ai-panel" aria-label="AI Assistant" initial={{ x: 420 }} animate={{ x: 0 }} exit={{ x: 420 }} transition={spring.calm}>
+            <FigmaNode node={AIP} />
+          </motion.aside>
+        )}
+      </AnimatePresence>
       <Menu state={menu?.key === 'cols' && colsMenuItems ? { ...menu, items: colsMenuItems() } : menu} onClose={() => setMenu(null)} />
       <CatalogDialog target={catalog} projects={liveProjects.map((p) => p.name)} onClose={() => setCatalog(null)} onAdd={addPicks} onReplace={replaceLine} />
       <Toast toast={toast} onDone={() => setToastState(null)} />

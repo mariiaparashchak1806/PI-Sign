@@ -15,6 +15,8 @@ export const projectStatuses: { label: string; bg: string; fg: string; dot: stri
 export const projectTypes = ['Kitchen', 'Bathroom', 'Basement', 'Laundry', 'Closet']
 
 export const aiAnswers: Record<string, string> = {
+  'Which designers are free Oct 3?':
+    'Calendar availability isn’t connected yet. Designers you can assign: Anna Kovalenko, Mark Evans, Jeffrey Lindon, Test Designer and Test Designer 2 — use Assign above to pick one.',
   'Summarize this lead':
     'Cheryl Isaac (Washington DC) has 3 projects worth $13,128. Kitchen is fully estimated ($8,778); Bathroom is estimated but still needs before photos; Basement is empty. The consultation was on Sep 24 and one task is overdue. No designer is assigned yet.',
   'What’s missing before the quote?':

@@ -94,3 +94,7 @@
 - Checks: controls option 2 57/57, option 1 55/55, concept 2 28/28, 0 console errors; visual compare vs Figma PNG matches (diff noise = 1 px sub-pixel offsets, sticky sidebar, page height).
 - 2026-10-01 (re-check): 184:3568 re-exported — Needs attention removed from the design; left column is now a component (226:16901) with Project Details / Agenda / Activity instances (pairs updated in build_option2.py). Needs-attention logic stays dormant (guarded). Controls 52/52, agenda 27/27, files 19/19, concept 2 28/28, option 1 55/55, 0 console errors; visual compare matches (only hover-only ⋯ differ).
 - 2026-10-01 (re-check 2): Needs attention is back (new instance 231:19883 — bindings are by name, work unchanged); Lead stage bg updated. Project Details / Agenda column edits in Figma are mid-way (Project column collapsed to 1–8 px, names hidden, ⋯ overflowing) → kept the previous version of both tables until the designer finishes. scripts/compare_export.py added.
+
+## 2026-10-01 — concepts split into separate links
+- No more presenter switch. Concept 1: /prototype/concept-1/ (and /prototype/), Concept 2: /prototype/concept-2/. ?concept=2 still works for old links.
+- Build: scripts/concept-pages.mjs copies index.html to concept-1/ and concept-2/ (assets use the absolute base; App picks the concept from the path). scripts/concept-url-check.mjs verifies.

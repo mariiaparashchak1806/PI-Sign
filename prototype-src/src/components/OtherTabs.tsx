@@ -124,16 +124,12 @@ export function AgreementsTab({ say, confirm }: { say: (t: string) => void; conf
       </button>
       {settingsOpen && (
         <div className="tcard-body">
-          <div className="field-row">
-            <Field label="Estimated job start date"><TextInput type="date" value={s.start} onChange={(e) => setS({ ...s, start: e.target.value })} /></Field>
-            <Field label="Estimated job duration (business days)">
-              <div className="range"><TextInput type="number" min={1} aria-label="From" value={s.from} onChange={(e) => setS({ ...s, from: e.target.value })} /><span>–</span><TextInput type="number" min={1} aria-label="To" value={s.to} onChange={(e) => setS({ ...s, to: e.target.value })} /></div>
-            </Field>
-          </div>
-          <div className="check-stack">
-            <label className="catalog-check"><input type="checkbox" checked={s.senior} onChange={(e) => setS({ ...s, senior: e.target.checked })} />Buyer is older than 65 years old</label>
-            <label className="catalog-check wrap"><input type="checkbox" checked={s.permits} onChange={(e) => setS({ ...s, permits: e.target.checked })} />Please confirm if you expect the Company to pull the permits</label>
-          </div>
+          <Field label="Estimated job start date"><TextInput type="date" value={s.start} onChange={(e) => setS({ ...s, start: e.target.value })} /></Field>
+          <label className="catalog-check"><input type="checkbox" checked={s.senior} onChange={(e) => setS({ ...s, senior: e.target.checked })} />Buyer is older than 65 years old</label>
+          <Field label="Estimated job duration (business days)">
+            <div className="range"><TextInput type="number" min={1} aria-label="From" value={s.from} onChange={(e) => setS({ ...s, from: e.target.value })} /><span>–</span><TextInput type="number" min={1} aria-label="To" value={s.to} onChange={(e) => setS({ ...s, to: e.target.value })} /></div>
+          </Field>
+          <label className="catalog-check wrap"><input type="checkbox" checked={s.permits} onChange={(e) => setS({ ...s, permits: e.target.checked })} />Please confirm if you expect the Company to pull the permits</label>
           <Field label="Necessary notes">
             <div className="rte">
               <div className="rte-tools" role="toolbar" aria-label="Formatting">{tools.map(([c, icon, label]) => <button key={c} type="button" className="icon-plain" title={label} aria-label={label} onMouseDown={(e) => e.preventDefault()} onClick={() => fmt(c)}>{icon}</button>)}</div>

@@ -81,3 +81,4 @@
 - Overview summary cards (both concepts) count from the same state. Task "Attach file" adds real file items.
 - Concept 2: Files & Photos tab enabled (other tabs still inert); "View all" in its Files card opens it.
 - Checks: scripts/files-check.mjs; controls c1 57/57, c2 28/28, files tab c1 20/20 · c2 9/9, 0 console errors.
+- 2026-10-01: Contact card (concept 1): Call and SMS icons removed from the phone row; hover-only copy stays. Concept 2's contact block never had them.

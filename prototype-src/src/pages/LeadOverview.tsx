@@ -211,8 +211,9 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   )
   on(named('85:5281', 'Actions').id, { after: copyBtn('phone', contact.phone, 'Phone number', named('85:5281', 'Actions').id) })
   on('85:5385', { className: 'contact-row', after: copyBtn('address', contact.address, 'Address', '85:5385') })
-  on(named('85:5281', 'Icon button / Call').id, { onClick: () => { say(`Calling ${contact.phone}…`); location.href = `tel:${contact.phone.replace(/[^+\d]/g, '')}` }, title: 'Call' })
-  on(named('85:5281', 'Icon button / Copy').id, { onClick: () => setEditing('messages'), title: 'Messages' })
+  // Call and SMS icons removed from the phone row (designer, Oct 1); the hover-only copy button stays
+  patches[named('85:5281', 'Icon button / Call').id] = { hidden: true }
+  patches[named('85:5281', 'Icon button / Copy').id] = { hidden: true }
 
   // Top bar search → real input
   const searchText = textIn('19:1071')

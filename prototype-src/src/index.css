@@ -416,3 +416,9 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .pv-strip > span { border-radius: 8px; padding: 2px; border: 2px solid transparent; }
 .pv-strip > span.on { border-color: var(--color-brand-dark); }
 .tab-content.in-row { flex: 1 1 0; min-width: 0; }
+
+/* Concept 1 variant switch (Option 1 / Option 2) — presenter control over the empty sidebar area */
+.variant-switch { position: fixed; left: 100px; bottom: 20px; z-index: 60; display: inline-flex; gap: 4px; padding: 4px; border-radius: 10px; background: var(--color-surface); border: 1px solid var(--color-border); box-shadow: var(--shadow-menu); }
+.variant-switch button { height: 32px; padding: 0 14px; border-radius: 7px; font-size: 14px; font-weight: 500; color: var(--color-text-secondary); cursor: pointer; }
+.variant-switch button:hover { color: var(--color-text-primary); }
+.variant-switch button.on { background: var(--color-brand-dark); color: var(--color-surface); }

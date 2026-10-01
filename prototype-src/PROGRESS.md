@@ -98,3 +98,10 @@
 ## 2026-10-01 — concepts split into separate links
 - No more presenter switch. Concept 1: /prototype/concept-1/ (and /prototype/), Concept 2: /prototype/concept-2/. ?concept=2 still works for old links.
 - Build: scripts/concept-pages.mjs copies index.html to concept-1/ and concept-2/ (assets use the absolute base; App picks the concept from the path). scripts/concept-url-check.mjs verifies.
+
+## 2026-10-01 — Concept 1 has two variants
+- Option 1 = Figma 19:973 (re-synced: breadcrumbs in the top bar, AI Assistant button → side panel, AI card removed from the right column, shared Project Details / Agenda / Activity components), Option 2 = Figma 184:3568.
+- scripts/build_option1.py rebuilds tree.json from extraction/c1o1-export.json with a name-matched walk against the previous tree (ids kept → handlers work).
+- Both variants use the last complete Project Details + Agenda (the shared components are mid-edit in Figma: Project column collapsed / task names cut).
+- Links: /prototype/concept-1/ (Option 1), /prototype/concept-1/option-1/, /prototype/concept-1/option-2/, /prototype/concept-2/; "Option 1 / Option 2" switch on Concept 1 pages (updates the URL; switching resets prototype state).
+- Checks: option 1 52/52, option 2 57/57, concept 2 28/28, agenda/files tabs 27/19, 0 console errors; visual compare matches except the in-progress tables.

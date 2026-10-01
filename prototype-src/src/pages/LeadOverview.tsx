@@ -53,7 +53,8 @@ const AGENDA = '42:10916', AGENDA_HEAD = '42:10917'
 const ACTIVITY_HEAD = '93:4855', ACTIVITY_BODY = '93:5083'
 // AI Assistant card: on the page, or (Option 2: "Ask AI" button) taken from the 19:973 frame for the side panel
 const isAI = (n: FNode) => n.n === 'AI Assistant' && n.t !== 'TEXT'
-const TA = T.find(root, isAI) ? T : indexTree(tree as unknown as FNode)
+// the AI card is no longer drawn on the Concept 1 pages → the side panel uses the card from the 19:973 snapshot
+const TA = T.find(root, isAI) ? T : indexTree(treeC2base as unknown as FNode)
 const AI = TA.find(TA.byId.get(TA === T ? root.id : '19:973')!, isAI)!.id
 const aiNode = TA.byId.get(AI)!
 const AI_INPUT = TA.find(aiNode, (n) => n.n === 'Input')!.id
@@ -457,6 +458,9 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     ) })
   }
 
+  const topAI = !AI_INLINE ? T.find(node('19:1070'), (n) => n.n === 'Primary Button' && !!T.find(n, (m) => m.t === 'TEXT' && m.txt === 'AI Assistant')) : undefined
+  if (topAI) on(topAI.id, { onClick: () => setAiOpen((v) => !v), title: 'AI Assistant' })
+
   // ---------- Concept 1 · Option 2 (Figma 184:3568): merged lead card, stage, Needs attention, Ask AI ----------
   if (LEAD_CARD2) {
     textsIn(LEAD_CARD2, 'Cheryl Isaac').forEach((id) => (patches[id] = { txt: fullName }))
@@ -569,12 +573,12 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
 }
 
 // Concept 1 = Option 2 (Figma 184:3568); the previous Concept 1 frame (19:973) stays reachable at ?concept=1&option=1
-const Page1 = makePage(treeC1o2)
+// Concept 1 has two variants: Option 1 = Figma 19:973, Option 2 = Figma 184:3568
 const Page1o1 = makePage(tree)
+const Page1o2 = makePage(treeC1o2)
 const Page2 = makePage(treeC2base)
-const option1 = new URLSearchParams(location.search).get('option') === '1'
-export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
-  return concept === 2 ? <Page2 concept={2} /> : option1 ? <Page1o1 concept={1} /> : <Page1 concept={1} />
+export default function LeadOverview({ concept = 1, option = 1 }: { concept?: Concept; option?: 1 | 2 }) {
+  return concept === 2 ? <Page2 concept={2} /> : option === 2 ? <Page1o2 concept={1} /> : <Page1o1 concept={1} />
 }
 
 function Dialogs({ dialog, close, say, onRenameTask, wish, onAddTask, onUpload }: {

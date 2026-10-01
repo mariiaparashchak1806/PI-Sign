@@ -65,6 +65,8 @@
 - Concept 1 = Figma 184:3568 (Option 2); old 19:973 at ?option=1. Needs attention links follow their labels (design text/label mismatch flagged to designer).
 
 ## Links
-- Concept 1: https://mariiaparashchak1806.github.io/PI-Sign/prototype/concept-1/
+- Concept 1 · Option 1: https://mariiaparashchak1806.github.io/PI-Sign/prototype/concept-1/
+- Concept 1 · Option 2: https://mariiaparashchak1806.github.io/PI-Sign/prototype/concept-1/option-2/
 - Concept 2: https://mariiaparashchak1806.github.io/PI-Sign/prototype/concept-2/
 - The concept switch was removed (separate links per concept).
+- Concept 1 pages have an Option 1 / Option 2 switch (bottom-left).

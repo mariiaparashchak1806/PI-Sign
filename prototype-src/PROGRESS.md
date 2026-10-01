@@ -92,3 +92,4 @@
 - Previous Concept 1 (19:973) kept at ?concept=1&option=1. Concept 2 unchanged.
 - Files & Photos: list/grid toggle removed (designer) — list only.
 - Checks: controls option 2 57/57, option 1 55/55, concept 2 28/28, 0 console errors; visual compare vs Figma PNG matches (diff noise = 1 px sub-pixel offsets, sticky sidebar, page height).
+- 2026-10-01 (re-check): 184:3568 re-exported — Needs attention removed from the design; left column is now a component (226:16901) with Project Details / Agenda / Activity instances (pairs updated in build_option2.py). Needs-attention logic stays dormant (guarded). Controls 52/52, agenda 27/27, files 19/19, concept 2 28/28, option 1 55/55, 0 console errors; visual compare matches (only hover-only ⋯ differ).

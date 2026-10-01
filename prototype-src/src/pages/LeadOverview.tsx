@@ -15,7 +15,7 @@ import { AssignDialog, MessagesDialog, type Assignees, type Msg } from '../compo
 import { FILES0, FILES0_C2, FilesTab, countIn, hasRequired, type FilesState, type Folder, type FileItem } from '../components/FilesTab'
 import { CatalogDialog, type CatalogKind, type CatalogTarget } from '../components/CatalogDialog'
 import { ESTIMATE0, type CatalogItem, type Estimate, type Line } from '../lib/estimate'
-import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab } from '../components/OtherTabs'
+import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab, plansLabel, splitEvenly, type PayRow } from '../components/OtherTabs'
 
 // Concept 2 (Figma 124:1753): shared widgets carry concept-1 ids (scripts/build_concept2.py), so the same handlers apply.
 // ai-panel.json (Figma 236:4266 "AI chat panel — improved") is the AI Assistant side panel shared by every concept.
@@ -164,6 +164,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const [files, setFiles] = useState<FilesState>(concept === 2 ? FILES0_C2 : FILES0)
   const [catalog, setCatalog] = useState<CatalogTarget>(null)
   const [estimate, setEstimate] = useState<Estimate>(ESTIMATE0)
+  const [payPlan, setPayPlan] = useState<PayRow[]>(() => splitEvenly(2)) // the mock shows "2 payments"
   const kindNoun = (k: CatalogKind) => k.toLowerCase()
   const addPicks = (kind: CatalogKind, project: string, picks: { item: CatalogItem; qty: number }[]) => {
     const prev = estimate
@@ -471,9 +472,9 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
         {tab === 'agenda' ? <FigmaNode node={node(AGENDA)} parent={node(LEFT_COL)} />
           : tab === 'files' ? <FilesTab projects={liveProjects.map((p) => p.name)} files={files} setFiles={setFiles} say={say} />
           : tab === 'labors' || tab === 'materials' || tab === 'countertops' ? <EstimateTab key={tab} kind={(tab.charAt(0).toUpperCase() + tab.slice(1)) as CatalogKind} projects={liveProjects.map((p) => p.name)} estimate={estimate} setEstimate={setEstimate} onCatalog={setCatalog} say={say} />
-          : tab === 'payment' ? <PaymentTab />
+          : tab === 'payment' ? <PaymentTab total={13128} saved={payPlan} onSave={setPayPlan} say={say} />
           : tab === 'agreements' ? <AgreementsTab say={say} confirm={confirm} />
-          : tab === 'messages' ? <MessagesTab name={fullName} messages={messages} onSend={(m) => setMessages((x) => [...x, m])} />
+          : tab === 'messages' ? <MessagesTab name={fullName} phone={contact.phone} email={contact.email} messages={messages} onSend={(m) => { setMessages((x) => [...x, m]); say(`${m.ch} sent to ${fullName}`) }} say={say} />
           : <FormsTab email={contact.email} say={say} confirm={confirm} />}
       </div>
     ) })
@@ -566,6 +567,9 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     // AI Assistant lives in the top bar here → opens the same assistant card in a side panel
     on('124:3631', { onClick: () => setAiOpen((v) => !v), title: 'AI Assistant' })
   }
+
+  // Payment plan text on the lead card(s) follows the saved plan
+  ;['109:3925', '109:3830', 'I109:6980;109:3283', '231:20343', '124:2705'].forEach((id) => (patches[id] = { ...patches[id], txt: payPlan.length ? plansLabel(payPlan.length) : 'Not set' }))
 
   // ---------- AI Assistant side panel (Figma 236:4266) ----------
   const ask = (q: string) => { if (!q.trim()) return; setAi((a) => [...a, { q, a: aiAnswers[q] ?? aiFallback }]); setTimeout(() => { const c = document.querySelector(`[data-id="${AIP_CONVO}"]`); c?.scrollTo({ top: c.scrollHeight, behavior: 'smooth' }) }, 60) }

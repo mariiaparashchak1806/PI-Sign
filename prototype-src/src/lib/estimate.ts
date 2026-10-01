@@ -26,7 +26,11 @@ export const ESTIMATE0: Estimate = {
 export const SUMMARY: Summary = { Bathroom: { Materials: { items: 3, total: 1850 }, Labors: { items: 2, total: 1600 }, Countertops: { items: 1, total: 900 } } }
 
 // ---------- catalog ----------
-export type CatalogItem = { code: string; name: string; category: string; cost?: number; multiplier?: number; price: number; unit?: string }
+export type CatalogItem = {
+  code: string; name: string; category: string; cost?: number; multiplier?: number; price: number; unit?: string
+  image?: string; vendor?: string; brand?: string; specs?: string[]; inStock?: boolean
+}
+const img = (f: string) => `${import.meta.env.BASE_URL}catalog/${f}`
 // Labors: categories and the first items as shown in the PiSuite staging catalog (Oct 1 screenshots);
 // "Demolition & haul-away" and "Cabinet installation" are the mock's Kitchen labors.
 export const CATALOG: Record<CatalogKind, { categories: string[]; items: CatalogItem[] }> = {
@@ -52,7 +56,18 @@ export const CATALOG: Record<CatalogKind, { categories: string[]; items: Catalog
     { code: 'mock-m1', name: 'Shaker base cabinet 36"', category: '', price: 420 },
     { code: 'mock-m2', name: 'Cabinet pulls, brushed nickel', category: '', price: 12 },
   ] },
-  Countertops: { categories: [], items: [{ code: 'mock-c1', name: 'Quartz countertop, 3 cm', category: '', price: 65, unit: 'sq ft' }] },
+  // Countertops: the first rows of the PiSuite staging catalog (Oct 1 screenshot; thumbnails cropped from it, "In Stock" was on)
+  // — staging titles repeat SKU and brand ("SKU… – Cambria – SKU… – Cambria – Ridgegate – 131X65 – Polished Only"),
+  // so they're split into name / size · finish / SKU. Category column = "Countertops · <brand>".
+  Countertops: { categories: ['Cambria', 'Silestone'], items: [
+    { code: 'SKU1727986026007', name: 'Cambria Ridgegate', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65', 'Polished only'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-1.jpg'), inStock: true },
+    { code: 'SKU1727986026336', name: 'Cambria Dovestone', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65', 'Polished only'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-2.jpg'), inStock: true },
+    { code: 'SKU1727986025879B', name: 'Cambria Rose Bay', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-3.jpg'), inStock: true },
+    { code: 'SKU1727986026178', name: 'Cambria Weybourne', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-4.jpg'), inStock: true },
+    { code: 'SKU1727986026068C', name: 'Silestone Miami White 17', category: 'Silestone', vendor: 'Silestone', brand: 'Silestone', specs: [], cost: 50, multiplier: 1.8, price: 90, image: img('ct-5.jpg'), inStock: true },
+    { code: 'SKU1727986026231', name: 'Cambria Notting Hill', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65'], cost: 98, multiplier: 1.8, price: 176.4, image: img('ct-6.jpg'), inStock: true },
+    { code: 'mock-c1', name: 'Quartz countertop, 3 cm', category: '', price: 65, unit: 'sq ft' },
+  ] },
 }
 
 // one price format everywhere: $1,200 / $5.40 / $7,200

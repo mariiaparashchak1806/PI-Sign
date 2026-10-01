@@ -52,7 +52,8 @@ export function AssignDialog({ open, value, designers, managers, onClose, onSave
   )
 }
 
-export type Msg = { out: boolean; ch: 'SMS' | 'Email'; text: string; when: string }
+export type MsgFile = { name: string; size: number; src?: string; private?: boolean }
+export type Msg = { out: boolean; ch: 'SMS' | 'Email'; text: string; when: string; files?: MsgFile[] }
 export function MessagesDialog({ open, name, phone, email, store, status, created, messages, onSend, onClose }: {
   open: boolean; name: string; phone: string; email: string; store: string; status: string; created: string; messages: Msg[]; onSend: (m: Msg) => void; onClose: () => void
 }) {

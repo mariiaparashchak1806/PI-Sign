@@ -29,11 +29,14 @@ export function CatalogDialog({ target, projects, onClose, onAdd, onReplace }: {
   const [cat, setCat] = useState('All')
   const [search, setSearch] = useState('')
   const [showCost, setShowCost] = useState(false)
+  const [brand, setBrand] = useState('')
+  const [vendor, setVendor] = useState('')
+  const [inStock, setInStock] = useState(true)
   const [cart, setCart] = useState<Record<string, number>>({})
   const [cleared, setCleared] = useState<Record<string, number> | null>(null)
   useEffect(() => {
     if (!target) return
-    setProject(target.project); setCat('All'); setSearch(''); setCart({}); setCleared(null)
+    setProject(target.project); setCat('All'); setSearch(''); setBrand(''); setVendor(''); setCart({}); setCleared(null)
   }, [target])
   useEffect(() => {
     if (!target) return
@@ -46,8 +49,12 @@ export function CatalogDialog({ target, projects, onClose, onAdd, onReplace }: {
   const noun = kind.toLowerCase()
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return items.filter((it) => (cat === 'All' || it.category === cat) && (!q || it.name.toLowerCase().includes(q) || it.code.includes(q)))
-  }, [items, cat, search])
+    return items.filter((it) => (cat === 'All' || it.category === cat) && (!q || it.name.toLowerCase().includes(q) || it.code.toLowerCase().includes(q))
+      && (!brand || it.brand === brand) && (!vendor || it.vendor === vendor) && (!inStock || it.inStock !== false))
+  }, [items, cat, search, brand, vendor, inStock])
+  const uniq = (k: 'brand' | 'vendor') => [...new Set(items.map((it) => it[k]).filter(Boolean))] as string[]
+  const brands = uniq('brand'), vendors = uniq('vendor')
+  const withImg = items.some((it) => it.image)
   const byCode = (c: string) => items.find((it) => it.code === c)!
   const picks = Object.entries(cart).map(([code, qty]) => ({ item: byCode(code), qty }))
   const count = picks.length
@@ -83,13 +90,23 @@ export function CatalogDialog({ target, projects, onClose, onAdd, onReplace }: {
                 <div className="catalog-toolbar">
                   <div className="catalog-search">
                     <Search size={16} />
-                    <input className="input" placeholder={`Search ${noun} by name or code`} aria-label={`Search ${noun}`} value={search} onChange={(e) => setSearch(e.target.value)} />
+                    <input className="input" placeholder={`Search ${noun} by name or ${kind === 'Labors' ? 'code' : 'SKU'}`} aria-label={`Search ${noun}`} value={search} onChange={(e) => setSearch(e.target.value)} />
                   </div>
                   <Switch on={showCost} onChange={setShowCost} label="Show cost" />
                 </div>
+                {(brands.length > 0 || vendors.length > 0) && (
+                  <div className="cat-filters">
+                    <select className="input select" aria-label="Brand" value={brand} onChange={(e) => setBrand(e.target.value)}><option value="">All brands</option>{brands.map((b) => <option key={b}>{b}</option>)}</select>
+                    <select className="input select" aria-label="Vendor" value={vendor} onChange={(e) => setVendor(e.target.value)}><option value="">All vendors</option>{vendors.map((v) => <option key={v}>{v}</option>)}</select>
+                    <label className="catalog-check"><input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} />In stock only</label>
+                    {(brand || vendor) && <button className="link-btn" onClick={() => { setBrand(''); setVendor('') }}>Reset filters</button>}
+                    <span className="cat-count">{shown.length} of {items.length}</span>
+                  </div>
+                )}
                 {shown.length ? (
-                  <div className={`cat-table${showCost ? ' with-cost' : ''}`} role="table" aria-label={`${kind} catalog`}>
+                  <div className={`cat-table${showCost ? ' with-cost' : ''}${withImg ? ' with-img' : ''}`} role="table" aria-label={`${kind} catalog`}>
                     <div className="cat-row head" role="row">
+                      {withImg && <span role="columnheader" aria-label="Image" />}
                       <span role="columnheader">Item</span>
                       {showCost && <span role="columnheader" className="num">Cost</span>}
                       <span role="columnheader" className="num">Price</span>
@@ -99,7 +116,8 @@ export function CatalogDialog({ target, projects, onClose, onAdd, onReplace }: {
                       const qty = cart[it.code]
                       return (
                         <div key={it.code} className={`cat-row${qty ? ' picked' : ''}`} role="row">
-                          <span role="cell" className="cat-item"><b>{it.name}</b>{realCode(it.code) && <em>{it.code}</em>}</span>
+                          {withImg && <span role="cell" className="cat-thumb">{it.image ? <img src={it.image} alt="" loading="lazy" /> : <Package size={18} strokeWidth={1.6} />}</span>}
+                          <span role="cell" className="cat-item"><b>{it.name}</b>{(it.specs?.length || realCode(it.code)) && <em>{[...(it.specs ?? []), realCode(it.code)].filter(Boolean).join(' · ')}</em>}</span>
                           {showCost && <span role="cell" className="num muted">{it.cost != null ? <>{money2(it.cost)}{it.multiplier && <> · ×{it.multiplier}</>}</> : '—'}</span>}
                           <span role="cell" className="num">{money2(it.price)}{it.unit && <em> / {it.unit}</em>}</span>
                           <span role="cell" className="act">
@@ -116,7 +134,7 @@ export function CatalogDialog({ target, projects, onClose, onAdd, onReplace }: {
                 ) : (
                   <div className="empty-state">
                     <span className="empty-icon"><Search size={22} strokeWidth={1.6} /></span>
-                    {search ? <><b>No {noun} match “{search.trim()}”</b><span>Check the spelling or search by item code.</span></>
+                    {search || brand || vendor ? <><b>No {noun} match {search.trim() ? `“${search.trim()}”` : 'these filters'}</b><span>Check the spelling, search by code, or reset the filters.</span></>
                       : <><b>No {noun} in {cat} yet</b><span>This category isn’t loaded in the prototype — open All to see the catalog.</span></>}
                   </div>
                 )}

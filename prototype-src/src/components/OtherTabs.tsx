@@ -2,11 +2,11 @@
  *  Structure follows the PiSuite staging tabs; content is the lead's data from the mock; the staging
  *  "Insufficient permissions" errors are replaced by the real data or an empty state. */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Banknote, Bold, ChevronDown, Download, Eye, FileText, Italic, List, ListOrdered, Mail, MessageSquare, MoreHorizontal, PenLine, Plus, RefreshCw, Send, Strikethrough, Trash2, Underline } from 'lucide-react'
+import { Banknote, Bold, ChevronDown, Download, Eye, FileText, Italic, List, ListOrdered, Lock, Mail, MessageSquare, MoreHorizontal, Paperclip, PenLine, Plus, RefreshCw, Send, Strikethrough, Trash2, Underline, X } from 'lucide-react'
 import { SUMMARY, itemsLabel, lineTotal, money, type CatalogKind, type Estimate, type Line } from '../lib/estimate'
 import { Field, Select, Stepper, Switch, TextInput } from './Form'
 import { Menu, type MenuState } from './Overlay'
-import type { Msg } from './LeadDialogs'
+import type { Msg, MsgFile } from './LeadDialogs'
 
 function Card({ title, left, right, children, narrow }: { title: ReactNode; left?: ReactNode; right?: ReactNode; children: ReactNode; narrow?: boolean }) {
   return (
@@ -109,14 +109,75 @@ export function EstimateTab({ kind, projects, estimate, setEstimate, onCatalog, 
 }
 
 // ---------- Payment Plan ----------
-export function PaymentTab() {
-  const [plan, setPlan] = useState('2 payments')
+// Staging: plan select (1–5 payments), %/$ input-mode toggles, rows # · Percentage · Amount · Description · Date ·
+// Method, red Reset + Save. Here: share and amount are both editable and stay in sync (no mode toggle), the
+// total row shows what's left to schedule, the plan splits evenly when the count changes, Save is the one primary.
+export type PayRow = { share: number; desc: string; due: string; method: string }
+export const PAY_METHODS = ['N/A', 'Check', 'Cash', 'Wire Transfer', 'Credit Card', 'Financing']
+const round2 = (n: number) => Math.round(n * 100) / 100
+export const splitEvenly = (n: number, prev: PayRow[] = []): PayRow[] => Array.from({ length: n }, (_, i) => {
+  const base = Math.floor(10000 / n) / 100, p = prev[i] as PayRow | undefined
+  return { desc: p?.desc ?? '', due: p?.due ?? '', method: p?.method ?? 'Check', share: i === n - 1 ? round2(100 - base * (n - 1)) : base }
+})
+export const plansLabel = (n: number) => `${n} payment${n === 1 ? '' : 's'}`
+
+// number field that keeps what's typed while focused and shows the formatted value otherwise
+function NumInput({ value, format, onChange, label }: { value: number; format: (n: number) => string; onChange: (n: number) => void; label: string }) {
+  const [draft, setDraft] = useState<string | null>(null)
+  return <input className="input" inputMode="decimal" aria-label={label} value={draft ?? format(value)}
+    onFocus={(e) => { setDraft(String(value)); requestAnimationFrame(() => e.target.select()) }} onBlur={() => setDraft(null)}
+    onChange={(e) => { setDraft(e.target.value); onChange(Math.max(0, Number(e.target.value.replace(/[^\d.]/g, '')) || 0)) }} />
+}
+
+export function PaymentTab({ total, saved, onSave, say }: { total: number; saved: PayRow[]; onSave: (rows: PayRow[]) => void; say: (t: string, undo?: () => void) => void }) {
+  const [rows, setRows] = useState(saved)
+  useEffect(() => setRows(saved), [saved])
+  const sum = round2(rows.reduce((a, r) => a + r.share, 0))
+  const left = round2(100 - sum)
+  const dirty = JSON.stringify(rows) !== JSON.stringify(saved)
+  const amount = (share: number) => round2((total * share) / 100)
+  const set = (i: number, patch: Partial<PayRow>) => setRows((x) => x.map((r, j) => (j === i ? { ...r, ...patch } : r)))
   return (
-    <Card title="Payment Plan">
-      <div className="tcard-toolbar">
-        <Field label="Payment plan"><Select value={plan} onChange={(e) => setPlan(e.target.value)} aria-label="Payment plan"><option value="">Select plan…</option><option>2 payments</option></Select></Field>
+    <Card title={<span className="est-title">Payment Plan<span className="est-meta">{rows.length ? `${plansLabel(rows.length)} · ${money(total)}` : 'Not set'}</span></span>}
+      right={<div className="tcard-actions">
+        {dirty && <button className="btn btn-secondary" onClick={() => setRows(saved)}>Discard changes</button>}
+        <button className="btn btn-primary" disabled={!dirty || left !== 0 || !rows.length} onClick={() => { const prev = saved; onSave(rows); say(`Payment plan saved · ${plansLabel(rows.length)}`, () => onSave(prev)) }}>Save plan</button>
+      </div>}>
+      <div className="tcard-toolbar pay-toolbar">
+        <Field label="Plan">
+          <Select aria-label="Payment plan" value={rows.length || ''} onChange={(e) => setRows(splitEvenly(Number(e.target.value), rows))}>
+            {!rows.length && <option value="">Select plan…</option>}
+            {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{plansLabel(n)}</option>)}
+          </Select>
+        </Field>
+        <div className="pay-total"><span>Lead total</span><b>{money(total)}</b></div>
       </div>
-      <Empty icon={<Banknote size={22} strokeWidth={1.6} />} title="No payment schedule yet" text={plan ? 'Due dates and amounts for each payment will appear here.' : 'Pick a plan to split the $13,128 total into payments.'} />
+      {rows.length ? (
+        <div className="pay-table" role="table" aria-label="Payments">
+          <div className="pay-row head" role="row">
+            <span role="columnheader">#</span><span role="columnheader">Share</span><span role="columnheader">Amount</span>
+            <span role="columnheader">Description</span><span role="columnheader">Due date</span><span role="columnheader">Method</span>
+          </div>
+          {rows.map((r, i) => (
+            <div key={i} className="pay-row" role="row">
+              <span role="cell" className="pay-n">{i + 1}</span>
+              <label role="cell" className="affix"><NumInput label={`Share of payment ${i + 1}`} value={r.share} format={(n) => String(n)} onChange={(n) => set(i, { share: Math.min(100, n) })} /><em>%</em></label>
+              <label role="cell" className="affix pre"><em>$</em><NumInput label={`Amount of payment ${i + 1}`} value={amount(r.share)} format={(n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(n) => set(i, { share: Math.round(Math.min(total, n) / total * 1e6) / 1e4 })} /></label>
+              <input role="cell" className="input" aria-label={`Description of payment ${i + 1}`} placeholder="e.g. Deposit, due on signing" value={r.desc} onChange={(e) => set(i, { desc: e.target.value })} />
+              <input role="cell" className="input" type="date" aria-label={`Due date of payment ${i + 1}`} value={r.due} onChange={(e) => set(i, { due: e.target.value })} />
+              <select role="cell" className="input select" aria-label={`Method of payment ${i + 1}`} value={r.method} onChange={(e) => set(i, { method: e.target.value })}>{PAY_METHODS.map((m) => <option key={m}>{m}</option>)}</select>
+            </div>
+          ))}
+          <div className={`pay-row foot${left !== 0 ? ' warn' : ''}`} role="row">
+            <span role="cell" /><span role="cell" className="num">{sum}%</span><span role="cell" className="num">{money(amount(sum))}</span>
+            <span role="cell" className="pay-status">
+              {left === 0 ? 'The whole total is scheduled'
+                : <>{left > 0 ? `${money(amount(left))} (${left}%) not scheduled yet` : `Over the total by ${money(amount(-left))} (${-left}%)`}
+                  <button className="link-btn" onClick={() => setRows(splitEvenly(rows.length, rows))}>Split evenly</button></>}
+            </span>
+          </div>
+        </div>
+      ) : <Empty icon={<Banknote size={22} strokeWidth={1.6} />} title="No payment plan yet" text={`Pick how many payments split the ${money(total)} total.`} />}
     </Card>
   )
 }
@@ -183,35 +244,89 @@ export function AgreementsTab({ say, confirm }: { say: (t: string) => void; conf
 }
 
 // ---------- Messages ----------
-export function MessagesTab({ name, messages, onSend }: { name: string; messages: Msg[]; onSend: (m: Msg) => void }) {
+// Staging: "Messages (9)" feed — avatar, author, full date, message card with attachments (thumbnail, name,
+// lock = private, size, download). Kept as a feed; adds the channel on each message and a composer with
+// channel, attachments and the "Private" switch, so the feed and replying live in one place.
+const kb = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 102.4) / 10)} KB`)
+const initials = (s: string) => s.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+export function MessagesTab({ name, phone, email, messages, onSend, say }: { name: string; phone: string; email: string; messages: Msg[]; onSend: (m: Msg) => void; say: (t: string) => void }) {
   const [text, setText] = useState('')
-  const thread = useRef<HTMLDivElement>(null)
-  useEffect(() => { thread.current?.scrollTo({ top: 1e6 }) }, [messages])
-  const send = () => { const t = text.trim(); if (!t) return; onSend({ out: true, ch: 'SMS', text: t, when: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }); setText('') }
+  const [ch, setCh] = useState<Msg['ch']>('SMS')
+  const [files, setFiles] = useState<MsgFile[]>([])
+  const [priv, setPriv] = useState(false)
+  const feed = useRef<HTMLDivElement>(null)
+  const pick = useRef<HTMLInputElement>(null)
+  useEffect(() => { feed.current?.scrollTo({ top: 1e6, behavior: 'smooth' }) }, [messages])
+  const send = () => {
+    const t = text.trim(); if (!t && !files.length) return
+    onSend({ out: true, ch, text: t, when: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }), files: files.map((f) => ({ ...f, private: priv })) })
+    setText(''); setFiles([]); setPriv(false)
+  }
   return (
-    <Card title={`Messages (${messages.length})`}>
-      <div className="chat-thread tab-thread" ref={thread}>
-        {messages.length ? messages.map((m, i) => <div key={i} className={`bubble${m.out ? ' out' : ''}`}>{m.text}<span className="when">{m.out ? 'You' : name} · {m.ch} · {m.when}</span></div>)
-          : <Empty icon={<MessageSquare size={22} strokeWidth={1.6} />} title="No messages yet" />}
+    <Card title={<span className="est-title">Messages<span className="est-meta">{messages.length}</span></span>}>
+      <div className="msg-feed" ref={feed}>
+        {messages.length ? messages.map((m, i) => {
+          const who = m.out ? 'You' : name
+          return (
+            <article key={i} className={`msg${m.out ? ' out' : ''}`}>
+              <span className="msg-avatar" aria-hidden="true">{initials(m.out ? 'You' : name)}</span>
+              <div className="msg-main">
+                <header><b>{who}</b><span className="msg-ch">{m.ch}</span><time>{m.when}</time></header>
+                <div className="msg-card">
+                  {m.text && <p>{m.text}</p>}
+                  {!!m.files?.length && <div className="msg-files">{m.files.map((f, j) => (
+                    <div key={j} className="msg-file">
+                      <div className="msg-file-thumb">{f.src ? <img src={f.src} alt="" /> : <FileText size={22} strokeWidth={1.6} />}</div>
+                      <div className="msg-file-meta">
+                        <span className="msg-file-name" title={f.name}>{f.name}</span>
+                        {f.private && <span className="msg-private" title="Private — visible to your team only"><Lock size={14} />Private</span>}
+                        <span className="msg-size">{kb(f.size)}</span>
+                        <a className="icon-plain" aria-label={`Download ${f.name}`} title="Download" href={f.src} download={f.name} onClick={(e) => { if (!f.src) { e.preventDefault(); say(`${f.name} downloaded`) } }}><Download size={16} /></a>
+                      </div>
+                    </div>
+                  ))}</div>}
+                </div>
+              </div>
+            </article>
+          )
+        }) : <Empty icon={<MessageSquare size={22} strokeWidth={1.6} />} title="No messages yet" text={`Messages with ${name} appear here.`} />}
       </div>
-      <div className="tab-compose">
-        <input className="input" placeholder="Type your message here" aria-label="Message" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} />
-        <button className="btn btn-primary btn-lg" disabled={!text.trim()} onClick={send}><Send size={16} />Send</button>
+      <div className="msg-compose">
+        {files.length > 0 && <div className="msg-chips">
+          {files.map((f, i) => <span key={i} className="msg-chip"><Paperclip size={14} />{f.name}<em>{kb(f.size)}</em><button className="icon-plain" aria-label={`Remove ${f.name}`} onClick={() => setFiles((x) => x.filter((_, j) => j !== i))}><X size={14} /></button></span>)}
+          <Switch on={priv} onChange={setPriv} label="Private — team only" />
+        </div>}
+        <textarea className="input msg-text" rows={2} placeholder={ch === 'SMS' ? `Text ${name} at ${phone}` : `Email ${name} at ${email}`} aria-label="Message" value={text}
+          onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} />
+        <div className="msg-actions">
+          <div className="seg" role="radiogroup" aria-label="Channel">
+            {(['SMS', 'Email'] as const).map((c) => <button key={c} role="radio" aria-checked={ch === c} className={ch === c ? 'on' : ''} onClick={() => setCh(c)}>{c}</button>)}
+          </div>
+          <button className="btn btn-secondary" onClick={() => pick.current?.click()}><Paperclip size={16} />Attach</button>
+          <input ref={pick} type="file" multiple hidden onChange={(e) => { const l = [...(e.target.files ?? [])].map((f) => ({ name: f.name, size: f.size, src: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined })); setFiles((x) => [...x, ...l]); e.target.value = '' }} />
+          <span className="msg-hint">Enter to send · Shift+Enter for a new line</span>
+          <button className="btn btn-primary" disabled={!text.trim() && !files.length} onClick={send}><Send size={16} />Send {ch}</button>
+        </div>
       </div>
     </Card>
   )
 }
 
 // ---------- Forms ----------
-export function FormsTab({ email, say, confirm }: { email: string; say: (t: string) => void; confirm: (d: { title: string; body: string; ok: string; run: () => void }) => void }) {
+// Staging: one row "Credit Card Form" + an unlabeled mail icon. Here the row says whether and when it was sent,
+// and the action is a labelled button (Send to client → Resend) with the confirmation naming the address.
+export function FormsTab({ email, say, confirm }: { email: string; say: (t: string, undo?: () => void) => void; confirm: (d: { title: string; body: string; ok: string; run: () => void }) => void }) {
+  const [sent, setSent] = useState<string | null>(null)
+  const send = () => confirm({ title: `${sent ? 'Resend' : 'Email'} the Credit Card Form?`, body: `Cheryl Isaac gets a link to the form at ${email}.`, ok: sent ? 'Resend form' : 'Send form', run: () => { const prev = sent; setSent(new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })); say(`Credit Card Form sent to ${email}`, () => setSent(prev)) } })
   return (
-    <Card title="Forms" narrow>
-      <div className="files-list">
-        <div className="files-folder">
-          <FileText size={16} className="files-folder-icon" />
-          <span className="files-folder-name">Credit Card Form</span>
-          <button className="icon-box sm" aria-label="Email Credit Card Form" title="Send by email" onClick={() => confirm({ title: 'Email the Credit Card Form?', body: `Cheryl Isaac gets the form at ${email}.`, ok: 'Send form', run: () => say(`Credit Card Form sent to ${email}`) })}><Mail size={16} /></button>
+    <Card title={<span className="est-title">Forms<span className="est-meta">1</span></span>} narrow>
+      <div className="form-row">
+        <span className="form-icon"><FileText size={18} strokeWidth={1.6} /></span>
+        <div className="form-info">
+          <b>Credit Card Form</b>
+          <span className={sent ? 'ok' : ''}>{sent ? `Sent to ${email} · ${sent}` : 'Not sent yet'}</span>
         </div>
+        <button className="btn btn-secondary" onClick={send}><Mail size={16} />{sent ? 'Resend' : 'Send to client'}</button>
       </div>
     </Card>
   )

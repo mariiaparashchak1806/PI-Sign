@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { X, CircleX, CopyPlus, Download, FileText, Heart, Info, MoveRight, Paperclip, Pencil, Plus, RefreshCw, SquareCheck, Trash2, Archive, Link2 } from 'lucide-react'
 import tree from '../figma/tree.json'
-import treeC2base from '../figma/tree-c2base.json'
 import tree2 from '../figma/tree2.json'
 import { FigmaNode, OverridesProvider, indexTree, type FNode, type Handler, type Patch } from '../figma/FigmaNode'
 import { Btn, Dialog, Menu, Toast, type MenuItem, type MenuState, type ToastState } from '../components/Overlay'
@@ -13,21 +12,12 @@ import { FILES0, FilesTab, type FileCounts } from '../components/FilesTab'
 import { CatalogDialog, type CatalogKind } from '../components/CatalogDialog'
 import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab } from '../components/OtherTabs'
 
-// Concept 2 (Figma 124:1753): shared widgets carry concept-1 ids (scripts/build_concept2.py), so the same handlers apply.
-// It keeps the concept-1 snapshot it was built from (tree-c2base.json); concept 1 follows the latest Figma sync (tree.json).
+const root = tree as unknown as FNode
+const T = indexTree(root)
+// Concept 2 (Figma 124:1753): shared widgets carry concept-1 ids (scripts/build_concept2.py), so the same handlers apply
 const root2 = tree2 as unknown as FNode
 const T2 = indexTree(root2)
 export type Concept = 1 | 2
-type TabKey = 'overview' | 'agenda' | 'files' | 'labors' | 'materials' | 'countertops' | 'payment' | 'agreements' | 'messages' | 'forms'
-type TaskStatus = 'overdue' | 'upcoming' | 'done' | 'idle' | 'cancelled'
-type ProjectRow = { id: string; name: string; pill?: string; pillLabel?: string; more: string; chevron: string; sales: string }
-type NewTask = { id: string; name: string; due: string; status: TaskStatus; deleted?: boolean }
-
-const taskTypes = ['In-home Consultation', 'Measurement', 'Quote Preparation', 'Follow-up']
-
-function makePage(base: unknown) {
-const root = base as FNode
-const T = indexTree(root)
 const node = (id: string) => T.byId.get(id)!
 const find = (fromId: string, pred: (n: FNode) => boolean) => T.find(node(fromId), pred)
 const named = (fromId: string, name: string | RegExp) => find(fromId, (n) => (typeof name === 'string' ? n.n === name : name.test(n.n)))!
@@ -39,22 +29,14 @@ const I = { size: 16, strokeWidth: 1.8 } as const
 const fixture = new URLSearchParams(location.search).get('fixture')
 
 // ---------- ids resolved from the Figma tree ----------
-const LEAD_COLLAPSED = '109:3765', LEAD_DETAILS = '109:6980'
-// older snapshot wraps both lead states in 109:5225; the current frame puts them straight into the header row
-const LEAD_WRAP = T.byId.has('109:5225') ? '109:5225' : '25:4990'
-const PD = '42:10511', PD_COLHEAD = '93:8360', KITCHEN_EXPANDED = '42:10573'
-const PD_HEAD = (node(PD).k ?? [])[0].id
-const PD_TOGGLES = T.find(node(PD), (n) => n.n === 'Table toolbar')?.id // current design: Show cost / Show sale switches
+const LEAD_WRAP = '109:5225', LEAD_COLLAPSED = '109:3765', LEAD_DETAILS = '109:6980'
+const PD_HEAD = '93:8342', PD_COLHEAD = '93:8360', KITCHEN_EXPANDED = '42:10573'
 const PROJECT_ROWS = ['93:8375', '42:10700', '42:10752']
 const AGENDA = '42:10916', AGENDA_HEAD = '42:10917'
 const ACTIVITY_HEAD = '93:4855', ACTIVITY_BODY = '93:5083'
-const AI = T.find(root, (n) => n.n === 'AI Assistant' && n.t !== 'TEXT')!.id
-const AI_INPUT = T.find(node(AI), (n) => n.n === 'Input')!.id
-const AI_SUGGESTIONS = T.findAll(node(AI), (n) => n.n.startsWith('Suggestion /')).map((n) => n.id)
-// Signed documents card (summary in the old snapshot, "widget" in the current frame): every link/button opens its tab
-const SIGNED_CARD = (node('19:1233').k ?? []).find((c) => !c.hidden && !!T.find(c, (n) => n.t === 'TEXT' && n.txt === 'Signed documents'))!
-const SIGNED_LINKS = T.findAll(SIGNED_CARD, (n) => n.n === 'Link Button' || n.n === 'Secondary Button').map((n) => n.id)
+const AI = '19:1415', AI_INPUT = '19:1437'
 
+type ProjectRow = { id: string; name: string; pill?: string; pillLabel?: string; more: string; chevron: string; sales: string }
 const projectRows: ProjectRow[] = PROJECT_ROWS.map((id) => {
   const kids = kidsOf(id)
   const pill = kids.find((k) => k.n.startsWith('Pill'))
@@ -65,6 +47,7 @@ const projectRows: ProjectRow[] = PROJECT_ROWS.map((id) => {
 })
 const lineItems = T.findAll(node(KITCHEN_EXPANDED), (n) => n.n.startsWith('Item /')).map((it) => ({ id: it.id, name: named(it.id, 'Name').txt!, more: kidsOf(it.id).find((k) => k.n === 'Button')!.id }))
 
+type TaskStatus = 'overdue' | 'upcoming' | 'done' | 'idle' | 'cancelled'
 const taskRows = kidsOf(AGENDA).filter((k) => k.n.startsWith('Row / Task')).map((r) => {
   const pill = find(r.id, (n) => n.n.startsWith('Pill'))!
   const s = textIn(pill.id).txt!.toLowerCase() as TaskStatus
@@ -98,6 +81,7 @@ const CONTACT_ROWS = ['85:5281', '85:5353', '85:5385']
 // Every tab renders as a clone of the drawn active / idle tab so the state can move between them.
 const cloneAs = (n: FNode, sfx: string): FNode => ({ ...n, id: `${n.id}#${sfx}`, k: n.k?.map((c) => cloneAs(c, sfx)) })
 const TABS = '19:1210', GRID = '19:1231', CONTENT = '19:1099', LEFT_COL = '19:1232'
+type TabKey = 'overview' | 'agenda' | 'files' | 'labors' | 'materials' | 'countertops' | 'payment' | 'agreements' | 'messages' | 'forms'
 const TAB_KEYS: Record<string, TabKey> = { Overview: 'overview', Agenda: 'agenda', 'Files & Photos': 'files', Labors: 'labors', Materials: 'materials', Countertops: 'countertops', 'Payment Plan': 'payment', 'Signed documents': 'agreements', Messages: 'messages', Forms: 'forms' }
 const makeTabs = (TT: typeof T) => (TT.byId.get(TABS)!.k ?? []).filter((k) => !k.hidden).map((t) => {
   const label = TT.find(t, (n) => n.t === 'TEXT')!.txt!.trim()
@@ -106,12 +90,14 @@ const makeTabs = (TT: typeof T) => (TT.byId.get(TABS)!.k ?? []).filter((k) => !k
 })
 const TABS_BY_CONCEPT = { 1: makeTabs(T), 2: makeTabs(T2) }
 const TASK_TPL = node(taskRows.find((t) => t.initial === 'upcoming')!.id)
+const taskTypes = ['In-home Consultation', 'Measurement', 'Quote Preparation', 'Follow-up']
+type NewTask = { id: string; name: string; due: string; status: TaskStatus; deleted?: boolean }
 const isPast = (v: string) => new Date(v).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0)
 const fmtDue = (v: string) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 const FILE_SUMMARY: [string, string][] = [['Kitchen', '93:7332'], ['Bathroom', '93:7378'], ['Basement', find('93:7343', (n) => n.t === 'TEXT' && /files?$/.test(n.txt ?? ''))!.id]]
 
 // ---------- page ----------
-return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
+export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
   const R = concept === 2 ? root2 : root, RT = concept === 2 ? T2 : T, tabs = TABS_BY_CONCEPT[concept]
   const [menu, setMenu] = useState<MenuState>(null)
   const [toast, setToastState] = useState<ToastState>(null)
@@ -151,7 +137,6 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const notInPrototype = (what: string) => say(`${what} isn’t part of this prototype`)
 
   const patches: Record<string, Patch | undefined> = {}
-  let colsMenuItems: (() => MenuItem[]) | null = null
   const handlers: Record<string, Handler | undefined> = {}
   const on = (id: string | undefined, h: Handler) => {
     if (!id) return
@@ -162,7 +147,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const moreCls = (id: string) => `more-on-hover${menu?.anchorId === id ? ' is-open' : ''}`
 
   // Contact + Lead cards: 16 px gap like the rest of the page (0 in the mock); the Lead card gives up the 16 px
-  if (LEAD_WRAP !== '25:4990') { patches['25:4990'] = { style: { gap: 16 } }; patches[LEAD_WRAP] = { style: { flex: '1 1 0', minWidth: 0 } } } // the current frame already has the gap
+  patches['25:4990'] = { style: { gap: 16 } }
+  patches[LEAD_WRAP] = { style: { flex: '1 1 0', minWidth: 0 } }
   // Left menu is always pinned to the viewport
   patches['19:974'] = { style: { position: 'sticky', top: 0, height: '100vh', alignSelf: 'flex-start' } }
   // Page ends where the content ends (the Figma frame has fixed heights); overflow: clip keeps sticky working
@@ -219,56 +205,32 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
 
   // Project Details — header
   const headActions = named(PD_HEAD, 'Actions')
-  const colsNode = find(headActions.id, (n) => n.n === 'Icon button / cols')
-  if (colsNode) {
-    // older snapshot (concept 2): columns popover + doc icon + "Add ▾" menu
-    const colsBtn = colsNode.id
-    const colsOpen = menu?.key === 'cols'
-    const colsCount = Number(showCost) + Number(showSales)
-    const colsItems = (): MenuItem[] => [
-      { label: 'Show cost', checkbox: true, checked: showCost, keepOpen: true, onSelect: () => setShowCost((v) => !v) },
-      { label: 'Show sale', checkbox: true, checked: showSales, keepOpen: true, onSelect: () => setShowSales((v) => !v) },
-      '-',
-      { label: 'Show all columns', link: true, keepOpen: true, onSelect: () => { setShowCost(true); setShowSales(true) } },
-    ]
-    colsMenuItems = colsItems
-    on(colsBtn, {
-      onClick: () => open('cols', colsBtn, colsItems(), 268), title: 'Columns',
-      className: [colsOpen ? 'cols-open' : '', 'no-dot'].filter(Boolean).join(' '),
-      render: (_n, el) => <span key="cols" style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>{el}{colsCount > 0 && <span className="count-badge">{colsCount}</span>}</span>,
-    })
-    on(named(headActions.id, 'Icon button / doc').id, { onClick: () => say('Downloading summary PDF…'), title: 'Download summary PDF' })
-    const addBtn = named(headActions.id, /^Button \/ Add/).id
-    on(addBtn, { onClick: () => open('add', addBtn, [
-      { label: 'New project', icon: <Plus {...I} />, onSelect: () => setDialog({ kind: 'project' }) },
-      { label: 'From wishlist', icon: <Heart {...I} />, onSelect: () => setDialog({ kind: 'wishlist' }) },
-    ], 220) })
-  } else {
-    // current design: Preview PDF · Add from wishlist · Add project buttons + Show cost / Show sale switches
-    const btn = (label: string) => T.find(node(headActions.id), (n) => n.n === 'Secondary Button' && !!T.find(n, (m) => m.t === 'TEXT' && m.txt === label))?.id
-    on(btn('Preview PDF'), { onClick: () => say('Downloading summary PDF…'), title: 'Preview PDF' })
-    on(btn('Add from wishlist'), { onClick: () => setDialog({ kind: 'wishlist' }), title: 'Add from wishlist' })
-    on(btn('Add project'), { onClick: () => setDialog({ kind: 'project' }), title: 'Add project' })
-    if (PD_TOGGLES) {
-      const switches = T.findAll(node(PD_TOGGLES), (n) => n.n === 'Switch')
-      ;[[showCost, setShowCost, 'Show cost'], [showSales, setShowSales, 'Show sale']].forEach(([on_, set, label], i) => {
-        const sw = switches[i]; if (!sw) return
-        const isOn = on_ as boolean
-        patches[sw.id] = { bg: isOn ? undefined : 'var(--color-switch-off)', style: { justifyContent: isOn ? 'flex-end' : 'flex-start', transition: 'background .15s' } }
-        const toggle = () => (set as (f: (v: boolean) => boolean) => void)((v) => !v)
-        // the whole "switch + label" pair is the hit area
-        const pair = T.find(node(PD_TOGGLES), (n) => !!n.k?.some((k) => k.id === sw.id))!
-        on(pair.id, { onClick: toggle, title: label as string, className: 'switch-hit' })
-        handlers[pair.id] = { ...handlers[pair.id], render: (_n, el) => <span key={pair.id} role="switch" aria-checked={isOn} aria-label={label as string} style={{ display: 'contents' }}>{el}</span> }
-      })
-    }
-  }
+  const colsBtn = named(headActions.id, 'Icon button / cols').id
+  const colsOpen = menu?.key === 'cols'
+  const colsCount = Number(showCost) + Number(showSales)
+  const colsItems = (): MenuItem[] => [
+    { label: 'Show cost', checkbox: true, checked: showCost, keepOpen: true, onSelect: () => setShowCost((v) => !v) },
+    { label: 'Show sale', checkbox: true, checked: showSales, keepOpen: true, onSelect: () => setShowSales((v) => !v) },
+    '-',
+    { label: 'Show all columns', link: true, keepOpen: true, onSelect: () => { setShowCost(true); setShowSales(true) } },
+  ]
+  on(colsBtn, {
+    onClick: () => open('cols', colsBtn, colsItems(), 268), title: 'Columns',
+    className: [colsOpen ? 'cols-open' : '', 'no-dot'].filter(Boolean).join(' '),
+    render: (_n, el) => <span key="cols" style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>{el}{colsCount > 0 && <span className="count-badge">{colsCount}</span>}</span>,
+  })
+  on(named(headActions.id, 'Icon button / doc').id, { onClick: () => say('Downloading summary PDF…'), title: 'Download summary PDF' })
+  const addBtn = named(headActions.id, /^Button \/ Add/).id
+  on(addBtn, { onClick: () => open('add', addBtn, [
+    { label: 'New project', icon: <Plus {...I} />, onSelect: () => setDialog({ kind: 'project' }) },
+    { label: 'From wishlist', icon: <Heart {...I} />, onSelect: () => setDialog({ kind: 'wishlist' }) },
+  ], 220) })
   // Columns filter: Total ("cost") = index 4, Sales = index 5 in the header and project rows (the summary footer has no columns)
   const colCells = (i: number) => [kidsOf(PD_COLHEAD)[i].id, ...PROJECT_ROWS.map((r) => kidsOf(r)[i].id)]
   if (!showCost) colCells(4).forEach((id) => (patches[id] = { hidden: true }))
   if (!showSales) colCells(5).forEach((id) => (patches[id] = { hidden: true }))
   const liveProjects = projectRows.filter((r) => !deletedRows.includes(r.id))
-  patches[find(PD_HEAD, (n) => n.t === 'TEXT' && /projects?$/.test(n.txt ?? ''))!.id] = { txt: `${liveProjects.length} project${liveProjects.length === 1 ? '' : 's'}` }
+  patches[named(PD_HEAD, 'Sub').id] = { txt: `${liveProjects.length} project${liveProjects.length === 1 ? '' : 's'}` }
 
   // Project rows
   patches[KITCHEN_EXPANDED] = { hidden: !kitchenOpen || deletedRows.includes('93:8375') }
@@ -346,8 +308,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const openStatuses = [...taskRows.filter((t) => !task[t.id].deleted).map((t) => task[t.id].status), ...newTasks.filter((t) => !t.deleted).map((t) => t.status)].filter((s) => ['overdue', 'upcoming', 'idle'].includes(s))
   const openTasks = openStatuses
   const overdue = openStatuses.filter((s) => s === 'overdue').length
-  const agendaCount = find(AGENDA_HEAD, (n) => n.t === 'TEXT' && /open tasks/.test(n.txt ?? ''))!
-  patches[agendaCount.id] = { txt: `${openTasks.length} open task${openTasks.length === 1 ? '' : 's'}${overdue && agendaCount.txt!.includes('overdue') ? ` · ${overdue} overdue` : ''}` }
+  patches[find(AGENDA_HEAD, (n) => n.t === 'TEXT' && /open tasks/.test(n.txt ?? ''))!.id] = { txt: `${openTasks.length} open task${openTasks.length === 1 ? '' : 's'}${overdue ? ` · ${overdue} overdue` : ''}` }
   on(named(AGENDA_HEAD, 'Secondary Button').id, { onClick: () => setDialog({ kind: 'task', data: {} }) })
   const agendaViewAll = named(AGENDA_HEAD, 'Link Button').id
   if (tab === 'agenda') patches[agendaViewAll] = { hidden: true }
@@ -388,13 +349,13 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
 
   // Right column
   const ask = (q: string) => { if (!q.trim()) return; setAi((a) => [...a, { q, a: aiAnswers[q] ?? aiFallback }]) }
-  AI_SUGGESTIONS.forEach((id) => on(id, { onClick: () => ask(textIn(id).txt!) }))
+  ;['19:1425', '19:1429', '19:1433'].forEach((id) => on(id, { onClick: () => ask(textIn(id).txt!) }))
   const aiPlaceholder = named(AI_INPUT, 'Placeholder')
   on(aiPlaceholder.id, { render: () => <input key="ai-field" className="bare-input" style={{ flex: '1 1 0', minWidth: 0, fontSize: 13, lineHeight: '19px' }} value={aiText} onChange={(e) => setAiText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { ask(aiText); setAiText('') } }} placeholder={aiPlaceholder.txt} aria-label="Ask the AI assistant" /> })
   on(named(AI_INPUT, 'Send').id, { onClick: () => { if (!aiText.trim()) { say('Type a question or pick a suggestion'); return } ask(aiText); setAiText('') }, title: 'Send' })
   on(AI, { after: ai.length ? <div className="ai-thread">{ai.map((m, i) => <div key={i}><div className="ai-q">{m.q}</div><div className="ai-a">{m.a}</div></div>)}</div> : undefined })
   if (tabsOn) on('93:6062', { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
-  if (tabsOn) SIGNED_LINKS.forEach((id) => on(id, { onClick: () => setTab('agreements'), title: 'Open the Signed documents tab' }))
+  if (tabsOn) on('93:6004', { onClick: () => setTab('agreements'), title: 'Open the Signed documents tab' })
   if (tabsOn) on('93:7192', { onClick: () => setTab('files'), title: 'Open the Files & Photos tab' })
   FILE_SUMMARY.forEach(([p, id]) => { const n = Object.values(files[p] ?? {}).reduce((a, b) => a + b, 0); patches[id] = { txt: `${n} file${n === 1 ? '' : 's'}` } })
   if (files.Bathroom?.['Before Photos']) patches['93:7471'] = { hidden: true }
@@ -463,7 +424,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
           <FigmaNode node={node(AI)} parent={node('19:1233')} />
         </aside>
       )}
-      <Menu state={menu?.key === 'cols' && colsMenuItems ? { ...menu, items: colsMenuItems() } : menu} onClose={() => setMenu(null)} />
+      <Menu state={menu?.key === 'cols' ? { ...menu, items: colsItems() } : menu} onClose={() => setMenu(null)} />
       <CatalogDialog kind={catalog} onClose={() => setCatalog(null)} />
       <Toast toast={toast} onDone={() => setToastState(null)} />
       <LeadInfoDialog open={editing === 'lead'} value={leadInfo} onClose={() => setEditing(null)} onSave={(v) => { const prev = leadInfo; setLeadInfo(v); setEditing(null); say('Lead info saved', () => setLeadInfo(prev)) }} />
@@ -475,14 +436,6 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
         onUpload={(p, f, n) => { setFiles((x) => ({ ...x, [p]: { ...x[p], [f]: (x[p]?.[f] ?? 0) + n } })); say(`${n} file${n === 1 ? '' : 's'} added to ${p} · ${f}`, () => setFiles((x) => ({ ...x, [p]: { ...x[p], [f]: (x[p]?.[f] ?? n) - n } }))) }} />
     </OverridesProvider>
   )
-}
-
-}
-
-const Page1 = makePage(tree)
-const Page2 = makePage(treeC2base)
-export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
-  return concept === 2 ? <Page2 concept={2} /> : <Page1 concept={1} />
 }
 
 function Dialogs({ dialog, close, say, onRenameTask, wish, onAddTask, onUpload }: {

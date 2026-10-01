@@ -66,3 +66,10 @@
 - 2026-09-30: concept 2 is Overview-only — other tabs are drawn but inert (no click, default cursor); links into tabs (View all ×4, Payment plan) are inert there too. Concept 1 keeps all tabs.
 - 2026-10-01: Signed documents → Agreement Settings: the two checkboxes are stacked (were side by side, misaligned).
 - 2026-10-01: Agreement Settings is a single column: start date → 'Buyer is older than 65' → duration → 'Company to pull the permits' → notes.
+
+## 2026-10-01 — Figma sync of 19:973 (concept 1 only)
+- Full Bridge dump → scripts/sync.py (99 added / 83 removed / 64 changed). Concept-2 icons restored into icons.json after the sync.
+- New in Figma, now in the prototype: Project Details header (3 projects pill · Preview PDF · Add from wishlist · Add project buttons + Show cost / Show sale switches, replacing the columns popover and Add ▾ menu); Agenda "N open tasks" pill; Signed documents widget (Agreement · Not ready, Complete settings, Estimated job start / Duration / Agreement files); updated Upcoming/Done pills; 16 px Contact↔Lead gap now drawn in Figma (prototype patch dropped for concept 1).
+- Re-created nodes (AI Assistant, lead wrapper, PD header) are resolved by name now, not by id.
+- Concept 2 unchanged: LeadOverview is a factory — concept 1 = makePage(tree.json, latest sync), concept 2 = makePage(tree-c2base.json, the concept-1 snapshot it was built from) + tree2.json. Switching concepts now resets prototype state.
+- Checks: concept 1 controls 57/57, concept 2 26/26 (pixel-identical to before except the moved switch), agenda tab 28/28, 0 console errors; scripts/sync-check.mjs covers the new switches/buttons/widget.

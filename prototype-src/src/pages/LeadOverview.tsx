@@ -269,6 +269,17 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const colCells = (i: number) => [kidsOf(PD_COLHEAD)[i].id, ...PROJECT_ROWS.map((r) => kidsOf(r)[i].id)]
   if (!showCost) colCells(4).forEach((id) => (patches[id] = { hidden: true }))
   if (!showSales) colCells(5).forEach((id) => (patches[id] = { hidden: true }))
+  // the width freed by hidden columns is shared by the remaining data columns (same delta in header and rows → stays aligned)
+  const hiddenCols = [!showCost && 4, !showSales && 5].filter((i): i is number => i !== false)
+  if (hiddenCols.length) {
+    const header = kidsOf(PD_COLHEAD), gap = node(PD_COLHEAD).al?.gap ?? 0
+    const visible = [0, 1, 2, 3, 4, 5].filter((i) => !hiddenCols.includes(i))
+    const delta = hiddenCols.reduce((a, i) => a + header[i].w + gap, 0) / visible.length
+    visible.forEach((i) => [header[i], ...PROJECT_ROWS.map((r) => kidsOf(r)[i])].forEach((c) => {
+      if (!c) return
+      patches[c.id] = { ...patches[c.id], style: { ...patches[c.id]?.style, width: c.w + delta, flexShrink: 0 } }
+    }))
+  }
   const liveProjects = projectRows.filter((r) => !deletedRows.includes(r.id))
   patches[find(PD_HEAD, (n) => n.t === 'TEXT' && /projects?$/.test(n.txt ?? ''))!.id] = { txt: `${liveProjects.length} project${liveProjects.length === 1 ? '' : 's'}` }
 

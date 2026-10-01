@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { createPortal } from 'react-dom'
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Download, FileText, FolderInput, Image as ImageIcon, LayoutGrid, List, Pencil, Trash2, Upload, X } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Download, FileText, FolderInput, Image as ImageIcon, Pencil, Trash2, Upload, X } from 'lucide-react'
 import { spring } from '../lib/springs'
 
 export const FOLDERS = ['Before Photos', '3D Renderings', '2020 Files', 'Additional Material Photos'] as const
@@ -54,7 +54,7 @@ type Viewer = { project: string; folder: Folder; index: number } | null
 export function FilesTab({ projects, files, setFiles, say }: {
   projects: string[]; files: FilesState; setFiles: (f: (s: FilesState) => FilesState) => void; say: (t: string, undo?: () => void) => void
 }) {
-  const [view, setView] = useState<'list' | 'grid'>('list')
+  const view = 'list' as 'list' | 'grid' // list/grid toggle removed (designer, Oct 1) — list only
   const [closed, setClosed] = useState<string[]>([])
   const [viewer, setViewer] = useState<Viewer>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
@@ -84,10 +84,6 @@ export function FilesTab({ projects, files, setFiles, say }: {
       <input ref={input} type="file" multiple hidden onChange={(e) => target.current && add(target.current.project, target.current.folder, [...(e.target.files ?? [])])} />
       <header className="files-head">
         <h2>Files &amp; Photos</h2>
-        <div className="seg seg-icons" role="radiogroup" aria-label="View">
-          <button role="radio" aria-checked={view === 'list'} aria-label="List view" title="List" className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}><List size={16} /></button>
-          <button role="radio" aria-checked={view === 'grid'} aria-label="Grid view" title="Grid" className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')}><LayoutGrid size={16} /></button>
-        </div>
       </header>
       {projects.map((p) => {
         const total = countIn(files, p)

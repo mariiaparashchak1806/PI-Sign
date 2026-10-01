@@ -62,3 +62,4 @@
 - Concept 2: only Overview is interactive in the tab bar (per designer); card links into tabs are inert.
 - Concept 1 follows the latest Figma 19:973 (Oct 1 sync); concept 2 keeps its own snapshot (tree-c2base.json). Switching concepts resets state.
 - Files & Photos: live in both concepts (concept 2: Overview + Files only). Seed file names/uploader for Basement are demo data.
+- Concept 1 = Figma 184:3568 (Option 2); old 19:973 at ?option=1. Needs attention links follow their labels (design text/label mismatch flagged to designer).

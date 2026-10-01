@@ -83,3 +83,12 @@
 - Checks: scripts/files-check.mjs; controls c1 57/57, c2 28/28, files tab c1 20/20 · c2 9/9, 0 console errors.
 - 2026-10-01: Contact card (concept 1): Call and SMS icons removed from the phone row; hover-only copy stays. Concept 2's contact block never had them.
 - 2026-10-01: Project Details — when Total and/or Sales are hidden, the freed width is shared by the remaining data columns (same delta in header and rows, so they stay aligned). Both concepts (switches in concept 1, columns popover in concept 2). scripts/cols-check.mjs.
+
+## 2026-10-01 — Concept 1 now follows "Concept 1 — Option 2" (Figma 184:3568)
+- Bridge dump → extraction/c1-option2-export.json; scripts/build_option2.py → src/figma/tree-c1o2.json. Shared widgets (sidebar, top bar, tabs, Project Details, Agenda, Activity, Signed documents widget, Files, Messages, contact rows) get the 19:973 ids by a name-matched walk (586 nodes) → all existing actions work. 56 new icons merged.
+- New bindings: merged lead card (name/initials follow the contact; Ask AI → assistant side panel; Assign designer; ⋯ lead menu; Contact ✎ → Edit contact; Lead ✎ → Info; Designer value → Pick Assignees; "2 payments" → Payment Plan tab; contact rows copy on click). Lead stage stepper is static (as drawn).
+- Needs attention: header collapses; links run their action by label — Open task → Edit task (overdue task), Assign designer → Pick Assignees, Upload photos → Files & Photos tab, Open estimate → Materials tab; rows resolve and disappear (designer assigned / Bathroom before photos uploaded / overdue task done or cancelled); "N actions" counts live rows; the card hides when nothing is left.
+- Project Details "Row / Total" joins the Show cost / Show sale hide + stretch.
+- Previous Concept 1 (19:973) kept at ?concept=1&option=1. Concept 2 unchanged.
+- Files & Photos: list/grid toggle removed (designer) — list only.
+- Checks: controls option 2 57/57, option 1 55/55, concept 2 28/28, 0 console errors; visual compare vs Figma PNG matches (diff noise = 1 px sub-pixel offsets, sticky sidebar, page height).

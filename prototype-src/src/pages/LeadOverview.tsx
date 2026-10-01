@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { X, CircleX, CopyPlus, Download, FileText, Heart, Info, MoveRight, Paperclip, Pencil, Plus, RefreshCw, SquareCheck, Trash2, Archive, Link2 } from 'lucide-react'
 import tree from '../figma/tree.json'
+import treeC1o2 from '../figma/tree-c1o2.json'
 import treeC2base from '../figma/tree-c2base.json'
 import tree2 from '../figma/tree2.json'
 import { FigmaNode, OverridesProvider, indexTree, type FNode, type Handler, type Patch } from '../figma/FigmaNode'
@@ -41,16 +42,25 @@ const fixture = new URLSearchParams(location.search).get('fixture')
 // ---------- ids resolved from the Figma tree ----------
 const LEAD_COLLAPSED = '109:3765', LEAD_DETAILS = '109:6980'
 // older snapshot wraps both lead states in 109:5225; the current frame puts them straight into the header row
-const LEAD_WRAP = T.byId.has('109:5225') ? '109:5225' : '25:4990'
+// Concept 1 · Option 2 (Figma 184:3568) has one merged lead card instead of the two lead states
+const LEAD_CARD2 = T.byId.has('206:5636') ? '206:5636' : undefined
+const LEAD_WRAP = T.byId.has('109:5225') ? '109:5225' : LEAD_CARD2 ?? '25:4990'
 const PD = '42:10511', PD_COLHEAD = '93:8360', KITCHEN_EXPANDED = '42:10573'
 const PD_HEAD = (node(PD).k ?? [])[0].id
 const PD_TOGGLES = T.find(node(PD), (n) => n.n === 'Table toolbar')?.id // current design: Show cost / Show sale switches
 const PROJECT_ROWS = ['93:8375', '42:10700', '42:10752']
 const AGENDA = '42:10916', AGENDA_HEAD = '42:10917'
 const ACTIVITY_HEAD = '93:4855', ACTIVITY_BODY = '93:5083'
-const AI = T.find(root, (n) => n.n === 'AI Assistant' && n.t !== 'TEXT')!.id
-const AI_INPUT = T.find(node(AI), (n) => n.n === 'Input')!.id
-const AI_SUGGESTIONS = T.findAll(node(AI), (n) => n.n.startsWith('Suggestion /')).map((n) => n.id)
+// AI Assistant card: on the page, or (Option 2: "Ask AI" button) taken from the 19:973 frame for the side panel
+const isAI = (n: FNode) => n.n === 'AI Assistant' && n.t !== 'TEXT'
+const TA = T.find(root, isAI) ? T : indexTree(tree as unknown as FNode)
+const AI = TA.find(TA.byId.get(TA === T ? root.id : '19:973')!, isAI)!.id
+const aiNode = TA.byId.get(AI)!
+const AI_INPUT = TA.find(aiNode, (n) => n.n === 'Input')!.id
+const AI_SUGGESTIONS = TA.findAll(aiNode, (n) => n.n.startsWith('Suggestion /')).map((n) => n.id)
+const AI_INLINE = TA === T
+const PD_TOTAL_ROW = (node(PD).k ?? []).find((k) => k.n === 'Row / Total' && !k.hidden)?.id
+const NEEDS = T.find(root, (n) => n.n === 'Section - Needs attention')
 // Signed documents card (summary in the old snapshot, "widget" in the current frame): every link/button opens its tab
 const SIGNED_CARD = (node('19:1233').k ?? []).find((c) => !c.hidden && !!T.find(c, (n) => n.t === 'TEXT' && n.txt === 'Signed documents'))!
 const SIGNED_LINKS = T.findAll(SIGNED_CARD, (n) => n.n === 'Link Button' || n.n === 'Secondary Button').map((n) => n.id)
@@ -80,11 +90,12 @@ const pillStyle = (status: TaskStatus) => {
 const doneName = taskRows.find((t) => t.initial === 'done')!.name
 const statusLabel: Record<TaskStatus, string> = { overdue: 'Overdue', upcoming: 'Upcoming', done: 'Done', idle: 'Idle', cancelled: 'Cancelled' }
 
-const leadHeaders = [find(LEAD_COLLAPSED, (n) => n.n === 'Header')!, find(LEAD_DETAILS, (n) => n.n === 'Header')!]
+const LEGACY_LEAD = T.byId.has(LEAD_COLLAPSED)
+const leadHeaders = LEGACY_LEAD ? [find(LEAD_COLLAPSED, (n) => n.n === 'Header')!, find(LEAD_DETAILS, (n) => n.n === 'Header')!] : []
 const leadButtons = leadHeaders.map((h) => ({ edit: named(h.id, 'Secondary Button').id, assign: named(h.id, 'Primary Button').id, more: named(h.id, 'Icon button').id }))
 const notAssignedTexts = T.findAll(node(LEAD_WRAP), (n) => n.t === 'TEXT' && n.txt === 'Not assigned').map((n) => n.id)
-const showDetailsToggle = named(LEAD_COLLAPSED, /^Toggle \/ Show details/).id
-const hideDetailsToggle = named(LEAD_DETAILS, /^Toggle \/ Show details/).id
+const showDetailsToggle = LEGACY_LEAD ? named(LEAD_COLLAPSED, /^Toggle \/ Show details/).id : undefined
+const hideDetailsToggle = LEGACY_LEAD ? named(LEAD_DETAILS, /^Toggle \/ Show details/).id : undefined
 const paymentLinks = T.findAll(node(LEAD_WRAP), (n) => n.n === 'Link / Open').map((n) => n.id)
 
 // Values shown in the cards → initial values of the edit dialogs
@@ -122,6 +133,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const [messages, setMessages] = useState<Msg[]>([{ out: false, ch: 'SMS', text: 'Thanks, see you tomorrow!', when: '5:02 PM' }])
   const [kitchenOpen, setKitchenOpen] = useState(fixture !== 'kitchen-collapsed' && concept === 1)
   const [aiOpen, setAiOpen] = useState(false)
+  const [needsOpen, setNeedsOpen] = useState(true)
   const [showSales, setShowSales] = useState(true)
   const [showCost, setShowCost] = useState(true)
   const [activityOpen, setActivityOpen] = useState(true)
@@ -163,18 +175,23 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const moreCls = (id: string) => `more-on-hover${menu?.anchorId === id ? ' is-open' : ''}`
 
   // Contact + Lead cards: 16 px gap like the rest of the page (0 in the mock); the Lead card gives up the 16 px
-  if (LEAD_WRAP !== '25:4990') { patches['25:4990'] = { style: { gap: 16 } }; patches[LEAD_WRAP] = { style: { flex: '1 1 0', minWidth: 0 } } } // the current frame already has the gap
+  if (LEAD_WRAP === '109:5225') { patches['25:4990'] = { style: { gap: 16 } }; patches[LEAD_WRAP] = { style: { flex: '1 1 0', minWidth: 0 } } } // the current frame already has the gap
   // Left menu is always pinned to the viewport
   patches['19:974'] = { style: { position: 'sticky', top: 0, height: '100vh', alignSelf: 'flex-start' } }
   // Page ends where the content ends (the Figma frame has fixed heights); overflow: clip keeps sticky working
   patches[root.id] = { style: { minHeight: '100vh', overflow: 'clip' } }
   patches[CONTENT] = { style: { height: 'auto', padding: RT.byId.get(CONTENT)!.al!.p.map((v, i) => `${i === 2 ? 48 : v}px`).join(' ') } }
   // Lead card — "Show details" is the drawn alternate state (hidden frame in the mock)
-  patches[LEAD_COLLAPSED] = { hidden: showDetails }
-  patches[LEAD_DETAILS] = { hidden: !showDetails }
+  if (LEGACY_LEAD) { patches[LEAD_COLLAPSED] = { hidden: showDetails }; patches[LEAD_DETAILS] = { hidden: !showDetails } }
   on(showDetailsToggle, { onClick: () => setShowDetails(true), title: 'Show details' })
   on(hideDetailsToggle, { onClick: () => setShowDetails(false), title: 'Hide details' })
   if (designer) notAssignedTexts.forEach((id) => (patches[id] = { txt: designer }))
+  const leadMore = (): MenuItem[] => [
+    { label: 'Copy lead link', icon: <Link2 {...I} />, onSelect: () => { navigator.clipboard?.writeText(location.href); say('Lead link copied') } },
+    { label: 'Send to archive', icon: <Archive {...I} />, onSelect: () => confirm({ title: 'Send Cheryl Isaac to archive?', body: 'The lead leaves the active pipeline. You can restore it from Archive.', ok: 'Send to archive', run: () => say('Lead sent to archive (demo)') }) },
+    '-',
+    { label: 'Delete lead', danger: true, icon: <Trash2 {...I} />, onSelect: () => confirm({ title: 'Delete Cheryl Isaac?', body: 'The lead, its 3 projects, tasks and files are removed for everyone. You can’t undo this.', ok: 'Delete lead', danger: true, run: () => say('Lead deleted (demo)') }) },
+  ]
   leadButtons.forEach((b) => {
     on(b.edit, { onClick: () => setEditing('lead'), title: 'Edit lead' })
     on(b.assign, { onClick: () => setEditing('assign'), title: 'Assign designer' })
@@ -192,7 +209,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   leadText.forEach(([from, to]) => from !== to && textsIn(LEAD_WRAP, from).forEach((id) => (patches[id] = { txt: to })))
 
   // Contact card — edit dialog, values, hover-only copy
-  on(named('85:3793', 'Secondary Button').id, { onClick: () => setEditing('contact'), title: 'Edit contact' })
+  if (T.byId.has('85:3793')) on(named('85:3793', 'Secondary Button').id, { onClick: () => setEditing('contact'), title: 'Edit contact' })
   const fullName = `${contact.first} ${contact.last}`.trim()
   patches['85:3794'] = { txt: fullName }
   textsIn('19:1100', 'Cheryl Isaac').forEach((id) => (patches[id] = { txt: fullName }))
@@ -202,18 +219,23 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   CONTACT_ROWS.forEach((id) => on(id, { className: 'contact-row' }))
   patches['85:5353'] = { bg: 'transparent' } // grey fill in the mock is the hover state
   const copy = (text: string, label: string) => () => { navigator.clipboard?.writeText(text); say(`${label} copied`) }
-  const mailCopy = named('85:5353', 'Icon button / Copy')
-  on(mailCopy.id, { onClick: copy(contact.email, 'Email'), title: 'Copy email', className: 'copy-on-hover' })
-  const copyBtn = (key: string, text: string, label: string, parentId: string) => (
-    <span key={key} className="copy-on-hover clickable ghost" role="button" tabIndex={0} title={`Copy ${label.toLowerCase()}`} onClick={copy(text, label)} style={{ display: 'inline-flex', borderRadius: 6, flexShrink: 0 }}>
-      <FigmaNode node={{ ...mailCopy, id: `${mailCopy.id}#${key}` }} parent={node(parentId)} />
-    </span>
-  )
-  on(named('85:5281', 'Actions').id, { after: copyBtn('phone', contact.phone, 'Phone number', named('85:5281', 'Actions').id) })
-  on('85:5385', { className: 'contact-row', after: copyBtn('address', contact.address, 'Address', '85:5385') })
-  // Call and SMS icons removed from the phone row (designer, Oct 1); the hover-only copy button stays
-  patches[named('85:5281', 'Icon button / Call').id] = { hidden: true }
-  patches[named('85:5281', 'Icon button / Copy').id] = { hidden: true }
+  const mailCopy = find('85:5353', (n) => n.n === 'Icon button / Copy')
+  if (mailCopy) {
+    on(mailCopy.id, { onClick: copy(contact.email, 'Email'), title: 'Copy email', className: 'copy-on-hover' })
+    const copyBtn = (key: string, text: string, label: string, parentId: string) => (
+      <span key={key} className="copy-on-hover clickable ghost" role="button" tabIndex={0} title={`Copy ${label.toLowerCase()}`} onClick={copy(text, label)} style={{ display: 'inline-flex', borderRadius: 6, flexShrink: 0 }}>
+        <FigmaNode node={{ ...mailCopy, id: `${mailCopy.id}#${key}` }} parent={node(parentId)} />
+      </span>
+    )
+    on(named('85:5281', 'Actions').id, { after: copyBtn('phone', contact.phone, 'Phone number', named('85:5281', 'Actions').id) })
+    on('85:5385', { className: 'contact-row', after: copyBtn('address', contact.address, 'Address', '85:5385') })
+    // Call and SMS icons removed from the phone row (designer, Oct 1); the hover-only copy button stays
+    patches[named('85:5281', 'Icon button / Call').id] = { hidden: true }
+    patches[named('85:5281', 'Icon button / Copy').id] = { hidden: true }
+  } else {
+    // Option 2: plain rows without icon buttons → the row copies its value
+    ;([['85:5281', contact.phone, 'Phone number'], ['85:5353', contact.email, 'Email'], ['85:5385', contact.address, 'Address']] as const).forEach(([id, v, l]) => on(id, { onClick: copy(v, l), title: `Copy ${l.toLowerCase()}`, className: 'value-hover' }))
+  }
 
   // Top bar search → real input
   const searchText = textIn('19:1071')
@@ -266,7 +288,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     }
   }
   // Columns filter: Total ("cost") = index 4, Sales = index 5 in the header and project rows (the summary footer has no columns)
-  const colCells = (i: number) => [kidsOf(PD_COLHEAD)[i].id, ...PROJECT_ROWS.map((r) => kidsOf(r)[i].id)]
+  const dataRows = PD_TOTAL_ROW ? [...PROJECT_ROWS, PD_TOTAL_ROW] : PROJECT_ROWS
+  const colCells = (i: number) => [kidsOf(PD_COLHEAD)[i].id, ...dataRows.map((r) => kidsOf(r)[i]?.id).filter(Boolean) as string[]]
   if (!showCost) colCells(4).forEach((id) => (patches[id] = { hidden: true }))
   if (!showSales) colCells(5).forEach((id) => (patches[id] = { hidden: true }))
   // the width freed by hidden columns is shared by the remaining data columns (same delta in header and rows → stays aligned)
@@ -275,7 +298,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     const header = kidsOf(PD_COLHEAD), gap = node(PD_COLHEAD).al?.gap ?? 0
     const visible = [0, 1, 2, 3, 4, 5].filter((i) => !hiddenCols.includes(i))
     const delta = hiddenCols.reduce((a, i) => a + header[i].w + gap, 0) / visible.length
-    visible.forEach((i) => [header[i], ...PROJECT_ROWS.map((r) => kidsOf(r)[i])].forEach((c) => {
+    visible.forEach((i) => [header[i], ...dataRows.map((r) => kidsOf(r)[i])].forEach((c) => {
       if (!c) return
       patches[c.id] = { ...patches[c.id], style: { ...patches[c.id]?.style, width: c.w + delta, flexShrink: 0 } }
     }))
@@ -401,10 +424,10 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
 
   // Right column
   const ask = (q: string) => { if (!q.trim()) return; setAi((a) => [...a, { q, a: aiAnswers[q] ?? aiFallback }]) }
-  AI_SUGGESTIONS.forEach((id) => on(id, { onClick: () => ask(textIn(id).txt!) }))
-  const aiPlaceholder = named(AI_INPUT, 'Placeholder')
+  AI_SUGGESTIONS.forEach((id) => on(id, { onClick: () => ask(TA.find(TA.byId.get(id)!, (n) => n.t === 'TEXT')!.txt!) }))
+  const aiPlaceholder = TA.find(TA.byId.get(AI_INPUT)!, (n) => n.n === 'Placeholder')!
   on(aiPlaceholder.id, { render: () => <input key="ai-field" className="bare-input" style={{ flex: '1 1 0', minWidth: 0, fontSize: 13, lineHeight: '19px' }} value={aiText} onChange={(e) => setAiText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { ask(aiText); setAiText('') } }} placeholder={aiPlaceholder.txt} aria-label="Ask the AI assistant" /> })
-  on(named(AI_INPUT, 'Send').id, { onClick: () => { if (!aiText.trim()) { say('Type a question or pick a suggestion'); return } ask(aiText); setAiText('') }, title: 'Send' })
+  on(TA.find(TA.byId.get(AI_INPUT)!, (n) => n.n === 'Send')!.id, { onClick: () => { if (!aiText.trim()) { say('Type a question or pick a suggestion'); return } ask(aiText); setAiText('') }, title: 'Send' })
   on(AI, { after: ai.length ? <div className="ai-thread">{ai.map((m, i) => <div key={i}><div className="ai-q">{m.q}</div><div className="ai-a">{m.a}</div></div>)}</div> : undefined })
   if (tabsOn) on('93:6062', { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
   if (tabsOn) SIGNED_LINKS.forEach((id) => on(id, { onClick: () => setTab('agreements'), title: 'Open the Signed documents tab' }))
@@ -432,6 +455,53 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
           : <FormsTab email={contact.email} say={say} confirm={confirm} />}
       </div>
     ) })
+  }
+
+  // ---------- Concept 1 · Option 2 (Figma 184:3568): merged lead card, stage, Needs attention, Ask AI ----------
+  if (LEAD_CARD2) {
+    textsIn(LEAD_CARD2, 'Cheryl Isaac').forEach((id) => (patches[id] = { txt: fullName }))
+    const initialsText = find('206:5729', (n) => n.t === 'TEXT')
+    if (initialsText) patches[initialsText.id] = { txt: `${contact.first[0] ?? ''}${contact.last[0] ?? ''}`.toUpperCase() }
+    on('206:6024', { onClick: () => setAiOpen((v) => !v), title: 'Ask AI' })
+    on('206:6025', { onClick: () => setEditing('assign'), title: 'Assign designer' })
+    on('206:6026', { onClick: () => open('lead-more', '206:6026', leadMore(), 220), title: 'Lead actions' })
+    on('206:5963', { onClick: () => setEditing('contact'), title: 'Edit contact' })
+    on('206:6015', { onClick: () => setEditing('lead'), title: 'Edit lead' })
+    on('206:6136', { onClick: () => setEditing('assign'), title: designer ? 'Change assignees' : 'Assign designer', className: 'value-hover' })
+  }
+  if (NEEDS) {
+    // Needs attention: header collapses the list; each row's link runs its action; resolved rows disappear
+    const rows = (NEEDS.k ?? []).filter((k) => k.n.startsWith('Row / Task') && !k.hidden)
+    const label = (r: FNode) => T.find(r, (n) => n.n === 'Link Button')
+    const linkText = (r: FNode) => (label(r) ? T.find(label(r)!, (n) => n.t === 'TEXT')?.txt?.trim() : '') ?? ''
+    const overdueTask = taskRows.find((t) => t.initial === 'overdue')
+    const resolved = (r: FNode) => {
+      const l = linkText(r)
+      if (l === 'Assign designer') return !!designer
+      if (l === 'Upload photos') return hasRequired(files, 'Bathroom')
+      if (l === 'Open task') return !!overdueTask && ['done', 'cancelled'].includes(task[overdueTask.id].status)
+      return false
+    }
+    const live = rows.filter((r) => !resolved(r))
+    rows.forEach((r) => {
+      if (resolved(r)) { patches[r.id] = { hidden: true }; return }
+      on(r.id, { className: 'hover-row' })
+      const l = linkText(r), btn = label(r)?.id
+      const act: Record<string, () => void> = {
+        'Open task': () => overdueTask && setDialog({ kind: 'task', data: { id: overdueTask.id, title: task[overdueTask.id].name ?? overdueTask.name.txt } }),
+        'Assign designer': () => setEditing('assign'),
+        'Upload photos': () => (tabsOn ? setTab('files') : notInPrototype('The Files & Photos tab')),
+        'Open estimate': () => (tabsOn ? setTab('materials') : notInPrototype('The estimate')),
+      }
+      if (btn && act[l]) on(btn, { onClick: act[l], title: l })
+    })
+    const head = (NEEDS.k ?? [])[0], countText = T.find(head, (n) => n.t === 'TEXT' && /actions?$/.test(n.txt ?? ''))
+    if (countText) patches[countText.id] = { txt: `${live.length} action${live.length === 1 ? '' : 's'}` }
+    const chev = T.find(head, (n) => !!n.icon && /chev/.test(n.n))
+    if (chev) patches[chev.id] = { style: { transform: needsOpen ? 'none' : 'rotate(180deg)', transition: 'transform .18s var(--spring-snappy)' } }
+    on(head.id, { onClick: () => setNeedsOpen((v) => !v), title: needsOpen ? 'Collapse' : 'Expand', className: 'row-hover' })
+    ;(NEEDS.k ?? []).slice(1).forEach((k) => { if (!needsOpen) patches[k.id] = { hidden: true } })
+    if (!live.length) patches[NEEDS.id] = { hidden: true }
   }
 
   // ---------- concept 2: lead column + AI Assistant button (ids from Figma 124:1753) ----------
@@ -470,10 +540,10 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   return (
     <OverridesProvider value={{ patches, handlers }}>
       <FigmaNode node={R} />
-      {concept === 2 && aiOpen && (
+      {(concept === 2 || !AI_INLINE) && aiOpen && (
         <aside className="ai-drawer" aria-label="AI Assistant">
           <button className="icon-plain ai-drawer-close" aria-label="Close AI Assistant" onClick={() => setAiOpen(false)}><X size={18} /></button>
-          <FigmaNode node={node(AI)} parent={node('19:1233')} />
+          <FigmaNode node={aiNode} parent={TA.byId.get('19:1233')!} />
         </aside>
       )}
       <Menu state={menu?.key === 'cols' && colsMenuItems ? { ...menu, items: colsMenuItems() } : menu} onClose={() => setMenu(null)} />
@@ -498,10 +568,13 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
 
 }
 
-const Page1 = makePage(tree)
+// Concept 1 = Option 2 (Figma 184:3568); the previous Concept 1 frame (19:973) stays reachable at ?concept=1&option=1
+const Page1 = makePage(treeC1o2)
+const Page1o1 = makePage(tree)
 const Page2 = makePage(treeC2base)
+const option1 = new URLSearchParams(location.search).get('option') === '1'
 export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
-  return concept === 2 ? <Page2 concept={2} /> : <Page1 concept={1} />
+  return concept === 2 ? <Page2 concept={2} /> : option1 ? <Page1o1 concept={1} /> : <Page1 concept={1} />
 }
 
 function Dialogs({ dialog, close, say, onRenameTask, wish, onAddTask, onUpload }: {

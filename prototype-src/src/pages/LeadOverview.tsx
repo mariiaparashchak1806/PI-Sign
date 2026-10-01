@@ -11,7 +11,8 @@ import { ContactDialog, LeadInfoDialog, type Contact, type LeadInfo } from '../c
 import { aiAnswers, aiFallback, designers, projectManagers, projectStatuses, projectTypes } from '../lib/mockData'
 import { AssignDialog, MessagesDialog, type Assignees, type Msg } from '../components/LeadDialogs'
 import { FILES0, FILES0_C2, FilesTab, countIn, hasRequired, type FilesState, type Folder, type FileItem } from '../components/FilesTab'
-import { CatalogDialog, type CatalogKind } from '../components/CatalogDialog'
+import { CatalogDialog, type CatalogKind, type CatalogTarget } from '../components/CatalogDialog'
+import { ESTIMATE0, type CatalogItem, type Estimate, type Line } from '../lib/estimate'
 import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab } from '../components/OtherTabs'
 
 // Concept 2 (Figma 124:1753): shared widgets carry concept-1 ids (scripts/build_concept2.py), so the same handlers apply.
@@ -157,7 +158,29 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const setTab = (t: TabKey) => { setTabState(t); setMenu(null); window.scrollTo({ top: 0 }) }
   const [newTasks, setNewTasks] = useState<NewTask[]>([])
   const [files, setFiles] = useState<FilesState>(concept === 2 ? FILES0_C2 : FILES0)
-  const [catalog, setCatalog] = useState<CatalogKind | null>(null)
+  const [catalog, setCatalog] = useState<CatalogTarget>(null)
+  const [estimate, setEstimate] = useState<Estimate>(ESTIMATE0)
+  const kindNoun = (k: CatalogKind) => k.toLowerCase()
+  const addPicks = (kind: CatalogKind, project: string, picks: { item: CatalogItem; qty: number }[]) => {
+    const prev = estimate
+    setEstimate((e) => {
+      const ls = [...(e[project]?.[kind] ?? [])]
+      picks.forEach(({ item, qty }) => {
+        const i = ls.findIndex((l) => l.name === item.name)
+        if (i >= 0) ls[i] = { ...ls[i], qty: ls[i].qty + qty }
+        else ls.push({ id: `${item.code}-${Date.now()}`, name: item.name, qty, unit: item.unit, price: item.price, cost: item.cost, code: item.code.startsWith('mock-') ? undefined : item.code })
+      })
+      return { ...e, [project]: { ...e[project], [kind]: ls } }
+    })
+    setCatalog(null)
+    say(`${picks.length} ${picks.length === 1 ? 'item' : 'items'} added to ${project} ${kindNoun(kind)}`, () => setEstimate(prev))
+  }
+  const replaceLine = (kind: CatalogKind, project: string, line: Line, item: CatalogItem) => {
+    const prev = estimate
+    setEstimate((e) => ({ ...e, [project]: { ...e[project], [kind]: (e[project]?.[kind] ?? []).map((l) => (l.id === line.id ? { ...l, name: item.name, unit: item.unit, price: item.price, cost: item.cost, code: item.code.startsWith('mock-') ? undefined : item.code } : l)) } }))
+    setCatalog(null)
+    say(`${line.name} replaced with ${item.name}`, () => setEstimate(prev))
+  }
 
   const say = useCallback((text: string, undo?: () => void) => setToastState({ id: Date.now(), text, undo }), [])
   const open = (key: string, anchorId: string, items: MenuItem[], width?: number, align?: 'left' | 'right') => setMenu((m) => (m?.key === key ? null : { key, anchorId, items, width, align }))
@@ -332,7 +355,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     on(it.id, { className: 'hover-row' }); on(it.more, { className: moreCls(it.more) })
     on(it.more, { onClick: () => open(`item-${it.id}`, it.more, [
       { label: 'Edit quantity & price', icon: <Pencil {...I} />, onSelect: () => notInPrototype('Inline quantity editing') },
-      { label: 'Replace from catalog', icon: <RefreshCw {...I} />, onSelect: () => setCatalog(groupOf(it.id)) },
+      { label: 'Replace from catalog', icon: <RefreshCw {...I} />, onSelect: () => { const kind = groupOf(it.id); setCatalog({ kind, project: 'Kitchen', replace: estimate.Kitchen?.[kind]?.find((l) => l.name === it.name) }) } },
       { label: 'Duplicate', icon: <CopyPlus {...I} />, onSelect: () => say(`${it.name} duplicated (demo)`) },
       { label: 'Move to project', icon: <MoveRight {...I} />, meta: '›', onSelect: () => open(`move-${it.id}`, it.more, projectRows.filter((p) => p.name !== 'Kitchen').map((p) => ({ label: p.name, onSelect: () => say(`${it.name} moved to ${p.name} (demo)`) })), 200) },
       '-',
@@ -341,7 +364,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   })
   // "Add from catalog" per group (Materials · Labors · Countertops, in drawn order)
   const CATALOG_GROUPS: CatalogKind[] = ['Materials', 'Labors', 'Countertops']
-  kidsOf(KITCHEN_EXPANDED).forEach((g, i) => T.findAll(g, (n) => n.n === 'Link Button').forEach((b) => on(b.id, { onClick: () => setCatalog(CATALOG_GROUPS[i]), title: `Add ${CATALOG_GROUPS[i].toLowerCase()} from catalog` })))
+  kidsOf(KITCHEN_EXPANDED).forEach((g, i) => T.findAll(g, (n) => n.n === 'Link Button').forEach((b) => on(b.id, { onClick: () => setCatalog({ kind: CATALOG_GROUPS[i], project: 'Kitchen' }), title: `Add ${CATALOG_GROUPS[i].toLowerCase()} from catalog` })))
   const groupOf = (id: string) => CATALOG_GROUPS[kidsOf(KITCHEN_EXPANDED).findIndex((g) => !!T.find(g, (n) => n.id === id))] ?? 'Materials'
 
   // Agenda
@@ -449,7 +472,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
       <div className={`tab-content${concept === 2 ? " in-row" : ""}`}>
         {tab === 'agenda' ? <FigmaNode node={node(AGENDA)} parent={node(LEFT_COL)} />
           : tab === 'files' ? <FilesTab projects={liveProjects.map((p) => p.name)} files={files} setFiles={setFiles} say={say} />
-          : tab === 'labors' || tab === 'materials' || tab === 'countertops' ? <EstimateTab key={tab} kind={(tab.charAt(0).toUpperCase() + tab.slice(1)) as CatalogKind} projects={liveProjects.map((p) => p.name)} onCatalog={setCatalog} say={say} />
+          : tab === 'labors' || tab === 'materials' || tab === 'countertops' ? <EstimateTab key={tab} kind={(tab.charAt(0).toUpperCase() + tab.slice(1)) as CatalogKind} projects={liveProjects.map((p) => p.name)} estimate={estimate} setEstimate={setEstimate} onCatalog={setCatalog} say={say} />
           : tab === 'payment' ? <PaymentTab />
           : tab === 'agreements' ? <AgreementsTab say={say} confirm={confirm} />
           : tab === 'messages' ? <MessagesTab name={fullName} messages={messages} onSend={(m) => setMessages((x) => [...x, m])} />
@@ -514,6 +537,10 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     const LEAD2 = '124:2658'
     // the lead card grows (layoutGrow 1) inside an auto-height column → keep its own height in the browser
     patches[LEAD2] = { style: { flex: 'none' } }
+    // Overview: the lead column is pinned to the viewport height; only the right column scrolls with the page
+    // (Main and Content clip in Figma → `overflow: clip` instead of hidden so they don't become scroll containers)
+    if (tab === 'overview') ['124:2617', '19:1099'].forEach((id) => (patches[id] = { ...patches[id], style: { ...patches[id]?.style, overflow: 'clip' } }))
+    if (tab === 'overview') patches['124:2656'] = { style: { position: 'sticky', top: 20, alignSelf: 'flex-start', height: 'calc(100vh - 40px)', overflowY: 'auto', overscrollBehavior: 'contain', scrollbarWidth: 'thin', borderRadius: 12 } }
     patches['124:2673'] = { txt: fullName }
     on('124:2680', { onClick: () => open('lead-more', '124:2680', [
       { label: 'Copy lead link', icon: <Link2 {...I} />, onSelect: () => { navigator.clipboard?.writeText(location.href); say('Lead link copied') } },
@@ -552,7 +579,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
         </aside>
       )}
       <Menu state={menu?.key === 'cols' && colsMenuItems ? { ...menu, items: colsMenuItems() } : menu} onClose={() => setMenu(null)} />
-      <CatalogDialog kind={catalog} onClose={() => setCatalog(null)} />
+      <CatalogDialog target={catalog} projects={liveProjects.map((p) => p.name)} onClose={() => setCatalog(null)} onAdd={addPicks} onReplace={replaceLine} />
       <Toast toast={toast} onDone={() => setToastState(null)} />
       <LeadInfoDialog open={editing === 'lead'} value={leadInfo} onClose={() => setEditing(null)} onSave={(v) => { const prev = leadInfo; setLeadInfo(v); setEditing(null); say('Lead info saved', () => setLeadInfo(prev)) }} />
       <ContactDialog open={editing === 'contact'} value={contact} onClose={() => setEditing(null)} onSave={(v) => { const prev = contact; setContact(v); setEditing(null); say('Contact saved', () => setContact(prev)) }} />

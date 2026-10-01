@@ -1,72 +1,159 @@
-/** "Add from catalog" — layout of the PiSuite staging Materials / Labors / Countertops pickers:
- *  toolbar (price toggles, add, filter, In Stock, Brand, Vendor, search) · results · selected items with Reset / OK.
- *  The catalog isn't connected in the prototype, so results show an empty state (instead of staging's permission error). */
-import { useEffect, useState } from 'react'
+/** "Add from catalog" — reworked PiSuite staging picker (Labors / Materials / Countertops):
+ *  categories + search on the left, one table of items (name · code · price, cost × multiplier on demand),
+ *  "Add" turns into a quantity stepper in place, and the selection on the right shows quantities, line
+ *  totals and the subtotal before the single primary action "Add N items to <project>".
+ *  Items are the first page of the staging Labors catalog + the mock's own lines (see lib/estimate). */
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { createPortal } from 'react-dom'
-import { Banknote, Check, DollarSign, Filter, Package, PackageSearch, Plus, Search, X } from 'lucide-react'
+import { Check, Package, Plus, Search, X } from 'lucide-react'
 import { spring } from '../lib/springs'
+import { CATALOG, type CatalogItem, type CatalogKind, type Line } from '../lib/estimate'
+import { Stepper, Switch } from './Form'
 
-export type CatalogKind = 'Materials' | 'Labors' | 'Countertops'
+export type { CatalogKind }
+export type CatalogTarget = { kind: CatalogKind; project: string; replace?: Line } | null
 
-export function CatalogDialog({ kind, onClose }: { kind: CatalogKind | null; onClose: () => void }) {
-  const [cost, setCost] = useState(true)
-  const [sale, setSale] = useState(true)
-  const [inStock, setInStock] = useState(true)
-  const [q, setQ] = useState({ brand: '', vendor: '', search: '' })
-  useEffect(() => { if (kind) setQ({ brand: '', vendor: '', search: '' }) }, [kind])
+// catalog prices always carry cents so the column lines up: $3.00 · $5.40 · $7,200.00
+const money2 = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const realCode = (c: string) => (c.startsWith('mock-') ? '' : c)
+
+export function CatalogDialog({ target, projects, onClose, onAdd, onReplace }: {
+  target: CatalogTarget
+  projects: string[]
+  onClose: () => void
+  onAdd: (kind: CatalogKind, project: string, picks: { item: CatalogItem; qty: number }[]) => void
+  onReplace: (kind: CatalogKind, project: string, line: Line, item: CatalogItem) => void
+}) {
+  const [project, setProject] = useState('')
+  const [cat, setCat] = useState('All')
+  const [search, setSearch] = useState('')
+  const [showCost, setShowCost] = useState(false)
+  const [cart, setCart] = useState<Record<string, number>>({})
+  const [cleared, setCleared] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    if (!kind) return
+    if (!target) return
+    setProject(target.project); setCat('All'); setSearch(''); setCart({}); setCleared(null)
+  }, [target])
+  useEffect(() => {
+    if (!target) return
     const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key)
-  }, [kind, onClose])
-  const noun = kind?.toLowerCase() ?? ''
-  const searching = !!(q.brand || q.vendor || q.search)
+  }, [target, onClose])
+
+  const kind = target?.kind ?? 'Labors'
+  const { categories, items } = CATALOG[kind]
+  const noun = kind.toLowerCase()
+  const shown = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return items.filter((it) => (cat === 'All' || it.category === cat) && (!q || it.name.toLowerCase().includes(q) || it.code.includes(q)))
+  }, [items, cat, search])
+  const byCode = (c: string) => items.find((it) => it.code === c)!
+  const picks = Object.entries(cart).map(([code, qty]) => ({ item: byCode(code), qty }))
+  const count = picks.length
+  const subtotal = picks.reduce((a, p) => a + p.qty * p.item.price, 0)
+  const setQty = (code: string, qty: number) => setCart((c) => ({ ...c, [code]: qty }))
+  const drop = (code: string) => setCart((c) => { const { [code]: _, ...rest } = c; return rest })
+  const replacing = target?.replace
+
   return createPortal(
     <AnimatePresence>
-      {kind && (
+      {target && (
         <motion.div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <motion.div role="dialog" aria-modal="true" aria-label={kind} className="dialog catalog" initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={spring.calm}>
+          <motion.div role="dialog" aria-modal="true" aria-label={replacing ? `Replace ${replacing.name}` : `Add ${noun}`} className={`dialog catalog${replacing ? ' replace' : ''}`} initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={spring.calm}>
             <div className="dialog-head">
-              <div className="dialog-title">{kind}</div>
+              {replacing
+                ? <div className="dialog-title">Replace “{replacing.name}” <span className="cat-title-meta">in {target.project}</span></div>
+                : <div className="dialog-title cat-title">Add {noun} to
+                    <select className="input select cat-project" aria-label="Project" value={project} onChange={(e) => setProject(e.target.value)}>{projects.map((p) => <option key={p}>{p}</option>)}</select>
+                  </div>}
               <button className="icon-plain" aria-label="Close" onClick={onClose}><X size={18} /></button>
             </div>
             <div className="catalog-body">
+              {categories.length > 0 && (
+                <nav className="cat-nav" aria-label="Categories">
+                  {['All', ...categories].map((c) => (
+                    <button key={c} className={`cat-nav-item${cat === c ? ' on' : ''}`} aria-current={cat === c ? 'true' : undefined} onClick={() => setCat(c)}>
+                      <span>{c}</span>{c === 'All' && <em>{items.length}</em>}
+                    </button>
+                  ))}
+                </nav>
+              )}
               <div className="catalog-main">
-                {kind !== 'Labors' && (
-                  <div className="catalog-toolbar">
-                    <div className="catalog-tools">
-                      <button className={`tool-btn${cost ? ' on' : ''}`} aria-pressed={cost} title="Show cost" onClick={() => setCost((v) => !v)}><DollarSign size={16} /></button>
-                      <button className={`tool-btn${sale ? ' on' : ''}`} aria-pressed={sale} title="Show sale price" onClick={() => setSale((v) => !v)}><Banknote size={16} /></button>
-                      <button className="tool-btn" disabled title="Add custom item"><Plus size={16} /></button>
+                <div className="catalog-toolbar">
+                  <div className="catalog-search">
+                    <Search size={16} />
+                    <input className="input" placeholder={`Search ${noun} by name or code`} aria-label={`Search ${noun}`} value={search} onChange={(e) => setSearch(e.target.value)} />
+                  </div>
+                  <Switch on={showCost} onChange={setShowCost} label="Show cost" />
+                </div>
+                {shown.length ? (
+                  <div className={`cat-table${showCost ? ' with-cost' : ''}`} role="table" aria-label={`${kind} catalog`}>
+                    <div className="cat-row head" role="row">
+                      <span role="columnheader">Item</span>
+                      {showCost && <span role="columnheader" className="num">Cost</span>}
+                      <span role="columnheader" className="num">Price</span>
+                      <span role="columnheader" className="act" aria-label="Action" />
                     </div>
-                    <button className="tool-btn outline" title="Filters" aria-label="Filters"><Filter size={16} /></button>
-                    <label className="catalog-check"><input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} />In Stock</label>
-                    <input className="input" placeholder="Brand" aria-label="Brand" value={q.brand} onChange={(e) => setQ({ ...q, brand: e.target.value })} />
-                    <input className="input" placeholder="Vendor" aria-label="Vendor" value={q.vendor} onChange={(e) => setQ({ ...q, vendor: e.target.value })} />
-                    <div className="catalog-search">
-                      <Search size={16} />
-                      <input className="input" placeholder="Search from +200,000 materials…" aria-label="Search the catalog" value={q.search} onChange={(e) => setQ({ ...q, search: e.target.value })} />
-                    </div>
+                    {shown.map((it) => {
+                      const qty = cart[it.code]
+                      return (
+                        <div key={it.code} className={`cat-row${qty ? ' picked' : ''}`} role="row">
+                          <span role="cell" className="cat-item"><b>{it.name}</b>{realCode(it.code) && <em>{it.code}</em>}</span>
+                          {showCost && <span role="cell" className="num muted">{it.cost != null ? <>{money2(it.cost)}{it.multiplier && <> · ×{it.multiplier}</>}</> : '—'}</span>}
+                          <span role="cell" className="num">{money2(it.price)}{it.unit && <em> / {it.unit}</em>}</span>
+                          <span role="cell" className="act">
+                            {replacing
+                              ? <button className="btn btn-secondary btn-sm" onClick={() => onReplace(kind, target.project, replacing, it)}>Select</button>
+                              : qty
+                                ? <Stepper value={qty} min={0} label={`Quantity of ${it.name}`} onChange={(n) => (n ? setQty(it.code, n) : drop(it.code))} />
+                                : <button className="btn btn-secondary btn-sm" onClick={() => { setQty(it.code, 1); setCleared(null) }}><Plus size={16} />Add</button>}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <span className="empty-icon"><Search size={22} strokeWidth={1.6} /></span>
+                    {search ? <><b>No {noun} match “{search.trim()}”</b><span>Check the spelling or search by item code.</span></>
+                      : <><b>No {noun} in {cat} yet</b><span>This category isn’t loaded in the prototype — open All to see the catalog.</span></>}
                   </div>
                 )}
-                <div className="empty-state">
-                  <span className="empty-icon"><PackageSearch size={24} strokeWidth={1.6} /></span>
-                  <b>{searching ? `No ${noun} match your search` : `No ${noun} found`}</b>
-                  <span>{searching ? 'Try another brand, vendor or name.' : `${kind} from your catalog will appear here.`}</span>
-                </div>
               </div>
-              <aside className="catalog-side" aria-label="Selected items">
-                <div className="empty-state">
-                  <span className="empty-icon"><Package size={24} strokeWidth={1.6} /></span>
-                  <b>No item selected</b>
-                  <span>Items you pick are listed here before you add them.</span>
-                </div>
-                <div className="catalog-foot">
-                  <button className="btn btn-secondary" disabled>Reset</button>
-                  <button className="btn btn-primary" disabled><Check size={16} />OK</button>
-                </div>
-              </aside>
+              {!replacing && (
+                <aside className="catalog-side" aria-label="Selected items">
+                  <div className="cat-side-head">
+                    <b>Selected{count ? ` · ${count}` : ''}</b>
+                    {count > 0 && <button className="link-btn" onClick={() => { setCleared(cart); setCart({}) }}>Clear</button>}
+                  </div>
+                  {count ? (
+                    <div className="cat-cart">
+                      {picks.map(({ item, qty }) => (
+                        <div key={item.code} className="cat-cart-row">
+                          <div className="cat-cart-name"><span>{item.name}</span><button className="icon-plain" aria-label={`Remove ${item.name}`} onClick={() => drop(item.code)}><X size={16} /></button></div>
+                          <div className="cat-cart-meta">
+                            <Stepper value={qty} label={`Quantity of ${item.name}`} unit={item.unit} onChange={(n) => setQty(item.code, n)} />
+                            <span className="num">{money2(qty * item.price)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state">
+                      <span className="empty-icon"><Package size={22} strokeWidth={1.6} /></span>
+                      {cleared ? <><b>Selection cleared</b><button className="link-btn" onClick={() => { setCart(cleared); setCleared(null) }}>Undo</button></>
+                        : <><b>Nothing selected yet</b><span>Add items from the list — you can set quantities here before adding them to {project}.</span></>}
+                    </div>
+                  )}
+                  <div className="catalog-foot">
+                    {count > 0 && <div className="cat-subtotal"><span>Subtotal</span><b>{money2(subtotal)}</b></div>}
+                    <button className="btn btn-primary" disabled={!count} onClick={() => onAdd(kind, project, picks)}>
+                      <Check size={16} />{count ? `Add ${count} item${count === 1 ? '' : 's'} to ${project}` : `Add to ${project}`}
+                    </button>
+                  </div>
+                </aside>
+              )}
             </div>
           </motion.div>
         </motion.div>

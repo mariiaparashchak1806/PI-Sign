@@ -43,7 +43,7 @@
 
 ### Intentionally static (controls audit)
 - Rail, sidebar nav, tabs other than Overview (user decision 2026-09-30), breadcrumbs, lead status pill, Bathroom/Basement chevrons (no line items drawn), right-column summary rows, header checkbox in Agenda
-- "View all" (Agenda, Signed documents, Files), Payment plan link, catalog, inline qty edit → toast "isn't part of this prototype"
+- "View all" (Agenda, Signed documents, Files), Payment plan link → toast "isn't part of this prototype"
 
 ### Tabs
 - Overview · Agenda · Files & Photos are clickable; other tabs are inactive (toast).
@@ -52,7 +52,7 @@
 - Deviation: the designer's task menu says "Delete project" — shown as "Delete task" (it deletes the task).
 - Assumption: Basement's "2 files" from the Overview summary are placed in Before Photos (the mock doesn't say which folder).
 - Deviation: 16 px gap between the Contact and Lead cards (0 in the mock), per designer.
-- Add from catalog: picker shell with empty states (catalog not connected); staging's permission error deliberately not shown.
+- Add from catalog: categories + search, items from the staging Labors catalog (first page) + mock lines, in-place qty stepper, selection with subtotal → adds lines to the chosen project; Replace mode from ⋯.
 - All tabs are built (see PROGRESS.md 2026-09-30). Not itemised in the mock → not invented: Bathroom lines, payment amounts/dates.
 - Deviation: page ends where content ends (Figma frame has a fixed 2653 px height with empty space); left menu is sticky.
 

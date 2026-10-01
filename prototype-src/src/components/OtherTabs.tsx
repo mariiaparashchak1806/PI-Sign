@@ -2,10 +2,10 @@
  *  Structure follows the PiSuite staging tabs; content is the lead's data from the mock; the staging
  *  "Insufficient permissions" errors are replaced by the real data or an empty state. */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Banknote, Bold, ChevronDown, DollarSign, Download, Eye, FileText, Italic, List, ListOrdered, Mail, MessageSquare, PenLine, Pencil, Plus, Send, Strikethrough, Trash2, Underline } from 'lucide-react'
-import { ESTIMATE, itemsLabel, money, type Line } from '../lib/estimate'
-import type { CatalogKind } from './CatalogDialog'
-import { Field, Select, TextInput } from './Form'
+import { Banknote, Bold, ChevronDown, Download, Eye, FileText, Italic, List, ListOrdered, Mail, MessageSquare, MoreHorizontal, PenLine, Plus, RefreshCw, Send, Strikethrough, Trash2, Underline } from 'lucide-react'
+import { SUMMARY, itemsLabel, lineTotal, money, type CatalogKind, type Estimate, type Line } from '../lib/estimate'
+import { Field, Select, Stepper, Switch, TextInput } from './Form'
+import { Menu, type MenuState } from './Overlay'
 import type { Msg } from './LeadDialogs'
 
 function Card({ title, left, right, children, narrow }: { title: ReactNode; left?: ReactNode; right?: ReactNode; children: ReactNode; narrow?: boolean }) {
@@ -26,63 +26,84 @@ function Empty({ icon, title, text }: { icon: ReactNode; title: string; text?: s
 }
 
 // ---------- Labors / Materials / Countertops ----------
-export function EstimateTab({ kind, projects, onCatalog, say }: { kind: CatalogKind; projects: string[]; onCatalog: (k: CatalogKind) => void; say: (t: string, undo?: () => void) => void }) {
-  const [unit, setUnit] = useState(true)
-  const [total, setTotal] = useState(true)
-  const [mode, setMode] = useState<'list' | 'edit'>('list')
-  const [project, setProject] = useState(projects[0] ?? 'Kitchen')
-  const [open, setOpen] = useState<string[]>(['Kitchen'])
-  const [lines, setLines] = useState<Record<string, Line[]>>(() => Object.fromEntries(ESTIMATE.filter((p) => p.lines).map((p) => [p.project, p.lines![kind]])))
+// One list per project (Kitchen → Bathroom → Basement): quantities change in place, ⋯ replaces or removes a
+// line, each project adds from the catalog straight into itself. Bathroom's drawn totals stay as a summary row.
+export function EstimateTab({ kind, projects, estimate, setEstimate, onCatalog, say }: {
+  kind: CatalogKind; projects: string[]; estimate: Estimate; setEstimate: (f: (e: Estimate) => Estimate) => void
+  onCatalog: (t: { kind: CatalogKind; project: string; replace?: Line }) => void; say: (t: string, undo?: () => void) => void
+}) {
+  const [showCost, setShowCost] = useState(false)
+  const [showSale, setShowSale] = useState(true)
+  const [closed, setClosed] = useState<string[]>([])
+  const [menu, setMenu] = useState<MenuState>(null)
   const noun = kind.toLowerCase()
+  const groups = projects.map((p) => {
+    const ls = estimate[p]?.[kind] ?? []
+    const sum = SUMMARY[p]?.[kind]
+    return { p, ls, sum, count: ls.length + (sum?.items ?? 0), value: ls.reduce((a, l) => a + lineTotal(l), 0) + (sum?.total ?? 0) }
+  })
+  const allCount = groups.reduce((a, g) => a + g.count, 0), allValue = groups.reduce((a, g) => a + g.value, 0)
+  const setLines = (p: string, f: (ls: Line[]) => Line[]) => setEstimate((e) => ({ ...e, [p]: { ...e[p], [kind]: f(e[p]?.[kind] ?? []) } }))
+  const cols = `minmax(0,1fr) 148px${showCost ? ' 110px' : ''}${showSale ? ' 110px 120px' : ''} 28px`
   return (
-    <Card title={kind}
-      left={<div className="seg seg-icons" role="group" aria-label="Columns">
-        <button aria-pressed={unit} className={unit ? 'on' : ''} title="Show unit price" onClick={() => setUnit((v) => !v)}><DollarSign size={16} /></button>
-        <button aria-pressed={total} className={total ? 'on' : ''} title="Show line total" onClick={() => setTotal((v) => !v)}><Banknote size={16} /></button>
-      </div>}
-      right={<div className="seg seg-labels" role="radiogroup" aria-label="Mode">
-        <button role="radio" aria-checked={mode === 'list'} className={mode === 'list' ? 'on' : ''} onClick={() => setMode('list')}><List size={16} />List</button>
-        <button role="radio" aria-checked={mode === 'edit'} className={mode === 'edit' ? 'on' : ''} onClick={() => setMode('edit')}><Pencil size={16} />Edit</button>
-      </div>}>
-      <div className="tcard-toolbar">
-        <Field label="Project"><Select value={project} onChange={(e) => setProject(e.target.value)} aria-label="Project">{projects.map((p) => <option key={p}>{p}</option>)}</Select></Field>
-        <button className="btn btn-primary btn-lg" onClick={() => onCatalog(kind)}><Plus size={16} />Add from catalog</button>
-      </div>
-      {ESTIMATE.filter((p) => projects.includes(p.project)).map((p) => {
-        const ls = lines[p.project]
-        const sum = p.summary?.[kind]
-        const count = ls ? ls.length : sum?.items ?? 0
-        const value = ls ? ls.reduce((a, l) => a + l.qty * l.price, 0) : sum?.total ?? 0
-        const itemised = !!ls
-        const isOpen = open.includes(p.project) && itemised
+    <Card title={<span className="est-title">{kind}<span className="est-meta">{itemsLabel(allCount)}{showSale && allCount > 0 && <> · {money(allValue)}</>}</span></span>}
+      right={<div className="est-switches"><Switch on={showCost} onChange={setShowCost} label="Show cost" /><Switch on={showSale} onChange={setShowSale} label="Show sale" /></div>}>
+      {groups.map(({ p, ls, sum, count, value }) => {
+        const isOpen = !closed.includes(p)
         return (
-          <div key={p.project} className="tgroup">
-            <button className={`tgroup-head${itemised ? '' : ' static'}`} aria-expanded={itemised ? isOpen : undefined} tabIndex={itemised ? 0 : -1}
-              onClick={() => itemised && setOpen((o) => (isOpen ? o.filter((x) => x !== p.project) : [...o, p.project]))}>
-              {itemised ? <ChevronDown size={16} className="files-chev" style={{ transform: isOpen ? 'none' : 'rotate(-90deg)' }} /> : <span className="tgroup-chev-space" />}
-              <span className="files-group-name">{p.project}</span>
-              <span className="files-group-count">{count ? itemsLabel(count) : `No ${noun}`}</span>
-              {count > 0 && <span className="tgroup-total">{money(value)}</span>}
-            </button>
-            {isOpen && (ls.length ? (
-              <div className="tlines" role="table" aria-label={`${p.project} ${noun}`}>
-                {ls.map((l, i) => (
-                  <div key={l.name} className="tline" role="row">
-                    <span className="tline-name" role="cell">{l.name}</span>
-                    {mode === 'edit'
-                      ? <span className="tline-qty" role="cell"><input className="input qty" type="number" min={1} aria-label={`Quantity of ${l.name}`} value={l.qty} onChange={(e) => { const qty = Math.max(1, Number(e.target.value) || 1); setLines((x) => ({ ...x, [p.project]: x[p.project].map((y, j) => (j === i ? { ...y, qty } : y)) })) }} />{l.unit && <em>{l.unit}</em>}</span>
-                      : unit && <span className="tline-unit" role="cell">{l.qty}{l.unit ? ` ${l.unit}` : ''} × {money(l.price)}</span>}
-                    {mode === 'edit' && unit && <span className="tline-unit" role="cell">× {money(l.price)}</span>}
-                    {total && <span className="tline-total" role="cell">{money(l.qty * l.price)}</span>}
-                    {mode === 'edit' && <button className="icon-plain danger" aria-label={`Remove ${l.name}`} title="Remove" onClick={() => { const prev = ls; setLines((x) => ({ ...x, [p.project]: x[p.project].filter((_, j) => j !== i) })); say(`${l.name} removed`, () => setLines((x) => ({ ...x, [p.project]: prev }))) }}><Trash2 size={16} /></button>}
+          <div key={p} className="tgroup">
+            <div className="tgroup-head est-head">
+              <button className="est-toggle" aria-expanded={isOpen} onClick={() => setClosed((c) => (isOpen ? [...c, p] : c.filter((x) => x !== p)))}>
+                <ChevronDown size={16} className="files-chev" style={{ transform: isOpen ? 'none' : 'rotate(-90deg)' }} />
+                <span className="files-group-name">{p}</span>
+                <span className="files-group-count">{count ? itemsLabel(count) : `No ${noun}`}</span>
+              </button>
+              {showSale && count > 0 && <span className="tgroup-total">{money(value)}</span>}
+              {count > 0 && <button className="btn btn-secondary btn-sm" onClick={() => onCatalog({ kind, project: p })}><Plus size={16} />Add from catalog</button>}
+            </div>
+            {isOpen && (count ? (
+              <div className="tlines est-lines" role="table" aria-label={`${p} ${noun}`} style={{ ['--est-cols' as string]: cols }}>
+                <div className="tline est-row head" role="row">
+                  <span role="columnheader">Item</span><span role="columnheader">Qty</span>
+                  {showCost && <span role="columnheader" className="num">Unit cost</span>}
+                  {showSale && <><span role="columnheader" className="num">Unit price</span><span role="columnheader" className="num">Total</span></>}
+                  <span />
+                </div>
+                {sum && (
+                  <div className="tline est-row summary" role="row">
+                    <span role="cell" className="tline-name">Items from the estimate<em>{itemsLabel(sum.items)}</em></span>
+                    <span role="cell" />{showCost && <span role="cell" />}
+                    {showSale && <><span role="cell" /><span role="cell" className="num strong">{money(sum.total)}</span></>}
+                    <span />
+                  </div>
+                )}
+                {ls.map((l) => (
+                  <div key={l.id} className="tline est-row" role="row">
+                    <span role="cell" className="tline-name">{l.name}{l.code && <em>{l.code}</em>}</span>
+                    <span role="cell"><Stepper value={l.qty} unit={l.unit} label={`Quantity of ${l.name}`} onChange={(qty) => setLines(p, (x) => x.map((y) => (y.id === l.id ? { ...y, qty } : y)))} /></span>
+                    {showCost && <span role="cell" className="num muted">{l.cost != null ? money(l.cost) : '—'}</span>}
+                    {showSale && <><span role="cell" className="num muted">{money(l.price)}</span><span role="cell" className="num strong">{money(lineTotal(l))}</span></>}
+                    <button className="icon-plain" data-id={`est-${l.id}`} aria-label={`Actions for ${l.name}`} aria-haspopup="menu" onClick={() => setMenu(menu?.key === l.id ? null : { key: l.id, anchorId: `est-${l.id}`, width: 220, items: [
+                      { label: 'Replace from catalog', icon: <RefreshCw size={16} />, onSelect: () => onCatalog({ kind, project: p, replace: l }) },
+                      '-',
+                      { label: 'Remove', danger: true, icon: <Trash2 size={16} />, onSelect: () => { let prev: Line[] = []; setLines(p, (x) => { prev = x; return x.filter((y) => y.id !== l.id) }); say(`${l.name} removed from ${p}`, () => setLines(p, () => prev)) } },
+                    ] })}><MoreHorizontal size={16} /></button>
                   </div>
                 ))}
-                <div className="tline subtotal" role="row"><span className="tline-name" role="cell">Subtotal</span><span className="tline-total" role="cell">{money(value)}</span>{mode === 'edit' && <span className="tline-pad" />}</div>
+                {showSale && <div className="tline est-row subtotal" role="row"><span role="cell" className="tline-name">Subtotal</span><span />{showCost && <span />}<span /><span role="cell" className="num strong">{money(value)}</span><span /></div>}
               </div>
-            ) : <Empty icon={<FileText size={22} strokeWidth={1.6} />} title={`No ${noun} yet`} text={`Add ${noun} from the catalog.`} />)}
+            ) : (
+              <div className="empty-state">
+                <span className="empty-icon"><FileText size={22} strokeWidth={1.6} /></span>
+                <b>No {noun} in {p} yet</b>
+                <span>Pick them from the catalog — quantities can be changed here afterwards.</span>
+                <button className="btn btn-secondary" onClick={() => onCatalog({ kind, project: p })}><Plus size={16} />Add from catalog</button>
+              </div>
+            ))}
           </div>
         )
       })}
+      <Menu state={menu} onClose={() => setMenu(null)} />
     </Card>
   )
 }

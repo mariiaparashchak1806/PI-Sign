@@ -27,6 +27,8 @@ export const FILES0: FilesState = {
   Bathroom: {},
   Basement: { 'Before Photos': seed('basement', 2, 'Test Designer', 'Sep 29, 2026', ['IMG_5102.jpg', 'basement-stairs.jpg']) },
 }
+// Concept 2 draws Basement with "Before photos required" next to its 2 files → those files are not before photos there
+export const FILES0_C2: FilesState = { ...FILES0, Basement: { 'Additional Material Photos': seed('basement', 2, 'Test Designer', 'Sep 29, 2026', ['IMG_5102.jpg', 'basement-stairs.jpg']) } }
 export const countIn = (s: FilesState, project: string) => Object.values(s[project] ?? {}).reduce((a, l) => a + (l?.length ?? 0), 0)
 export const hasRequired = (s: FilesState, project: string) => (s[project]?.[REQUIRED]?.length ?? 0) > 0
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`

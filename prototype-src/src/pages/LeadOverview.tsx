@@ -10,12 +10,12 @@ import { Field, Select, TextArea, TextInput } from '../components/Form'
 import { ContactDialog, LeadInfoDialog, type Contact, type LeadInfo } from '../components/EditDialogs'
 import { aiAnswers, aiFallback, designers, projectManagers, projectStatuses, projectTypes } from '../lib/mockData'
 import { AssignDialog, MessagesDialog, type Assignees, type Msg } from '../components/LeadDialogs'
-import { FILES0, FilesTab, countIn, hasRequired, type FilesState, type Folder, type FileItem } from '../components/FilesTab'
+import { FILES0, FILES0_C2, FilesTab, countIn, hasRequired, type FilesState, type Folder, type FileItem } from '../components/FilesTab'
 import { CatalogDialog, type CatalogKind } from '../components/CatalogDialog'
 import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab } from '../components/OtherTabs'
 
 // Concept 2 (Figma 124:1753): shared widgets carry concept-1 ids (scripts/build_concept2.py), so the same handlers apply.
-// It keeps the concept-1 snapshot it was built from (tree-c2base.json); concept 1 follows the latest Figma sync (tree.json).
+// tree-c2base.json (the older 19:973 snapshot) is only the source of the AI Assistant card for the side panel.
 const root2 = tree2 as unknown as FNode
 const T2 = indexTree(root2)
 export type Concept = 1 | 2
@@ -156,7 +156,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const tab: TabKey = tabLive(tabState) ? tabState : 'overview'
   const setTab = (t: TabKey) => { setTabState(t); setMenu(null); window.scrollTo({ top: 0 }) }
   const [newTasks, setNewTasks] = useState<NewTask[]>([])
-  const [files, setFiles] = useState<FilesState>(FILES0)
+  const [files, setFiles] = useState<FilesState>(concept === 2 ? FILES0_C2 : FILES0)
   const [catalog, setCatalog] = useState<CatalogKind | null>(null)
 
   const say = useCallback((text: string, undo?: () => void) => setToastState({ id: Date.now(), text, undo }), [])
@@ -512,6 +512,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   if (concept === 2) {
     const n2 = (id: string) => T2.byId.get(id)!
     const LEAD2 = '124:2658'
+    // the lead card grows (layoutGrow 1) inside an auto-height column → keep its own height in the browser
+    patches[LEAD2] = { style: { flex: 'none' } }
     patches['124:2673'] = { txt: fullName }
     on('124:2680', { onClick: () => open('lead-more', '124:2680', [
       { label: 'Copy lead link', icon: <Link2 {...I} />, onSelect: () => { navigator.clipboard?.writeText(location.href); say('Lead link copied') } },
@@ -535,7 +537,6 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     if (hasRequired(files, 'Bathroom')) patches['124:3730'] = { hidden: true }
     if (hasRequired(files, 'Basement')) patches['109:10756'] = { hidden: true }
     // Kitchen row expands into the drawn line items (the same block as concept 1)
-    patches['124:3023'] = { style: { transform: kitchenOpen ? 'rotate(90deg)' : 'none', transition: 'transform .18s var(--spring-snappy)' } }
     on('93:8375', { render: (_n, el) => <>{el}{kitchenOpen && !deletedRows.includes('93:8375') && <FigmaNode key="kx" node={node(KITCHEN_EXPANDED)} parent={n2('42:10511')} />}</> })
     // AI Assistant lives in the top bar here → opens the same assistant card in a side panel
     on('124:3631', { onClick: () => setAiOpen((v) => !v), title: 'AI Assistant' })
@@ -576,7 +577,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
 // Concept 1 has two variants: Option 1 = Figma 19:973, Option 2 = Figma 184:3568
 const Page1o1 = makePage(tree)
 const Page1o2 = makePage(treeC1o2)
-const Page2 = makePage(treeC2base)
+const Page2 = makePage(tree) // Concept 2 shares the current Concept 1 widgets (scripts/build_concept2.py)
 export default function LeadOverview({ concept = 1, option = 1 }: { concept?: Concept; option?: 1 | 2 }) {
   return concept === 2 ? <Page2 concept={2} /> : option === 2 ? <Page1o2 concept={1} /> : <Page1o1 concept={1} />
 }

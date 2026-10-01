@@ -105,3 +105,10 @@
 - Both variants use the last complete Project Details + Agenda (the shared components are mid-edit in Figma: Project column collapsed / task names cut).
 - Links: /prototype/concept-1/ (Option 1), /prototype/concept-1/option-1/, /prototype/concept-1/option-2/, /prototype/concept-2/; "Option 1 / Option 2" switch on Concept 1 pages (updates the URL; switching resets prototype state).
 - Checks: option 1 52/52, option 2 57/57, concept 2 28/28, agenda/files tabs 27/19, 0 console errors; visual compare matches except the in-progress tables.
+
+## 2026-10-01 — Concept 2 re-synced with Figma 124:1753
+- Full Bridge dump (extraction/concept2-export.json); scripts/build_concept2.py rewritten: shared widgets map to the current Concept 1 ids (tree.json) → Concept 2 now has Needs attention, the new Project Details header (Preview PDF / Add from wishlist / Add project, Show cost / Show sale switches, Total row), Agenda pill, Signed documents widget. 10 new icons.
+- Page2 base = tree.json (was the older snapshot; tree-c2base.json is now only the AI card source for the side panel).
+- Lead card has layoutGrow 1 in an auto-height column → flex: none (otherwise it collapses in the browser).
+- Basement shows "Before photos required" in Concept 2's design → Concept 2 seeds Basement's 2 files in Additional Material Photos (FILES0_C2).
+- Checks: concept 2 30/30, files tab 9/9, concept 1 option 1 52/52, option 2 57/57, 0 console errors; visual compare matches.

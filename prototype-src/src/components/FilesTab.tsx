@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { createPortal } from 'react-dom'
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Download, FileText, FolderInput, Image as ImageIcon, Pencil, Trash2, Upload, X } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Download, FileText, FolderInput, Image as ImageIcon, LayoutGrid, List, Maximize2, MoreHorizontal, Pencil, Trash2, Upload, X } from 'lucide-react'
 import { spring } from '../lib/springs'
 
 export const FOLDERS = ['Before Photos', '3D Renderings', '2020 Files', 'Additional Material Photos'] as const
@@ -56,7 +56,19 @@ type Viewer = { project: string; folder: Folder; index: number } | null
 export function FilesTab({ projects, files, setFiles, say }: {
   projects: string[]; files: FilesState; setFiles: (f: (s: FilesState) => FilesState) => void; say: (t: string, undo?: () => void) => void
 }) {
-  const view = 'list' as 'list' | 'grid' // list/grid toggle removed (designer, Oct 1) — list only
+  // List = folder rows with thumbnails; Grid = every photo as a card, grouped by folder (reworked staging grid view)
+  const [view, setView] = useState<'list' | 'grid'>('list')
+  const [cardMenu, setCardMenu] = useState<string | null>(null)
+  useEffect(() => {
+    if (!cardMenu) return
+    const close = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest('.fg-card-menu, .fg-more')) setCardMenu(null) }
+    document.addEventListener('mousedown', close); return () => document.removeEventListener('mousedown', close)
+  }, [cardMenu])
+  const removeAt = (project: string, folder: Folder, it: FileItem, index: number, label: string) => {
+    setFiles((s) => ({ ...s, [project]: { ...s[project], [folder]: (s[project]?.[folder] ?? []).filter((x) => x.id !== it.id) } }))
+    say(`${label} deleted`, () => setFiles((s) => { const l = [...(s[project]?.[folder] ?? [])]; l.splice(index, 0, it); return { ...s, [project]: { ...s[project], [folder]: l } } }))
+  }
+  const download = (it: FileItem) => { if (it.src) { const a = document.createElement('a'); a.href = it.src; a.download = it.original; a.click() } say(`Downloading ${it.original}…`) }
   const [closed, setClosed] = useState<string[]>([])
   const [viewer, setViewer] = useState<Viewer>(null)
   const [dragOver, setDragOver] = useState<string | null>(null)
@@ -86,6 +98,10 @@ export function FilesTab({ projects, files, setFiles, say }: {
       <input ref={input} type="file" multiple hidden onChange={(e) => target.current && add(target.current.project, target.current.folder, [...(e.target.files ?? [])])} />
       <header className="files-head">
         <h2>Files &amp; Photos</h2>
+        <div className="seg seg-icons" role="radiogroup" aria-label="View">
+          <button role="radio" aria-checked={view === 'list'} aria-label="List view" title="List — folders with previews" className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}><List size={16} /></button>
+          <button role="radio" aria-checked={view === 'grid'} aria-label="Grid view" title="Grid — all photos" className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')}><LayoutGrid size={16} /></button>
+        </div>
       </header>
       {projects.map((p) => {
         const total = countIn(files, p)
@@ -99,6 +115,56 @@ export function FilesTab({ projects, files, setFiles, say }: {
               {!hasRequired(files, p) && <span className="files-required-pill"><AlertTriangle size={14} />Before photos required</span>}
             </button>
             {open && (
+              view === 'grid' ? (
+                <div className="fg">
+                  {FOLDERS.map((f) => {
+                    const list = files[p]?.[f] ?? []
+                    const missing = f === REQUIRED && list.length === 0
+                    const label = f === '2020 Files' ? 'Add files' : 'Add photos'
+                    return (
+                      <section key={f} className={`fg-folder${missing ? ' is-missing' : ''}`} aria-label={`${p} · ${f}`} {...dragProps(p, f)}>
+                        <header className="fg-head">
+                          <span className="files-folder-title">{f}{f === REQUIRED && <span className="files-req-badge">Required</span>}</span>
+                          <span className={`files-folder-meta${missing ? ' warn' : ''}`}>{missing ? <><AlertTriangle size={14} />Add at least one before photo</> : list.length ? plural(list.length, noun(f)) : `No ${noun(f)}s yet`}</span>
+                          <span style={{ flex: 1 }} />
+                          <button className="btn btn-sm" onClick={() => pick(p, f)}><Upload size={14} />{label}</button>
+                        </header>
+                        {list.length ? (
+                          <div className="fg-grid">
+                            {list.map((it, i) => {
+                              const name = displayName(it, f, i)
+                              return (
+                                <article key={it.id} className="fg-card">
+                                  <button type="button" className="fg-thumb" style={{ background: it.src ? undefined : TONES[it.tone ?? 0] }} onClick={() => setViewer({ project: p, folder: f, index: i })} aria-label={`Open ${name}`}>
+                                    {it.src ? <img src={it.src} alt="" /> : <ImageIcon size={22} strokeWidth={1.5} />}
+                                  </button>
+                                  <div className="fg-info">
+                                    <div className="fg-name" title={`${name} — ${it.original}`}>{name}</div>
+                                    <div className="fg-meta" title={`Uploaded by ${it.by} · ${it.at}`}>{it.at.replace(/, \d{4}.*$/, '')} · {it.by.split(' ')[0]}</div>
+                                  </div>
+                                  <button type="button" className="icon-plain fg-more" aria-label={`Actions for ${name}`} aria-haspopup="menu" aria-expanded={cardMenu === it.id} onClick={() => setCardMenu((m) => (m === it.id ? null : it.id))}><MoreHorizontal size={16} /></button>
+                                  {cardMenu === it.id && (
+                                    <div className="menu fg-card-menu" role="menu">
+                                      <button role="menuitem" className="menu-item" onClick={() => { setCardMenu(null); setViewer({ project: p, folder: f, index: i }) }}><Maximize2 size={16} /><span className="menu-label">Open</span></button>
+                                      <button role="menuitem" className="menu-item" onClick={() => { setCardMenu(null); download(it) }}><Download size={16} /><span className="menu-label">Download</span></button>
+                                      <div className="menu-divider" />
+                                      <button role="menuitem" className="menu-item danger" onClick={() => { setCardMenu(null); removeAt(p, f, it, i, name) }}><Trash2 size={16} /><span className="menu-label">Delete</span></button>
+                                    </div>
+                                  )}
+                                </article>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <button type="button" className={`fg-drop${missing ? ' warn' : ''}`} onClick={() => pick(p, f)}>
+                            <Upload size={16} />Drag {noun(f)}s here or <u>browse</u>
+                          </button>
+                        )}
+                      </section>
+                    )
+                  })}
+                </div>
+              ) : (
               <div className={view === 'grid' ? 'files-grid' : 'files-list'}>
                 {FOLDERS.map((f) => {
                   const list = files[p]?.[f] ?? []
@@ -127,6 +193,7 @@ export function FilesTab({ projects, files, setFiles, say }: {
                   )
                 })}
               </div>
+              )
             )}
           </div>
         )

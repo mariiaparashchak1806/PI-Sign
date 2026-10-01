@@ -422,3 +422,25 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .variant-switch button { height: 32px; padding: 0 14px; border-radius: 7px; font-size: 14px; font-weight: 500; color: var(--color-text-secondary); cursor: pointer; }
 .variant-switch button:hover { color: var(--color-text-primary); }
 .variant-switch button.on { background: var(--color-brand-dark); color: var(--color-surface); }
+
+/* Files & Photos — grid view (every photo as a card, grouped by folder) */
+.fg { display: flex; flex-direction: column; }
+.fg-folder { padding: 14px 20px 18px; border-top: 1px solid var(--color-border); }
+.fg-folder:first-child { border-top: 0; }
+.fg-folder[data-drop="on"] { outline: 2px dashed var(--color-brand-dark); outline-offset: -4px; background: var(--color-bg-expanded); }
+.fg-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.fg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.fg-card { position: relative; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: visible; background: var(--color-surface); display: flex; flex-direction: column; }
+.fg-card:hover { box-shadow: 0 2px 8px var(--c-000000-a008); }
+.fg-thumb { aspect-ratio: 4 / 3; width: 100%; border-radius: 7px 7px 0 0; overflow: hidden; display: grid; place-items: center; color: var(--color-text-secondary); cursor: zoom-in; }
+.fg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fg-info { padding: 8px 36px 10px 10px; min-width: 0; }
+.fg-name { font-size: 14px; font-weight: 500; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fg-meta { font-size: 14px; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fg-more { position: absolute; right: 6px; bottom: 10px; }
+.fg-card-menu { position: absolute; right: 6px; bottom: 44px; width: 180px; z-index: 5; }
+.fg-add { aspect-ratio: auto; min-height: 150px; border: 1px dashed var(--color-border); border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--color-text-secondary); font-size: 14px; cursor: pointer; background: transparent; }
+.fg-add:hover { color: var(--color-text-primary); border-color: var(--color-text-secondary); background: var(--color-bg-table-header); }
+.fg-drop { width: 100%; height: 56px; border: 1px dashed var(--color-border); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--color-text-secondary); font-size: 14px; cursor: pointer; background: transparent; }
+.fg-drop:hover { background: var(--color-bg-table-header); color: var(--color-text-primary); }
+.fg-drop.warn { border-color: var(--c-eed6af); background: var(--c-fff5e5); color: var(--color-warning); }

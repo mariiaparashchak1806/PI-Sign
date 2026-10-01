@@ -116,3 +116,7 @@
 ## 2026-10-01 — tables fixed in Figma + synced
 - Figma (designer's request): Project Details component 226:15063, Default variant — Project column FILL, Materials/Labors/Total/Sales 60, Countertops 84, gap 12, header Status 178 → every row fits and all rows share the same column widths. Agenda component 226:15876 — Created by 120, Due Date 110, Status 110, gap 16 → Task column 266, full task names fit.
 - Prototype: fresh Bridge dumps of 19:973 and 184:3568; build_option1 KEEP emptied (tables as drawn); option 2 and concept 2 rebuilt. Controls: option 1 52/52, option 2 57/57, concept 2 30/30, agenda tab 27/27, 0 console errors.
+
+## 2026-10-01 — Files & Photos: list/grid toggle back, grid view reworked (all concepts/variants)
+- Staging grid problems: vertical folder names on green bars, full-height empty blocks ("No file found"), UUID names, bin next to download on every card, no count/Required, no drop hint.
+- Grid now: folders as horizontal sections (name + Required badge + count + Add photos), photo cards (4:3 thumbnail → viewer, readable name, "Sep 29 · Anna", ⋯ → Open / Download / Delete with Undo), compact dashed drop zone for empty folders (warning style when Before Photos is missing), drag & drop on the whole folder. scripts/grid-check.mjs.

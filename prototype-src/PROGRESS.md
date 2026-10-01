@@ -73,3 +73,11 @@
 - Re-created nodes (AI Assistant, lead wrapper, PD header) are resolved by name now, not by id.
 - Concept 2 unchanged: LeadOverview is a factory — concept 1 = makePage(tree.json, latest sync), concept 2 = makePage(tree-c2base.json, the concept-1 snapshot it was built from) + tree2.json. Switching concepts now resets prototype state.
 - Checks: concept 1 controls 57/57, concept 2 26/26 (pixel-identical to before except the moved switch), agenda tab 28/28, 0 console errors; scripts/sync-check.mjs covers the new switches/buttons/widget.
+
+## 2026-10-01 — Files & Photos tab reworked after the UX review (both concepts)
+- Folder rows: name + "Required" badge (warning style when empty: "Add at least one before photo"), count as text, up to 4 thumbnails + "+N" (open the viewer), labelled "Add photos"/"Add files" button, drag & drop on the whole row. Image-only folders reject non-images ("1 skipped (images only)"). Grid view = folder tiles with a cover.
+- Viewer: title "Project · Folder", "3 of 6"; readable name (technical names — UUID, IMG_1234, DSC…, Screenshot… — become "Before photo 3"; the original file name stays in the details); rename (✎, Enter/Esc); "Uploaded by … · date" (+ size for real uploads); Download / Move to folder / Delete (separated, Undo); prev/next + ←/→/Esc; thumbnail strip only for 2+ photos; "Add more".
+- Data from the mock: Kitchen 6 before photos by Anna Kovalenko, Sep 29, 2026, 2:40 PM (Activity); Basement 2; Bathroom none. File names are demo names (incl. the UUID case from staging); Basement uploader shown as Test Designer (not in the mock). Real uploads show the real image.
+- Overview summary cards (both concepts) count from the same state. Task "Attach file" adds real file items.
+- Concept 2: Files & Photos tab enabled (other tabs still inert); "View all" in its Files card opens it.
+- Checks: scripts/files-check.mjs; controls c1 57/57, c2 28/28, files tab c1 20/20 · c2 9/9, 0 console errors.

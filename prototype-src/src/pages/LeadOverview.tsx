@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { X, CircleX, CopyPlus, Download, FileText, Heart, Info, MoveRight, Paperclip, Pencil, Plus, RefreshCw, SquareCheck, Trash2, Archive, Link2 } from 'lucide-react'
 import tree from '../figma/tree.json'
 import treeC2base from '../figma/tree-c2base.json'
@@ -9,7 +9,7 @@ import { Field, Select, TextArea, TextInput } from '../components/Form'
 import { ContactDialog, LeadInfoDialog, type Contact, type LeadInfo } from '../components/EditDialogs'
 import { aiAnswers, aiFallback, designers, projectManagers, projectStatuses, projectTypes } from '../lib/mockData'
 import { AssignDialog, MessagesDialog, type Assignees, type Msg } from '../components/LeadDialogs'
-import { FILES0, FilesTab, type FileCounts } from '../components/FilesTab'
+import { FILES0, FilesTab, countIn, hasRequired, type FilesState, type Folder, type FileItem } from '../components/FilesTab'
 import { CatalogDialog, type CatalogKind } from '../components/CatalogDialog'
 import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab } from '../components/OtherTabs'
 
@@ -139,10 +139,11 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const [tabState, setTabState] = useState<TabKey>((new URLSearchParams(location.search).get('tab') as TabKey) || 'overview')
   // Concept 2 is presented on Overview only: other tabs are drawn but inert, and links into them are off
   const tabsOn = concept === 1
-  const tab: TabKey = tabsOn ? tabState : 'overview'
+  const tabLive = (k?: TabKey) => !!k && (tabsOn || k === 'overview' || k === 'files') // concept 2: Overview + Files & Photos only
+  const tab: TabKey = tabLive(tabState) ? tabState : 'overview'
   const setTab = (t: TabKey) => { setTabState(t); setMenu(null); window.scrollTo({ top: 0 }) }
   const [newTasks, setNewTasks] = useState<NewTask[]>([])
-  const [files, setFiles] = useState<FileCounts>(FILES0)
+  const [files, setFiles] = useState<FilesState>(FILES0)
   const [catalog, setCatalog] = useState<CatalogKind | null>(null)
 
   const say = useCallback((text: string, undo?: () => void) => setToastState({ id: Date.now(), text, undo }), [])
@@ -395,23 +396,23 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   on(AI, { after: ai.length ? <div className="ai-thread">{ai.map((m, i) => <div key={i}><div className="ai-q">{m.q}</div><div className="ai-a">{m.a}</div></div>)}</div> : undefined })
   if (tabsOn) on('93:6062', { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
   if (tabsOn) SIGNED_LINKS.forEach((id) => on(id, { onClick: () => setTab('agreements'), title: 'Open the Signed documents tab' }))
-  if (tabsOn) on('93:7192', { onClick: () => setTab('files'), title: 'Open the Files & Photos tab' })
-  FILE_SUMMARY.forEach(([p, id]) => { const n = Object.values(files[p] ?? {}).reduce((a, b) => a + b, 0); patches[id] = { txt: `${n} file${n === 1 ? '' : 's'}` } })
-  if (files.Bathroom?.['Before Photos']) patches['93:7471'] = { hidden: true }
+  if (tab !== 'files') on('93:7192', { onClick: () => setTab('files'), title: 'Open the Files & Photos tab' })
+  FILE_SUMMARY.forEach(([p, id]) => { const n = countIn(files, p); patches[id] = { txt: `${n} file${n === 1 ? '' : 's'}` } })
+  if (hasRequired(files, 'Bathroom')) patches['93:7471'] = { hidden: true }
 
   // Tabs
   tabs.forEach((t) => {
     const active = (t.key ?? '') === tab, c = active ? t.on : t.off
     patches[active ? t.onLabel : t.offLabel] = { txt: t.label }
-    if (!active && !tabsOn) on(c.id, { className: 'tab-inactive' })
+    if (!active && !tabLive(t.key)) on(c.id, { className: 'tab-inactive' })
     else if (!active) on(c.id, { onClick: () => (t.key ? setTab(t.key) : notInPrototype(`The ${t.label} tab`)), title: t.key ? undefined : `${t.label} — not in this prototype`, className: t.key ? undefined : 'tab-inactive' })
     on(t.id, { render: () => <FigmaNode node={c} parent={RT.byId.get(TABS)!} /> })
   })
   if (tab !== 'overview') {
     on(GRID, { render: () => (
-      <div className="tab-content">
+      <div className={`tab-content${concept === 2 ? " in-row" : ""}`}>
         {tab === 'agenda' ? <FigmaNode node={node(AGENDA)} parent={node(LEFT_COL)} />
-          : tab === 'files' ? <FilesTab projects={liveProjects.map((p) => p.name)} counts={files} onAdd={(p, f) => setDialog({ kind: 'attach', data: { p, f } })} />
+          : tab === 'files' ? <FilesTab projects={liveProjects.map((p) => p.name)} files={files} setFiles={setFiles} say={say} />
           : tab === 'labors' || tab === 'materials' || tab === 'countertops' ? <EstimateTab key={tab} kind={(tab.charAt(0).toUpperCase() + tab.slice(1)) as CatalogKind} projects={liveProjects.map((p) => p.name)} onCatalog={setCatalog} say={say} />
           : tab === 'payment' ? <PaymentTab />
           : tab === 'agreements' ? <AgreementsTab say={say} confirm={confirm} />
@@ -444,9 +445,9 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     lead2.forEach(([id, v]) => n2(id).txt !== v && (patches[id] = { txt: v }))
     void LEAD2
     // Files and photos summary (4 rows in this concept, incl. Laundry room as drawn)
-    ;[['Kitchen', '124:3722'], ['Bathroom', '124:3736'], ['Basement', '109:10739']].forEach(([p, id]) => { const k = Object.values(files[p] ?? {}).reduce((a, b) => a + b, 0); patches[id] = { txt: `${k} file${k === 1 ? '' : 's'}` } })
-    if (files.Bathroom?.['Before Photos']) patches['124:3730'] = { hidden: true }
-    if (files.Basement?.['Before Photos']) patches['109:10756'] = { hidden: true }
+    ;[['Kitchen', '124:3722'], ['Bathroom', '124:3736'], ['Basement', '109:10739']].forEach(([p, id]) => { const k = countIn(files, p); patches[id] = { txt: `${k} file${k === 1 ? '' : 's'}` } })
+    if (hasRequired(files, 'Bathroom')) patches['124:3730'] = { hidden: true }
+    if (hasRequired(files, 'Basement')) patches['109:10756'] = { hidden: true }
     // Kitchen row expands into the drawn line items (the same block as concept 1)
     patches['124:3023'] = { style: { transform: kitchenOpen ? 'rotate(90deg)' : 'none', transition: 'transform .18s var(--spring-snappy)' } }
     on('93:8375', { render: (_n, el) => <>{el}{kitchenOpen && !deletedRows.includes('93:8375') && <FigmaNode key="kx" node={node(KITCHEN_EXPANDED)} parent={n2('42:10511')} />}</> })
@@ -472,7 +473,13 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
       <MessagesDialog open={editing === 'messages'} name={fullName} phone={contact.phone} email={contact.email} store={leadInfo.store} status="Pending Leads" created="Sep 29, 2026, 2:17 PM" messages={messages} onSend={(m) => setMessages((x) => [...x, m])} onClose={() => setEditing(null)} />
       <Dialogs dialog={dialog} close={() => setDialog(null)} say={say} onRenameTask={(id, name) => (id.startsWith('new') ? setNewTasks((x) => x.map((y) => (y.id === id ? { ...y, name } : y))) : setTask((t) => ({ ...t, [id]: { ...t[id], name } })))} wish={wish}
         onAddTask={(name, due) => { const id = `new${Date.now()}`; setNewTasks((x) => [...x, { id, name, due, status: isPast(due) ? 'overdue' : 'upcoming' }]); say(`“${name}” added`, () => setNewTasks((x) => x.filter((y) => y.id !== id))) }}
-        onUpload={(p, f, n) => { setFiles((x) => ({ ...x, [p]: { ...x[p], [f]: (x[p]?.[f] ?? 0) + n } })); say(`${n} file${n === 1 ? '' : 's'} added to ${p} · ${f}`, () => setFiles((x) => ({ ...x, [p]: { ...x[p], [f]: (x[p]?.[f] ?? n) - n } }))) }} />
+        onUpload={(p, f, list) => {
+          const folder = f as Folder
+          const items: FileItem[] = list.map((file, i) => ({ id: `a${Date.now()}-${i}`, original: file.name, by: 'You', at: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }), size: file.size, src: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined }))
+          const ids = new Set(items.map((x) => x.id))
+          setFiles((x) => ({ ...x, [p]: { ...x[p], [folder]: [...(x[p]?.[folder] ?? []), ...items] } }))
+          say(`${items.length} file${items.length === 1 ? '' : 's'} added to ${p} · ${f}`, () => setFiles((x) => ({ ...x, [p]: { ...x[p], [folder]: (x[p]?.[folder] ?? []).filter((y) => !ids.has(y.id)) } })))
+        }} />
     </OverridesProvider>
   )
 }
@@ -488,10 +495,11 @@ export default function LeadOverview({ concept = 1 }: { concept?: Concept }) {
 function Dialogs({ dialog, close, say, onRenameTask, wish, onAddTask, onUpload }: {
   dialog: null | { kind: string; data?: Record<string, unknown> }; close: () => void; say: (t: string, undo?: () => void) => void
   onRenameTask: (id: string, name: string) => void; wish: Record<string, boolean>
-  onAddTask: (name: string, due: string) => void; onUpload: (project: string, folder: string, n: number) => void
+  onAddTask: (name: string, due: string) => void; onUpload: (project: string, folder: string, files: File[]) => void
 }) {
   const d = dialog?.data ?? {}
   const [form, setForm] = useState<Record<string, string>>({})
+  const picked = useRef<File[]>([])
   const key = useMemo(() => JSON.stringify(dialog), [dialog])
   const v = (k: string, dflt = '') => form[`${key}:${k}`] ?? dflt
   const set = (k: string) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [`${key}:${k}`]: e.target.value }))
@@ -542,11 +550,11 @@ function Dialogs({ dialog, close, say, onRenameTask, wish, onAddTask, onUpload }
         <Field label="Project"><Select value={v('p', (d.p as string) ?? 'Kitchen')} onChange={set('p')}>{['Kitchen', 'Bathroom', 'Basement'].map((t) => <option key={t}>{t}</option>)}</Select></Field>
         <Field label="Folder"><Select value={v('f', (d.f as string) ?? 'Before Photos')} onChange={set('f')}>{['Before Photos', '3D Renderings', '2020 Files', 'Additional Material Photos'].map((t) => <option key={t}>{t}</option>)}</Select></Field>
       </div>
-      <label className="dropzone"><FileText size={22} strokeWidth={1.6} /><b>Drag files here or browse</b><span>Photos, PDF, 2020 files · up to 25 MB</span><input type="file" multiple hidden onChange={(e) => setForm((f) => ({ ...f, [`${key}:files`]: String(e.target.files?.length ?? 0) }))} /></label>
+      <label className="dropzone"><FileText size={22} strokeWidth={1.6} /><b>Drag files here or browse</b><span>Photos, PDF, 2020 files · up to 25 MB</span><input type="file" multiple hidden onChange={(e) => { picked.current = [...(e.target.files ?? [])]; setForm((f) => ({ ...f, [`${key}:files`]: String(picked.current.length) })) }} /></label>
       {Number(v('files', '0')) > 0 && <div className="muted">{v('files')} file(s) selected</div>}
     </>
     const n = Number(v('files', '0'))
-    footer = <><Btn onClick={close}>Cancel</Btn><Btn kind="primary" disabled={!n} onClick={() => { close(); onUpload(v('p', (d.p as string) ?? 'Kitchen'), v('f', (d.f as string) ?? 'Before Photos'), n) }}>Upload</Btn></>
+    footer = <><Btn onClick={close}>Cancel</Btn><Btn kind="primary" disabled={!n} onClick={() => { close(); onUpload(v('p', (d.p as string) ?? 'Kitchen'), v('f', (d.f as string) ?? 'Before Photos'), picked.current) }}>Upload</Btn></>
   } else if (dialog?.kind === 'confirm') {
     title = d.title as string; width = 440
     body = <p className="muted" style={{ lineHeight: 1.55 }}>{d.body as string}</p>

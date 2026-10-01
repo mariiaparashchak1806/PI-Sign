@@ -61,3 +61,4 @@
 - Concept 2 deviations: Designer has no Assign button in the design — clicking the value opens Pick Assignees; Kitchen starts collapsed (as drawn) and expands into concept 1's line items.
 - Concept 2: only Overview is interactive in the tab bar (per designer); card links into tabs are inert.
 - Concept 1 follows the latest Figma 19:973 (Oct 1 sync); concept 2 keeps its own snapshot (tree-c2base.json). Switching concepts resets state.
+- Files & Photos: live in both concepts (concept 2: Overview + Files only). Seed file names/uploader for Basement are demo data.

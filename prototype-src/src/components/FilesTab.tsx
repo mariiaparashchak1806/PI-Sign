@@ -165,24 +165,21 @@ export function FilesTab({ projects, files, setFiles, say }: {
                   })}
                 </div>
               ) : (
-              <div className={view === 'grid' ? 'files-grid' : 'files-list'}>
+              <div className="files-list">
                 {FOLDERS.map((f) => {
                   const list = files[p]?.[f] ?? []
                   const missing = f === REQUIRED && list.length === 0
                   const openAt = (i: number) => setViewer({ project: p, folder: f, index: i })
-                  const thumbs = list.slice(0, view === 'grid' ? 1 : 4)
+                  const thumbs = list.slice(0, 4)
                   return (
                     <div key={f} className={`files-folder${missing ? ' is-missing' : ''}`} {...dragProps(p, f)}>
-                      {view === 'grid' && (list.length
-                        ? <Thumb it={list[0]} size={96} onClick={() => openAt(0)} label={displayName(list[0], f, 0)} />
-                        : <span className="ph-empty" aria-hidden><ImageIcon size={22} strokeWidth={1.5} /></span>)}
                       <span className="files-folder-name">
                         <span className="files-folder-title">{f}{f === REQUIRED && <span className="files-req-badge">Required</span>}</span>
                         <span className={`files-folder-meta${missing ? ' warn' : ''}`}>
                           {missing ? <><AlertTriangle size={14} />Add at least one before photo</> : list.length ? plural(list.length, noun(f)) : `No ${noun(f)}s yet · drag files here`}
                         </span>
                       </span>
-                      {view === 'list' && list.length > 0 && (
+                      {list.length > 0 && (
                         <span className="ph-strip">
                           {thumbs.map((it, i) => <Thumb key={it.id} it={it} onClick={() => openAt(i)} label={displayName(it, f, i)} />)}
                           {list.length > 4 && <button type="button" className="ph-more" onClick={() => openAt(4)} aria-label={`Show all ${list.length}`}>+{list.length - 4}</button>}

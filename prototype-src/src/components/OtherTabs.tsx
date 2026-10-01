@@ -130,7 +130,7 @@ export function AgreementsTab({ say, confirm }: { say: (t: string) => void; conf
               <div className="range"><TextInput type="number" min={1} aria-label="From" value={s.from} onChange={(e) => setS({ ...s, from: e.target.value })} /><span>–</span><TextInput type="number" min={1} aria-label="To" value={s.to} onChange={(e) => setS({ ...s, to: e.target.value })} /></div>
             </Field>
           </div>
-          <div className="field-row">
+          <div className="check-stack">
             <label className="catalog-check"><input type="checkbox" checked={s.senior} onChange={(e) => setS({ ...s, senior: e.target.checked })} />Buyer is older than 65 years old</label>
             <label className="catalog-check wrap"><input type="checkbox" checked={s.permits} onChange={(e) => setS({ ...s, permits: e.target.checked })} />Please confirm if you expect the Company to pull the permits</label>
           </div>

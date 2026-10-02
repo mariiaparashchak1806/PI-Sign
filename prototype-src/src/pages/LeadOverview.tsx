@@ -492,6 +492,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     on('206:6025', { onClick: () => setEditing('assign'), title: 'Assign designer' })
     on('206:6026', { onClick: () => open('lead-more', '206:6026', leadMore(), 220), title: 'Lead actions' })
     on('206:5963', { onClick: () => setEditing('contact'), title: 'Edit contact' })
+    // Contact edit: its stroke is at 15% opacity in the mock — same stroke as the Lead edit button (206:6015)
+    patches['206:5963'] = { ...patches['206:5963'], style: { ...patches['206:5963']?.style, borderColor: 'rgba(231,229,224,1)' } }
     on('206:6015', { onClick: () => setEditing('lead'), title: 'Edit lead' })
     on('206:6136', { onClick: () => setEditing('assign'), title: designer ? 'Change assignees' : 'Assign designer', className: 'value-hover' })
   }

@@ -148,3 +148,6 @@
 - Designer's request: "поки перемальовуємо те що в оригіналі" → new src/components/LaborsCatalog.tsx, 1:1 with the staging picker in prototype styling: title "Labors"; categories on the left (ALL first, uppercase, active = brand dark); toolbar: $ (cost) / banknote (sale price) toggles, "Search labors", Sub Category, Tags (no options known → placeholder only); table # · LABOR (name + code) · [COST · MULTIPLIER] · PRICE · ACTIONS with editable floating-label fields (cost × multiplier recalculates price) and PICK; right panel: picked items (thumbnail placeholder, name, cost "3.00 USD", − n +, ×) or "No item found"; RESET / OK.
 - PICK again = +1; OK adds the picked labors (with edited values) to the project the dialog was opened for; Replace from catalog → PICK reads "Select" and replaces the line. Materials / Countertops keep the reworked picker (CatalogDialog routes by kind and remembers it for the exit animation).
 - Checks: scripts/labors-catalog-check.mjs (option 1, option 2 Labors tab; Concept 2 and Option 1 Overview links; Materials still reworked) — all ok, 0 console errors; controls 52/57/30, labors tab 19.
+
+## 2026-10-02 — Option 2: Contact edit button stroke
+- In the mock the Contact edit button (206:5963) has its stroke at 15% opacity, the Lead edit button (206:6015) at 100% → prototype draws 206:5963 with the same stroke rgb(231,229,224) 1px.

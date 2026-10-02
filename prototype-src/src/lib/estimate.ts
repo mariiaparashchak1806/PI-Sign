@@ -29,6 +29,7 @@ export const SUMMARY: Summary = { Bathroom: { Materials: { items: 3, total: 1850
 export type CatalogItem = {
   code: string; name: string; category: string; cost?: number; multiplier?: number; price: number; unit?: string
   image?: string; vendor?: string; brand?: string; specs?: string[]; inStock?: boolean
+  title?: string; finish?: string // the staging title and Finish as shown in its catalog
 }
 const img = (f: string) => `${import.meta.env.BASE_URL}catalog/${f}`
 // Labors: categories and the first items as shown in the PiSuite staging catalog (Oct 1 screenshots);
@@ -60,12 +61,12 @@ export const CATALOG: Record<CatalogKind, { categories: string[]; items: Catalog
   // — staging titles repeat SKU and brand ("SKU… – Cambria – SKU… – Cambria – Ridgegate – 131X65 – Polished Only"),
   // so they're split into name / size · finish / SKU. Category column = "Countertops · <brand>".
   Countertops: { categories: ['Cambria', 'Silestone'], items: [
-    { code: 'SKU1727986026007', name: 'Cambria Ridgegate', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65', 'Polished only'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-1.jpg'), inStock: true },
-    { code: 'SKU1727986026336', name: 'Cambria Dovestone', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65', 'Polished only'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-2.jpg'), inStock: true },
-    { code: 'SKU1727986025879B', name: 'Cambria Rose Bay', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-3.jpg'), inStock: true },
-    { code: 'SKU1727986026178', name: 'Cambria Weybourne', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-4.jpg'), inStock: true },
-    { code: 'SKU1727986026068C', name: 'Silestone Miami White 17', category: 'Silestone', vendor: 'Silestone', brand: 'Silestone', specs: [], cost: 50, multiplier: 1.8, price: 90, image: img('ct-5.jpg'), inStock: true },
-    { code: 'SKU1727986026231', name: 'Cambria Notting Hill', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65'], cost: 98, multiplier: 1.8, price: 176.4, image: img('ct-6.jpg'), inStock: true },
+    { code: 'SKU1727986026007', title: 'SKU1727986026007 - Cambria - SKU1727986026007 - Cambria - Ridgegate - 131X65 - Polished Only', finish: 'Polished Only', name: 'Cambria Ridgegate', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65', 'Polished only'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-1.jpg'), inStock: true },
+    { code: 'SKU1727986026336', title: 'SKU1727986026336 - Cambria - SKU1727986026336 - Cambria - Dovestone - 131X65 - Polished Only', finish: 'Polished Only', name: 'Cambria Dovestone', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65', 'Polished only'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-2.jpg'), inStock: true },
+    { code: 'SKU1727986025879B', title: 'SKU1727986025879B - Cambria - SKU1727986025879B - Cambria - Rose Bay - 131X65', finish: 'nos', name: 'Cambria Rose Bay', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-3.jpg'), inStock: true },
+    { code: 'SKU1727986026178', title: 'SKU1727986026178 - Cambria - SKU1727986026178 - Cambria - Weybourne - 131X65', finish: 'nos', name: 'Cambria Weybourne', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65'], cost: 90, multiplier: 1.8, price: 162, image: img('ct-4.jpg'), inStock: true },
+    { code: 'SKU1727986026068C', title: 'SKU1727986026068C - Silestone - SKU1727986026068C - Silestone - Miami White 17', finish: 'nos', name: 'Silestone Miami White 17', category: 'Silestone', vendor: 'Silestone', brand: 'Silestone', specs: [], cost: 50, multiplier: 1.8, price: 90, image: img('ct-5.jpg'), inStock: true },
+    { code: 'SKU1727986026231', title: 'SKU1727986026231 - Cambria - SKU1727986026231 - Cambria - Notting Hill - 131X65', finish: 'nos', name: 'Cambria Notting Hill', category: 'Cambria', vendor: 'Cambria', brand: 'Cambria', specs: ['131×65'], cost: 98, multiplier: 1.8, price: 176.4, image: img('ct-6.jpg'), inStock: true },
     { code: 'mock-c1', name: 'Quartz countertop, 3 cm', category: '', price: 65, unit: 'sq ft' },
   ] },
 }

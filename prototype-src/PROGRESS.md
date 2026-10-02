@@ -172,3 +172,9 @@
 - Messages tab: team feed (avatar, author — "(you)" for Test Designer —, date, message card, attachments with Private / size / download); composer "Write a message to the team…", Attach, "Private files" switch, Send; no SMS/Email channel. Sending updates the widget. Client SMS stays in the header Messages dialog (staging modal).
 - View all → Messages tab (Concept 1 options; Concept 2 tabs stay inert).
 - Checks: scripts/messages-check.mjs 12/12; controls overview pages + messages tab; 0 console errors.
+
+## 2026-10-02 — Materials / Countertops catalogs redrawn from the staging original (same principle as Labors)
+- New src/components/ProductCatalog.tsx (Materials + Countertops), 1:1 with the staging Countertops picker in prototype styling: title = kind; toolbar $ / banknote / + (custom item) toggles, Filters, In Stock, Brand, Vendor, "Search from +200,000 materials…"; table IMAGE · TITLE (PICK + product-page button, staging title "SKU… - Cambria - … - 131X65 - Polished Only") · DESCRIPTION (Vendor / Brand / Finish) · CATEGORY (kind + brand) · PRICE (Cost / Multiplier with $, Sale with banknote); picked items on the right (image, title, cost USD, − n +, ×) or "No item found"; RESET / OK. "+", Filters and the product page aren't in the prototype → toast.
+- Brand / Vendor / search filter the rows; PICK again = +1; OK adds to the project the dialog was opened for; Replace from catalog → "Select". Materials uses the same layout with the mock's two items (no staging Materials data).
+- The reworked picker (categories nav + selection with subtotal) is retired; CatalogDialog only routes Labors → LaborsCatalog, Materials / Countertops → ProductCatalog. Row editing in all three tabs is the shared inline Edit.
+- Checks: scripts/product-catalog-check.mjs 25/25 (option 1, option 2 × Countertops, Materials), labors-catalog-check ok; controls; 0 console errors.

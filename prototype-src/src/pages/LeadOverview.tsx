@@ -640,7 +640,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
         )}
       </AnimatePresence>
       <Menu state={menu?.key === 'cols' && colsMenuItems ? { ...menu, items: colsMenuItems() } : menu} onClose={() => setMenu(null)} />
-      <CatalogDialog target={catalog} projects={liveProjects.map((p) => p.name)} onClose={() => setCatalog(null)} onAdd={addPicks} onReplace={replaceLine} />
+      <CatalogDialog target={catalog} projects={liveProjects.map((p) => p.name)} onClose={() => setCatalog(null)} onAdd={addPicks} onReplace={replaceLine} say={say} />
       <Toast toast={toast} onDone={() => setToastState(null)} />
       <LeadInfoDialog open={editing === 'lead'} value={leadInfo} onClose={() => setEditing(null)} onSave={(v) => { const prev = leadInfo; setLeadInfo(v); setEditing(null); say('Lead info saved', () => setLeadInfo(prev)) }} />
       <ContactDialog open={editing === 'contact'} value={contact} onClose={() => setEditing(null)} onSave={(v) => { const prev = contact; setContact(v); setEditing(null); say('Contact saved', () => setContact(prev)) }} />

@@ -35,8 +35,8 @@ const t2 = await p.locator('.dialog.lc .dialog-title').innerText().catch(() => n
 console.log(t2 === 'Labors' ? 'ok  ' : 'FAIL', 'overview link', t2)
 await p.keyboard.press('Escape'); await p.waitForTimeout(500)
 await p.locator('[data-n="Link Button"]', { hasText: 'Add from catalog' }).nth(0).click(); await p.waitForTimeout(700)
-const t3 = await p.locator('.dialog.catalog:not(.lc) .dialog-title').innerText().catch(() => null)
-console.log(/materials/i.test(t3 ?? '') ? 'ok  ' : 'FAIL', 'materials keeps reworked picker', (t3 ?? '').split('\n')[0])
-if (!/materials/i.test(t3 ?? '')) bad++
+const t3 = await p.locator('.dialog.pc .dialog-title').innerText().catch(() => null)
+console.log(t3 === 'Materials' ? 'ok  ' : 'FAIL', 'materials opens its own (original) picker', t3)
+if (t3 !== 'Materials') bad++
 console.log('console errors', errs.length, errs.slice(0, 3))
 await b.close(); process.exit(bad || errs.length ? 1 : 0)

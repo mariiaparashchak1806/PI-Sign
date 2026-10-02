@@ -242,8 +242,11 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   if (MAIN) patches[MAIN.id] = { ...patches[MAIN.id], style: { ...patches[MAIN.id]?.style, overflow: 'clip' } }
   patches['19:1070'] = { ...patches['19:1070'], style: { ...patches['19:1070']?.style, position: 'sticky', top: 0, zIndex: 30 } }
   // Page ends where the content ends (the Figma frame has fixed heights); overflow: clip keeps sticky working
-  patches[root.id] = { style: { minHeight: '100vh', overflow: 'clip' } }
-  patches[CONTENT] = { style: { height: 'auto', padding: RT.byId.get(CONTENT)!.al!.p.map((v, i) => `${i === 2 ? 48 : v}px`).join(' ') } }
+  patches[root.id] = { style: { minHeight: '100vh', overflow: 'clip', width: '100%', minWidth: 1024 } }
+  // the frame is drawn at 1440: below that Main / Content give up width instead of the page scrolling sideways
+  if (MAIN) patches[MAIN.id] = { ...patches[MAIN.id], style: { ...patches[MAIN.id]?.style, flex: '1 1 0', minWidth: 0, width: 'auto' } }
+  patches[CONTENT] = { ...patches[CONTENT], style: { ...patches[CONTENT]?.style, width: 'auto', alignSelf: 'stretch' } }
+  patches[CONTENT] = { ...patches[CONTENT], style: { ...patches[CONTENT]?.style, height: 'auto', padding: RT.byId.get(CONTENT)!.al!.p.map((v, i) => `${i === 2 ? 48 : v}px`).join(' ') } }
   // Lead card — "Show details" is the drawn alternate state (hidden frame in the mock)
   if (LEGACY_LEAD) { patches[LEAD_COLLAPSED] = { hidden: showDetails }; patches[LEAD_DETAILS] = { hidden: !showDetails } }
   // "Hide details" variant is drawn at a fixed 712 px; it fills the row like the "Show details" instance next to Contact
@@ -364,15 +367,14 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
       })
     }
   }
-  // Columns (designer, Oct 2): Project · Status next to the name · the five amount columns share the rest equally ·
-  // the row ⋯ slot. Header, project rows and Total keep the same edges (rows without a status cell get a spacer).
-  // Show cost hides Total (index 4), Show sale hides Sales (index 5) — the other amount columns take the space.
+  // Columns = Figma 226:15063 (Project Details, Oct 2): Project 120 · Status 130 · Materials 65 · Labors 60 ·
+  // Countertops 87 · Total 60 · Sales 60 · row ⋯ 32, gap 12. Header, project rows and Total share these edges (rows
+  // without a status cell get a spacer). Show cost hides Total (index 4), Show sale hides Sales (index 5) — the other
+  // amount columns grow into the freed space (flex-basis = the Figma width, so at the drawn size nothing moves).
   const dataRows = PD_TOTAL_ROW ? [...PROJECT_ROWS, PD_TOTAL_ROW] : PROJECT_ROWS
-  // the card is HUG in Figma (732 = its fixed columns); with flexible columns it fills its column instead
   patches[PD] = { ...patches[PD], style: { ...patches[PD]?.style, width: '100%', alignSelf: 'stretch' } }
   const rkids = (id: string) => (RT.byId.get(id)?.k ?? []).filter((k) => !k.hidden)
-  const rowW = RT.byId.get(PROJECT_ROWS[0]) ? rkids(PROJECT_ROWS[0]) : []
-  const GAP = 8, PROJ_W = 96, STATUS_W = 100, MORE_W = rowW[7]?.w ?? 32 // tighter than the mock's 12 so "Countertops" fits its column
+  const GAP = 12, PROJ_W = 120, STATUS_W = 130, MORE_W = 32, AMT_W = [65, 60, 87, 60, 60]
   const fixed = (w: number) => ({ width: w, minWidth: w, flex: 'none' as const })
   ;[PD_COLHEAD, ...dataRows].forEach((r) => {
     const ks = rkids(r); if (!ks.length) return
@@ -381,7 +383,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     ks.forEach((c, i) => {
       const hide = (i === 4 && !showCost) || (i === 5 && !showSales)
       const style = i === 0 ? { ...fixed(PROJ_W), order: 0, ...(!hasStatus ? { marginRight: STATUS_W + GAP } : {}) }
-        : i <= 5 ? { flex: '1 1 0', minWidth: 0, width: 'auto', order: 2, ...(r === PD_COLHEAD ? { overflow: 'visible', whiteSpace: 'nowrap' as const } : {}) }
+        : i <= 5 ? { flex: `1 1 ${AMT_W[i - 1]}px`, minWidth: 0, width: 'auto', order: 2, ...(r === PD_COLHEAD ? { overflow: 'visible', whiteSpace: 'nowrap' as const } : {}) }
         : i === 6 ? { ...fixed(STATUS_W), order: 1 } : { ...fixed(MORE_W), order: 3 }
       patches[c.id] = { ...patches[c.id], ...(hide ? { hidden: true } : {}), style: { ...patches[c.id]?.style, ...style } }
     })

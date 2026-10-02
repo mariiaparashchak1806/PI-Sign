@@ -49,6 +49,7 @@ const Ctx = createContext<Overrides>({ patches: {}, handlers: {} })
 export const OverridesProvider = Ctx.Provider
 
 const COLOR = colors as Record<string, string>
+const DOTS = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(27,29,26,1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>'
 const ICONS = icons as { svg: Record<string, string>; ref: Record<string, string> }
 const WEIGHT: Record<string, number> = { Thin: 100, ExtraLight: 200, Light: 300, Regular: 400, Medium: 500, SemiBold: 600, Bold: 700, ExtraBold: 800, Black: 900 }
 
@@ -173,6 +174,13 @@ export function FigmaNode({ node, parent = null }: { node: FNode; parent?: FNode
         </div>
       )
     }
+  } else if (node.icon && node.comp === 'Icon button') {
+    // the exporter treats "Icon button" as an icon and its SVG (with the shadow) is 2px wider than the button,
+    // which clips the stroke — draw it like the other buttons instead: fill, 1px stroke, radius, shadows + dots
+    sizing(node, parent, s)
+    box(node, s, patch)
+    Object.assign(s, { width: s.width ?? px(node.w), height: s.height ?? px(node.h), display: 'grid', placeItems: 'center', flexShrink: 0 })
+    el = <div {...common} style={{ ...s, ...patch?.style }} dangerouslySetInnerHTML={{ __html: DOTS }} />
   } else if (node.icon) {
     sizing(node, parent, s)
     if (s.width === undefined && s.flex === undefined) s.width = px(node.w)

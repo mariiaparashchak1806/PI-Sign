@@ -140,3 +140,6 @@
 - Messages: feed like staging (avatar, author, channel, time, message card, attachment cards with Private lock / size / download) + composer (SMS/Email, Attach with Private switch, Enter to send).
 - Forms: row shows "Not sent yet" / "Sent to <email> · <time>", labelled Send to client → Resend (confirm + Undo).
 - Checks: controls option 1 52/52, option 2 57/57, concept 2 30/30, payment 18/18, messages 19/19, forms 19/19, countertops 19/19; ai-panel 3/3; 0 console errors.
+
+## 2026-10-02 — Icon button (⋯) stroke
+- The exporter takes the "Icon button" component for an icon (name starts with "Icon"); its SVG includes the shadow and is 34 px wide, so in the 32 px box the stroke was clipped. FigmaNode now draws Icon button like the other buttons (fill, 1 px stroke rgba(39,39,42,.15), radius 6, shadows, dots) — header ⋯ on Option 1, Option 2 and Concept 2 now matches Figma 206:5637.

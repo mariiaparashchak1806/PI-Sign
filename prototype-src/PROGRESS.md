@@ -246,3 +246,8 @@
 
 ## 2026-10-02 — Switch colour
 - Show cost / Show sale switches are #48443E when on in every concept (Concept 1 · Option 2 and Concept 2 variants draw them green in the mock); off stays #D0D7D5.
+
+## 2026-10-02 — Option 2 Project Details + small fixes
+- Concept 1 · Option 2 renders the current Project Details component (Figma 226:15063, Default variant — the same instance as Option 1: green "Scheduled", group header rows, compact items, Subtotal rows); build_option2.py splices it in.
+- Link-style Secondary Buttons (no fill and no stroke in the mock, e.g. Preview PDF) stay plain; every other secondary button keeps the 27272A 15% stroke.
+- Labors / Materials / Countertops tabs: project group header rows #F7F6F2 (hover a shade darker).

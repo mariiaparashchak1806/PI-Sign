@@ -310,10 +310,10 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .tcard-toolbar .field { flex: 0 0 260px; }
 .btn-lg { height: 40px; display: inline-flex; align-items: center; gap: 6px; padding: 0 16px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-.tgroup-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 20px; min-height: 48px; background: var(--color-bg-table-header); border-top: 1px solid var(--color-border); cursor: pointer; text-align: left; }
-.tgroup-head:hover { background: var(--color-bg-expanded); }
+.tgroup-head { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 20px; min-height: 48px; background: rgba(247,246,242,1); /* #F7F6F2 = the Figma group header */ border-top: 1px solid var(--color-border); cursor: pointer; text-align: left; }
+.tgroup-head:hover { background: rgba(242,241,236,1); }
 .tgroup-head.static { cursor: default; }
-.tgroup-head.static:hover { background: var(--color-bg-table-header); }
+.tgroup-head.static:hover { background: rgba(247,246,242,1); }
 .tgroup-chev-space { width: 16px; flex-shrink: 0; }
 .tgroup-total { margin-left: auto; font-size: 14px; font-weight: 600; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
 .tlines { border-top: 1px solid var(--color-border); }

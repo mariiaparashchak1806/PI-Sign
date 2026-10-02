@@ -126,7 +126,9 @@ function box(n: FNode, s: CSSProperties, patch?: Patch) {
   }
   // every secondary-style button (Secondary Button, the ⋯ Icon button) has the same 1px #27272A 15% stroke on white
   // (some instances in the mock lost it)
-  if (n.comp === 'Secondary Button' || n.comp === 'Icon button') Object.assign(s, { borderStyle: 'solid', borderWidth: '1px', borderColor: 'rgba(39,39,42,0.15)', background: patch?.bg ?? 'rgba(255,255,255,1)' })
+  // (a Secondary Button drawn with no fill and no stroke is a link-style button — e.g. Preview PDF — and stays plain)
+  const linkStyle = n.comp === 'Secondary Button' && !n.stroke && !(n.fill ?? []).length
+  if ((n.comp === 'Secondary Button' && !linkStyle) || n.comp === 'Icon button') Object.assign(s, { borderStyle: 'solid', borderWidth: '1px', borderColor: 'rgba(39,39,42,0.15)', background: patch?.bg ?? 'rgba(255,255,255,1)' })
   if (Array.isArray(n.r)) s.borderRadius = n.r.map(px).join(' ')
   else if (n.r) s.borderRadius = px(n.r)
   const shadows = (n.fx ?? []).filter((e) => e.t === 'DROP_SHADOW' || e.t === 'INNER_SHADOW')

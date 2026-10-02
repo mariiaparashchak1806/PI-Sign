@@ -40,3 +40,18 @@ for k, v in exp['icons'].items():
     icons['svg'][h] = v; icons['ref'][kid] = h; added += 1
 json.dump(icons, open('src/figma/icons.json', 'w'))
 print('mapped', len(mapped), 'icons added', added)
+# Project Details = the current component (Figma 226:15063, Default variant) — the same instance Option 1 renders
+# (src/figma/tree.json, built by build_option1.py) replaces this frame's older copy
+import copy as _copy
+_t1 = json.load(open('src/figma/tree.json')); _t2 = json.load(open('src/figma/tree-c1o2.json'))
+def _find(n, i):
+    if n['id'] == i: return n
+    for k in n.get('k') or []:
+        r = _find(k, i)
+        if r: return r
+_pd = _find(_t1, '42:10511')
+def _rep(n):
+    for i, k in enumerate(n.get('k') or []):
+        if k['id'] == '42:10511': c = _copy.deepcopy(_pd); c['x'], c['y'] = k['x'], k['y']; n['k'][i] = c; return True
+        if _rep(k): return True
+if _pd and _rep(_t2): json.dump(_t2, open('src/figma/tree-c1o2.json', 'w'), separators=(',', ':'))

@@ -640,3 +640,11 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .dialog.catalog.lc .lc-side { width: 340px; }
 .lc-field input { background: var(--color-surface); }
 .lc .catalog-foot .btn { text-transform: uppercase; letter-spacing: .02em; font-weight: 600; }
+.menu-item.disabled, .menu-item:disabled { opacity: .45; cursor: not-allowed; } .menu-item.disabled:hover { background: transparent; }
+/* Agenda */
+.pill-ico { display: inline-flex; align-items: center; gap: 4px; }
+.agenda-toggle { display: block; width: 100%; padding: 12px 16px; border-top: 1px solid var(--color-border); text-align: left; font: 500 14px var(--font-sans); color: var(--color-text-secondary); cursor: pointer; background: transparent; }
+.agenda-toggle:hover { color: var(--color-text-primary); background: var(--color-bg-subtle); }
+.agenda-empty { padding: 20px 16px; border-top: 1px solid var(--color-border); font-size: 14px; color: var(--color-text-secondary); }
+.warn-text { color: var(--color-warning); }
+.check-hit.is-disabled { opacity: .45; cursor: not-allowed; }

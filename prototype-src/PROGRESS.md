@@ -151,3 +151,12 @@
 
 ## 2026-10-02 — Option 2: Contact edit button stroke
 - In the mock the Contact edit button (206:5963) has its stroke at 15% opacity, the Lead edit button (206:6015) at 100% → prototype draws 206:5963 with the same stroke rgb(231,229,224) 1px.
+
+## 2026-10-02 — Agenda state logic (designer's review + spec), all concepts/variants
+- Tasks are data (TASKS0 from the drawn rows); every row is a clone of a drawn row, sorted Overdue → Due today → Upcoming → On hold → Done; Cancelled hidden behind "Show N cancelled tasks" (shown last). Fixes the vanishing on-hold task and the cancelled task jumping to the top.
+- States: Upcoming / Due today / Overdue from the date (today = Sep 30, the mock's date — Activity lists Sep 29 as Yesterday → "Prepare estimate" reads Due today); On hold (was Idle; pause icon, date not red), Done (checkbox, toggles back), Cancelled — set by people.
+- Counter "N open tasks · M on hold" (open = Upcoming + Due today + Overdue + On hold).
+- ⋯ per state: open → Edit · Attach file · Put on hold · Cancel · Delete; On hold → Edit · Attach file · Resume · Cancel · Delete; Done / Cancelled → Reopen · Delete. Toast + Undo after Done, On hold, Cancel, Delete, Reopen (no confirm dialogs). Delete only for the author (current user = Test Designer) — disabled "Author only" otherwise. Resume with a past date opens Edit with "pick a new date" and "Resume task".
+- Table header: "Created by" → "Assignee" (values = the drawn names; no assignee data in the mock), select-all checkbox and the unnamed ⋯ column removed (no bulk actions).
+- Edit / Add task: the task's own date, US format MM/DD/YYYY + Time (No time default), Task type and Assignee full width (no truncation), "Created by" in the subtitle.
+- Checks: scripts/agenda-check.mjs 66/66 (22 per page × option 1, option 2, concept 2); controls 51/56/29, agenda tab 26; 0 console errors.

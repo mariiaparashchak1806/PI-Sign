@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { spring } from '../lib/springs'
-import { CircleX, Copy, CopyPlus, Sparkles, Download, FileText, Heart, Info, MoveRight, Paperclip, Pencil, Plus, RefreshCw, SquareCheck, Trash2, Archive, Link2 } from 'lucide-react'
+import { CircleX, Copy, CopyPlus, Sparkles, Download, FileText, Heart, Info, MoveRight, Paperclip, Pause, Pencil, Play, Plus, RefreshCw, RotateCcw, Trash2, Archive, Link2 } from 'lucide-react'
 import tree from '../figma/tree.json'
 import treeC1o2 from '../figma/tree-c1o2.json'
 import aiPanelTree from '../figma/ai-panel.json'
@@ -25,9 +25,25 @@ export type Concept = 1 | 2
 type TabKey = 'overview' | 'agenda' | 'files' | 'labors' | 'materials' | 'countertops' | 'payment' | 'agreements' | 'messages' | 'forms'
 type TaskStatus = 'overdue' | 'upcoming' | 'done' | 'idle' | 'cancelled'
 type ProjectRow = { id: string; name: string; pill?: string; pillLabel?: string; more: string; chevron: string; sales: string }
-type NewTask = { id: string; name: string; due: string; status: TaskStatus; deleted?: boolean }
 
 const taskTypes = ['In-home Consultation', 'Measurement', 'Quote Preparation', 'Follow-up']
+// ---------- Agenda task model (designer's spec, Oct 2) ----------
+// Upcoming / Due today / Overdue come from the date (never set by hand); On hold, Done and Cancelled are set by
+// people. Open = Upcoming + Due today + Overdue + On hold. "Today" is the mock's date: Activity lists Sep 29 as
+// Yesterday, so Sep 30 is today — that's why "Prepare estimate" (Sep 30) reads Due today.
+type TaskState = 'open' | 'hold' | 'done' | 'cancelled'
+type TaskView = 'overdue' | 'today' | 'upcoming' | 'hold' | 'done' | 'cancelled'
+type Task = { id: string; name: string; createdBy: string; assignee: string; due: string; time?: string; type?: string; desc?: string; state: TaskState }
+const TODAY = '2026-09-30'
+const CURRENT_USER = 'Test Designer' // the signed-in user (TD avatar in the top bar)
+const pad2 = (n: number) => String(n).padStart(2, '0')
+const toIso = (txt: string) => { const d = new Date(`${txt} 12:00`); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
+const isPast = (iso: string) => iso < TODAY
+const fmtDue = (iso: string) => new Date(`${iso}T12:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+const viewOf = (t: Task): TaskView => (t.state === 'done' ? 'done' : t.state === 'cancelled' ? 'cancelled' : t.state === 'hold' ? 'hold' : t.due < TODAY ? 'overdue' : t.due === TODAY ? 'today' : 'upcoming')
+const VIEW_LABEL: Record<TaskView, string> = { overdue: 'Overdue', today: 'Due today', upcoming: 'Upcoming', hold: 'On hold', done: 'Done', cancelled: 'Cancelled' }
+const VIEW_ORDER: Record<TaskView, number> = { overdue: 0, today: 1, upcoming: 2, hold: 3, done: 4, cancelled: 5 }
+const isOpen = (t: Task) => t.state === 'open' || t.state === 'hold'
 
 function makePage(base: unknown) {
 const root = base as FNode
@@ -88,7 +104,6 @@ const pillStyle = (status: TaskStatus) => {
   return status === 'idle' ? { bg: 'var(--color-idle-bg)', fg: 'var(--color-idle)' } : { bg: 'var(--color-bg-subtle)', fg: 'var(--color-text-secondary)' }
 }
 const doneName = taskRows.find((t) => t.initial === 'done')!.name
-const statusLabel: Record<TaskStatus, string> = { overdue: 'Overdue', upcoming: 'Upcoming', done: 'Done', idle: 'Idle', cancelled: 'Cancelled' }
 
 const LEGACY_LEAD = T.byId.has(LEAD_COLLAPSED)
 const leadHeaders = LEGACY_LEAD ? [find(LEAD_COLLAPSED, (n) => n.n === 'Header')!, find(LEAD_DETAILS, (n) => n.n === 'Header')!] : []
@@ -117,8 +132,9 @@ const makeTabs = (TT: typeof T) => (TT.byId.get(TABS)!.k ?? []).filter((k) => !k
 })
 const TABS_BY_CONCEPT = { 1: makeTabs(T), 2: makeTabs(T2) }
 const TASK_TPL = node(taskRows.find((t) => t.initial === 'upcoming')!.id)
-const isPast = (v: string) => new Date(v).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0)
-const fmtDue = (v: string) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+const TASKS0: Task[] = taskRows.map((t) => { const by = named(t.id, 'Created by').txt!; return { id: t.id, name: t.name.txt!, createdBy: by, assignee: by, due: toIso(named(t.id, 'Due date').txt!), state: t.initial === 'done' ? 'done' : 'open' } })
+const viewPill = (v: TaskView) => (v === 'overdue' || v === 'upcoming' || v === 'done' ? pillStyle(v) : v === 'today' ? { bg: 'var(--color-warning-bg)', fg: 'var(--color-warning)' } : { bg: 'var(--color-bg-subtle)', fg: 'var(--color-text-secondary)' })
+const OVERDUE_COLOR = segColor(node(taskRows.find((r) => r.initial === 'overdue')!.due))
 const FILE_SUMMARY: [string, string][] = [['Kitchen', '93:7332'], ['Bathroom', '93:7378'], ['Basement', find('93:7343', (n) => n.t === 'TEXT' && /files?$/.test(n.txt ?? ''))!.id]]
 
 // ---------- page ----------
@@ -140,9 +156,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const [projStatus, setProjStatus] = useState<Record<string, string>>({})
   const [deletedRows, setDeletedRows] = useState<string[]>([])
   const [wish, setWish] = useState<Record<string, boolean>>({ '93:8375': true })
-  const [task, setTask] = useState<Record<string, { status: TaskStatus; name?: string; deleted?: boolean }>>(
-    Object.fromEntries(taskRows.map((t) => [t.id, { status: t.initial }])))
-  const [hideDone, setHideDone] = useState(false)
+  const [tasks, setTasks] = useState<Task[]>(TASKS0)
+  const [showCancelled, setShowCancelled] = useState(false)
   const [ai, setAi] = useState<{ q: string; a: string }[]>([])
   const [aiText, setAiText] = useState('')
   const [aiVote, setAiVote] = useState<string | null>(null)
@@ -160,7 +175,6 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const tabLive = (k?: TabKey) => !!k && (tabsOn || k === 'overview' || k === 'files') // concept 2: Overview + Files & Photos only
   const tab: TabKey = tabLive(tabState) ? tabState : 'overview'
   const setTab = (t: TabKey) => { setTabState(t); setMenu(null); window.scrollTo({ top: 0 }) }
-  const [newTasks, setNewTasks] = useState<NewTask[]>([])
   const [files, setFiles] = useState<FilesState>(concept === 2 ? FILES0_C2 : FILES0)
   const [catalog, setCatalog] = useState<CatalogTarget>(null)
   const [estimate, setEstimate] = useState<Estimate>(ESTIMATE0)
@@ -376,75 +390,73 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const [removedItems, setRemovedItems] = useState<string[]>([])
   const patchesState = { remove: (id: string) => setRemovedItems((r) => [...r, id]), restore: (id: string) => setRemovedItems((r) => r.filter((x) => x !== id)) }
   removedItems.forEach((id) => (patches[id] = { hidden: true }))
-  const setTaskStatus = (id: string, status: TaskStatus, msg: string) => { const prev = task[id].status; setTask((t) => ({ ...t, [id]: { ...t[id], status } })); say(msg, () => setTask((t) => ({ ...t, [id]: { ...t[id], status: prev } }))) }
-  // Task ⋯ menu — exactly the designer's "Agenda — Task actions" spec
-  const taskMenu = (id: string, title: string, setStatus: (s: TaskStatus, msg: string) => void, remove: () => void): MenuItem[] => [
-    { label: 'Edit task', icon: <Pencil {...I} />, onSelect: () => setDialog({ kind: 'task', data: { id, title } }) },
-    { label: 'Attach file', icon: <Paperclip {...I} />, onSelect: () => setDialog({ kind: 'attach', data: { title } }) },
-    '-',
-    { label: 'Mark as idle', icon: <SquareCheck {...I} />, onSelect: () => setStatus('idle', `“${title}” marked as idle`) },
-    { label: 'Cancel task', icon: <CircleX {...I} />, onSelect: () => confirm({ title: `Cancel “${title}”?`, body: 'The task stays in Agenda as Cancelled and stops counting as overdue.', ok: 'Cancel task', run: () => setStatus('cancelled', `“${title}” cancelled`) }) },
-    '-',
-    { label: 'Delete task', danger: true, icon: <Trash2 {...I} />, onSelect: () => confirm({ title: `Delete “${title}”?`, body: 'The task and its attachments are removed for everyone. You can’t undo this.', ok: 'Delete task', danger: true, run: () => { remove(); say(`“${title}” deleted`) } }) },
-  ]
-  taskRows.forEach((t) => {
-    const s = task[t.id]
-    if (s.deleted || (hideDone && s.status === 'done')) { patches[t.id] = { hidden: true }; return }
-    const done = s.status === 'done', closed = done || s.status === 'cancelled'
-    const ps = pillStyle(s.status)
-    patches[t.pill] = { bg: ps.bg }
-    patches[t.pillLabel] = { txt: statusLabel[s.status], color: ps.fg }
-    patches[t.name.id] = { txt: s.name, decoration: closed ? 'line-through' : 'none', color: closed ? segColor(doneName) : segColor(t.name) }
-    const title = s.name ?? t.name.txt!
-    on(t.id, { className: 'hover-row' }); on(t.more, { className: moreCls(t.more) })
-    on(t.checkbox, {
-      render: () => (
-        <span key={t.checkbox} role="checkbox" aria-checked={done} aria-label={done ? 'Mark as not done' : 'Mark as done'} tabIndex={0} className={`check-hit${s.status === 'cancelled' ? ' is-disabled' : ''}`}
-          onClick={() => s.status !== 'cancelled' && setTaskStatus(t.id, done ? (t.initial === 'done' ? 'upcoming' : t.initial) : 'done', done ? `“${title}” reopened` : `“${title}” marked as done`)}
-          onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), (e.currentTarget as HTMLElement).click())}>
-          <FigmaNode node={{ ...(done ? CHECK_ON : CHECK_OFF), id: `${t.checkbox}#${done ? 'on' : 'off'}` }} parent={node(named(t.id, 'Cell / p').id)} />
-        </span>
-      ),
-    })
-    on(t.more, { onClick: () => open(`task-${t.id}`, t.more, taskMenu(t.id, title, (st, msg) => setTaskStatus(t.id, st, msg), () => setTask((x) => ({ ...x, [t.id]: { ...x[t.id], deleted: true } }))), 232), title: 'Task actions' })
-  })
-  const openStatuses = [...taskRows.filter((t) => !task[t.id].deleted).map((t) => task[t.id].status), ...newTasks.filter((t) => !t.deleted).map((t) => t.status)].filter((s) => ['overdue', 'upcoming', 'idle'].includes(s))
-  const openTasks = openStatuses
-  const overdue = openStatuses.filter((s) => s === 'overdue').length
+  // Agenda — tasks are data; each row is a clone of a drawn row, sorted overdue → due today → upcoming → on hold
+  // → done; cancelled tasks sit behind "Show cancelled". Every action shows a toast with Undo.
+  const setTask = (id: string, patch: Partial<Task>) => setTasks((x) => x.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+  const act = (t: Task, patch: Partial<Task>, msg: string) => { setTask(t.id, patch); say(msg, () => setTasks((x) => x.map((y) => (y.id === t.id ? t : y)))) }
+  const removeTask = (t: Task) => { const i = tasks.findIndex((x) => x.id === t.id); setTasks((x) => x.filter((y) => y.id !== t.id)); say(`“${t.name}” deleted`, () => setTasks((x) => [...x.slice(0, i), t, ...x.slice(i)])) }
+  // Resume: a due date that has already passed asks for a new one straight away
+  const resume = (t: Task) => { if (isPast(t.due)) { setTask(t.id, { state: 'open' }); setDialog({ kind: 'task', data: { task: { ...t, state: 'open' }, resume: true } }) } else act(t, { state: 'open' }, `“${t.name}” resumed`) }
+  const canDelete = (t: Task) => t.createdBy === CURRENT_USER // the author (or a manager); everyone else cancels to keep the history
+  const taskMenu = (t: Task): MenuItem[] => {
+    const v = viewOf(t)
+    const del: MenuItem = { label: 'Delete task', danger: true, icon: <Trash2 {...I} />, disabled: !canDelete(t), meta: canDelete(t) ? undefined : 'Author only', hint: canDelete(t) ? undefined : 'Only the author or a manager can delete this task — cancel it instead', onSelect: () => removeTask(t) }
+    if (v === 'done' || v === 'cancelled') return [{ label: 'Reopen task', icon: <RotateCcw {...I} />, onSelect: () => act(t, { state: 'open' }, `“${t.name}” reopened`) }, '-', del]
+    return [
+      { label: 'Edit task', icon: <Pencil {...I} />, onSelect: () => setDialog({ kind: 'task', data: { task: t } }) },
+      { label: 'Attach file', icon: <Paperclip {...I} />, onSelect: () => setDialog({ kind: 'attach', data: { title: t.name } }) },
+      '-',
+      v === 'hold' ? { label: 'Resume', icon: <Play {...I} />, onSelect: () => resume(t) } : { label: 'Put on hold', icon: <Pause {...I} />, onSelect: () => act(t, { state: 'hold' }, `“${t.name}” put on hold`) },
+      { label: 'Cancel task', icon: <CircleX {...I} />, onSelect: () => act(t, { state: 'cancelled' }, `“${t.name}” cancelled`) },
+      '-',
+      del,
+    ]
+  }
+  // header: no select-all (there are no bulk actions), "Created by" → "Assignee", the unnamed ⋯ column stays empty
+  taskRows.forEach((r) => (patches[r.id] = { hidden: true }))
+  patches[named('42:11146', 'Checkbox').id] = { style: { visibility: 'hidden' } }
+  patches[named('42:11148', 'Header').id] = { txt: 'Assignee' }
+  const agendaHeaderMore = kidsOf('42:11145').find((k) => k.n === 'Button')!.id
+  patches[agendaHeaderMore] = { style: { visibility: 'hidden' } }
+  const openTasks = tasks.filter(isOpen), overdueN = tasks.filter((t) => viewOf(t) === 'overdue').length, holdN = tasks.filter((t) => t.state === 'hold').length
   const agendaCount = find(AGENDA_HEAD, (n) => n.t === 'TEXT' && /open tasks/.test(n.txt ?? ''))!
-  patches[agendaCount.id] = { txt: `${openTasks.length} open task${openTasks.length === 1 ? '' : 's'}${overdue && agendaCount.txt!.includes('overdue') ? ` · ${overdue} overdue` : ''}` }
+  patches[agendaCount.id] = { txt: `${openTasks.length} open task${openTasks.length === 1 ? '' : 's'}${overdueN && agendaCount.txt!.includes('overdue') ? ` · ${overdueN} overdue` : ''}${holdN ? ` · ${holdN} on hold` : ''}` }
   on(named(AGENDA_HEAD, 'Secondary Button').id, { onClick: () => setDialog({ kind: 'task', data: {} }) })
   const agendaViewAll = named(AGENDA_HEAD, 'Link Button').id
   if (tab === 'agenda') patches[agendaViewAll] = { hidden: true }
   else if (tabsOn) on(agendaViewAll, { onClick: () => setTab('agenda'), title: 'Open the Agenda tab' })
   // Agenda tab: the same card at full width — the Task column takes the extra space
   const growCell = (id: string) => { const n = node(id), par = T.parentOf.get(id)!; return { style: { width: `calc(100% - ${par.w - par.al!.p[1] - par.al!.p[3] - n.w}px)` } } }
-  if (tab === 'agenda') ['42:11146', ...taskRows.map((t) => named(t.id, 'Cell / p').id)].forEach((id) => (patches[id] = { ...patches[id], ...growCell(id) }))
-  // Tasks added through "Add Task" — clones of a drawn row
-  const liveNew = newTasks.filter((t) => !t.deleted && !(hideDone && t.status === 'done'))
-  on(AGENDA, { after: liveNew.map((t) => {
+  if (tab === 'agenda') patches['42:11146'] = { ...patches['42:11146'], ...growCell('42:11146') }
+  const sortedTasks = [...tasks].sort((a, b) => VIEW_ORDER[viewOf(a)] - VIEW_ORDER[viewOf(b)] || a.due.localeCompare(b.due))
+  const cancelledN = tasks.filter((t) => t.state === 'cancelled').length
+  const taskRow = (t: Task) => {
     const c = cloneAs(TASK_TPL, t.id), at = (name: string) => T.find(c, (n) => n.n === name)!.id
-    const ps = pillStyle(t.status), done = t.status === 'done'
-    const pill = T.find(c, (n) => n.n.startsWith('Pill'))!, more = (c.k ?? []).find((k) => k.n === 'Button')!.id, cb = at('Checkbox')
-    patches[at('Name')] = { txt: t.name, decoration: done ? 'line-through' : 'none', color: done ? segColor(doneName) : undefined }
-    patches[at('Created by')] = { txt: 'Test Designer' }
-    patches[at('Due date')] = { txt: fmtDue(t.due), color: t.status === 'overdue' ? segColor(node(taskRows.find((r) => r.initial === 'overdue')!.due)) : undefined }
-    patches[pill.id] = { bg: ps.bg }
-    patches[T.find(pill, (n) => n.t === 'TEXT')!.id] = { txt: statusLabel[t.status], color: ps.fg }
+    const v = viewOf(t), ps = viewPill(v), closed = v === 'done' || v === 'cancelled', done = v === 'done'
+    const pill = T.find(c, (n) => n.n.startsWith('Pill'))!, pillText = T.find(pill, (n) => n.t === 'TEXT')!.id, more = (c.k ?? []).find((k) => k.n === 'Button')!.id, cb = at('Checkbox')
+    patches[at('Name')] = { txt: t.name, decoration: closed ? 'line-through' : 'none', color: closed ? segColor(doneName) : undefined }
+    patches[at('Created by')] = { txt: t.assignee }
+    patches[at('Due date')] = { txt: fmtDue(t.due), color: v === 'overdue' ? OVERDUE_COLOR : closed ? segColor(doneName) : undefined }
+    patches[pill.id] = { bg: ps.bg, style: v === 'upcoming' ? undefined : { borderColor: ps.bg } } // the template is the Upcoming pill — only it keeps its outline
+    patches[pillText] = { txt: VIEW_LABEL[v], color: ps.fg }
+    if (v === 'hold') on(pillText, { render: (_n, el) => <span key={pillText} className="pill-ico"><Pause size={12} strokeWidth={2.4} />{el}</span> })
     if (tab === 'agenda') patches[at('Cell / p')] = growCell(named(TASK_TPL.id, 'Cell / p').id)
-    const setSt = (status: TaskStatus) => setNewTasks((x) => x.map((y) => (y.id === t.id ? { ...y, status } : y)))
-    const reopen: TaskStatus = isPast(t.due) ? 'overdue' : 'upcoming'
-    on(c.id, { className: 'hover-row' }); on(more, { className: moreCls(more) })
+    on(c.id, { className: `hover-row${t.state === 'cancelled' ? ' task-cancelled' : ''}` }); on(more, { className: moreCls(more) })
     on(cb, { render: () => (
-      <span key={cb} role="checkbox" aria-checked={done} aria-label={done ? 'Mark as not done' : 'Mark as done'} tabIndex={0} className="check-hit"
-        onClick={() => { setSt(done ? reopen : 'done'); say(done ? `“${t.name}” reopened` : `“${t.name}” marked as done`) }}>
+      <span key={cb} role="checkbox" aria-checked={done} aria-disabled={t.state === 'cancelled'} aria-label={done ? 'Mark as not done' : 'Mark as done'} tabIndex={0} className={`check-hit${t.state === 'cancelled' ? ' is-disabled' : ''}`}
+        title={t.state === 'cancelled' ? 'Reopen the task to work on it again' : undefined}
+        onClick={() => { if (t.state === 'cancelled') return; act(t, { state: done ? 'open' : 'done' }, done ? `“${t.name}” reopened` : `“${t.name}” marked as done`) }}
+        onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), (e.currentTarget as HTMLElement).click())}>
         <FigmaNode node={{ ...(done ? CHECK_ON : CHECK_OFF), id: `${cb}#${done ? 'on' : 'off'}` }} parent={node(named(TASK_TPL.id, 'Cell / p').id)} />
       </span>) })
-    on(more, { onClick: () => open(`task-${t.id}`, more, taskMenu(t.id, t.name, (st, msg) => { setSt(st); say(msg) }, () => setNewTasks((x) => x.map((y) => (y.id === t.id ? { ...y, deleted: true } : y)))), 232), title: 'Task actions' })
+    on(more, { onClick: () => open(`task-${t.id}`, more, taskMenu(t), 240), title: 'Task actions' })
     return <FigmaNode key={c.id} node={c} parent={node(AGENDA)} />
-  }) })
-  const agendaHeaderMore = kidsOf('42:11145').find((k) => k.n === 'Button')!.id
-  on(agendaHeaderMore, { onClick: () => open('agenda-more', agendaHeaderMore, [{ label: hideDone ? 'Show completed tasks' : 'Hide completed tasks', checked: hideDone, onSelect: () => setHideDone((v) => !v) }], 230), title: 'List options' })
+  }
+  on(AGENDA, { after: <>
+    {sortedTasks.filter((t) => showCancelled || t.state !== 'cancelled').map(taskRow)}
+    {!tasks.length && <div className="agenda-empty">No tasks yet — add the first one with “Add task”.</div>}
+    {cancelledN > 0 && <button type="button" className="agenda-toggle" onClick={() => setShowCancelled((v) => !v)}>{showCancelled ? 'Hide cancelled tasks' : `Show ${cancelledN} cancelled task${cancelledN === 1 ? '' : 's'}`}</button>}
+  </> })
 
   // Activity
   patches[ACTIVITY_BODY] = { hidden: !activityOpen }
@@ -502,12 +514,12 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     const rows = (NEEDS.k ?? []).filter((k) => k.n.startsWith('Row / Task') && !k.hidden)
     const label = (r: FNode) => T.find(r, (n) => n.n === 'Link Button')
     const linkText = (r: FNode) => (label(r) ? T.find(label(r)!, (n) => n.t === 'TEXT')?.txt?.trim() : '') ?? ''
-    const overdueTask = taskRows.find((t) => t.initial === 'overdue')
+    const overdueRow = taskRows.find((t) => t.initial === 'overdue'), overdueTask = overdueRow && tasks.find((t) => t.id === overdueRow.id)
     const resolved = (r: FNode) => {
       const l = linkText(r)
       if (l === 'Assign designer') return !!designer
       if (l === 'Upload photos') return hasRequired(files, 'Bathroom')
-      if (l === 'Open task') return !!overdueTask && ['done', 'cancelled'].includes(task[overdueTask.id].status)
+      if (l === 'Open task') return !overdueTask || viewOf(overdueTask) !== 'overdue'
       return false
     }
     const live = rows.filter((r) => !resolved(r))
@@ -516,7 +528,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
       on(r.id, { className: 'hover-row' })
       const l = linkText(r), btn = label(r)?.id
       const act: Record<string, () => void> = {
-        'Open task': () => overdueTask && setDialog({ kind: 'task', data: { id: overdueTask.id, title: task[overdueTask.id].name ?? overdueTask.name.txt } }),
+        'Open task': () => overdueTask && setDialog({ kind: 'task', data: { task: overdueTask } }),
         'Assign designer': () => setEditing('assign'),
         'Upload photos': () => (tabsOn ? setTab('files') : notInPrototype('The Files & Photos tab')),
         'Open estimate': () => (tabsOn ? setTab('materials') : notInPrototype('The estimate')),
@@ -583,7 +595,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   if (designer) { patches['236:4297'] = { txt: `${designer} assigned` }; patches['I240:4403;72:6318'] = { txt: 'Change' } }
   on('240:4403', { onClick: () => setEditing('assign'), title: designer ? 'Change assignees' : 'Assign designer' })
   const overdueTask = taskRows.find((t) => t.initial === 'overdue')
-  on('240:4416', { onClick: () => { setTab('overview'); requestAnimationFrame(() => { const el = overdueTask ? document.querySelector(`[data-id="${CSS.escape(overdueTask.id)}"]`) : null; el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); el?.classList.add('flash'); setTimeout(() => el?.classList.remove('flash'), 1600) }) }, title: 'Show the task in Agenda' })
+  on('240:4416', { onClick: () => { setTab('overview'); requestAnimationFrame(() => { const el = overdueTask ? document.querySelector(`[data-id="${CSS.escape(`${TASK_TPL.id}#${overdueTask.id}`)}"]`) : null; el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); el?.classList.add('flash'); setTimeout(() => el?.classList.remove('flash'), 1600) }) }, title: 'Show the task in Agenda' })
   const bathBefore = files.Bathroom?.['Before Photos']?.length ?? 0
   patches['236:4312'] = { txt: `${bathBefore} photo${bathBefore === 1 ? '' : 's'} uploaded` }
   on('240:4429', { onClick: () => setDialog({ kind: 'attach', data: { p: 'Bathroom', f: 'Before Photos' } }), title: 'Upload Bathroom before photos' })
@@ -621,8 +633,9 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
       <ContactDialog open={editing === 'contact'} value={contact} onClose={() => setEditing(null)} onSave={(v) => { const prev = contact; setContact(v); setEditing(null); say('Contact saved', () => setContact(prev)) }} />
       <AssignDialog open={editing === 'assign'} value={assignees} designers={designers} managers={projectManagers} onClose={() => setEditing(null)} onSave={(v) => { const prev = assignees; setAssignees(v); setEditing(null); say(v.designer ? `${v.designer} assigned as designer` : 'Assignees updated', () => setAssignees(prev)) }} />
       <MessagesDialog open={editing === 'messages'} name={fullName} phone={contact.phone} email={contact.email} store={leadInfo.store} status="Pending Leads" created="Sep 29, 2026, 2:17 PM" messages={messages} onSend={(m) => setMessages((x) => [...x, m])} onClose={() => setEditing(null)} />
-      <Dialogs dialog={dialog} close={() => setDialog(null)} say={say} onRenameTask={(id, name) => (id.startsWith('new') ? setNewTasks((x) => x.map((y) => (y.id === id ? { ...y, name } : y))) : setTask((t) => ({ ...t, [id]: { ...t[id], name } })))} wish={wish}
-        onAddTask={(name, due) => { const id = `new${Date.now()}`; setNewTasks((x) => [...x, { id, name, due, status: isPast(due) ? 'overdue' : 'upcoming' }]); say(`“${name}” added`, () => setNewTasks((x) => x.filter((y) => y.id !== id))) }}
+      <Dialogs dialog={dialog} close={() => setDialog(null)} say={say} wish={wish} assignees={[...new Set([CURRENT_USER, ...designers, ...projectManagers, ...tasks.map((t) => t.assignee)])]}
+        onSaveTask={(t, msg) => { const prev = tasks.find((x) => x.id === t.id); setTasks((x) => x.map((y) => (y.id === t.id ? t : y))); say(msg ?? 'Task updated', prev && (() => setTasks((x) => x.map((y) => (y.id === t.id ? prev : y))))) }}
+        onAddTask={(t) => { const id = `new${Date.now()}`; setTasks((x) => [...x, { ...t, id, createdBy: CURRENT_USER, state: 'open' }]); say(`“${t.name}” added`, () => setTasks((x) => x.filter((y) => y.id !== id))) }}
         onUpload={(p, f, list) => {
           const folder = f as Folder
           const items: FileItem[] = list.map((file, i) => ({ id: `a${Date.now()}-${i}`, original: file.name, by: 'You', at: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }), size: file.size, src: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined }))
@@ -645,10 +658,15 @@ export default function LeadOverview({ concept = 1, option = 1 }: { concept?: Co
   return concept === 2 ? <Page2 concept={2} /> : option === 2 ? <Page1o2 concept={1} /> : <Page1o1 concept={1} />
 }
 
-function Dialogs({ dialog, close, say, onRenameTask, wish, onAddTask, onUpload }: {
+// US date entry (MM/DD/YYYY) + time — the product is for the US, so the browser's locale date picker isn't used
+const isoToUs = (iso: string) => { const [y, m, d] = iso.split('-'); return `${m}/${d}/${y}` }
+const usToIso = (us: string) => { const m = us.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if (!m) return null; const [, mo, d, y] = m.map(Number); const dt = new Date(y, mo - 1, d); return dt.getMonth() === mo - 1 && dt.getDate() === d ? `${y}-${pad2(mo)}-${pad2(d)}` : null }
+const TIMES = Array.from({ length: 23 }, (_, i) => { const h = 7 + Math.floor(i / 2), mm = i % 2 ? '30' : '00'; return `${((h + 11) % 12) + 1}:${mm} ${h < 12 ? 'AM' : 'PM'}` })
+
+function Dialogs({ dialog, close, say, wish, assignees, onSaveTask, onAddTask, onUpload }: {
   dialog: null | { kind: string; data?: Record<string, unknown> }; close: () => void; say: (t: string, undo?: () => void) => void
-  onRenameTask: (id: string, name: string) => void; wish: Record<string, boolean>
-  onAddTask: (name: string, due: string) => void; onUpload: (project: string, folder: string, files: File[]) => void
+  wish: Record<string, boolean>; assignees: string[]
+  onSaveTask: (t: Task, msg?: string) => void; onAddTask: (t: Omit<Task, 'id' | 'createdBy' | 'state'>) => void; onUpload: (project: string, folder: string, files: File[]) => void
 }) {
   const d = dialog?.data ?? {}
   const [form, setForm] = useState<Record<string, string>>({})
@@ -672,30 +690,27 @@ function Dialogs({ dialog, close, say, onRenameTask, wish, onAddTask, onUpload }
     const saved = [{ n: 'Kitchen', d: 'White shaker kitchen', c: '5 items' }, { n: 'Bathroom', d: 'No description', c: 'Empty' }].filter((_, i) => i === 1 || wish['93:8375'])
     body = <div className="wish-list">{saved.map((s) => <div key={s.n} className="wish-row"><b>{s.n}</b><span className={s.d === 'No description' ? 'muted' : ''}>{s.d}</span><span className="chip">{s.c}</span><Btn onClick={() => { close(); say(`${s.n} added from wishlist (demo)`) }}>Add</Btn></div>)}</div>
     footer = <Btn onClick={close}>Close</Btn>
-  } else if (dialog?.kind === 'task' && !d.id) {
-    // "Add Task" — fields as in the PiSuite staging dialog: Task, Due Date, Description
-    const today = new Date(); const pad = (n: number) => String(n).padStart(2, '0')
-    const due0 = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}T08:00`
-    title = 'Add Task'
-    body = <>
-      <Field label="Task"><Select value={v('task')} onChange={set('task')}><option value="" disabled>Select task…</option>{taskTypes.map((t) => <option key={t}>{t}</option>)}</Select></Field>
-      <Field label="Due Date"><TextInput type="datetime-local" value={v('due', due0)} onChange={set('due')} /></Field>
-      <Field label="Description"><TextArea value={v('desc')} onChange={set('desc')} placeholder="Description" /></Field>
-    </>
-    footer = <><Btn onClick={close}>Cancel</Btn><Btn kind="primary" disabled={!v('task') || !v('due', due0)} onClick={() => { close(); onAddTask(v('task'), v('due', due0)) }}>Add</Btn></>
   } else if (dialog?.kind === 'task') {
-    const editing = d.id as string | undefined
-    title = editing ? 'Edit task' : 'Add task'
+    // Add task (no task in data) / Edit task — same fields; dates in US format, the task's own date and time
+    const t = d.task as Task | undefined
+    const date = v('date', t ? isoToUs(t.due) : ''), iso = usToIso(date)
+    const name = v('title', t?.name ?? ''), type = v('type', t?.type ?? '')
+    title = t ? 'Edit task' : 'Add task'
+    subtitle = d.resume ? <span className="warn-text">The due date ({fmtDue(t!.due)}) has passed — pick a new one to resume.</span> : t ? <>Created by {t.createdBy}</> : undefined
+    width = 520
     body = <>
-      <Field label="Title"><TextInput value={v('title', (d.title as string) ?? '')} onChange={set('title')} placeholder="e.g. Confirm cabinet colour" /></Field>
+      <Field label="Title" required><TextInput value={name} onChange={set('title')} placeholder="e.g. Confirm cabinet colour" autoFocus={!d.resume} /></Field>
+      <Field label="Task type"><Select value={type} onChange={set('type')}><option value="">Select type…</option>{taskTypes.map((x) => <option key={x}>{x}</option>)}</Select></Field>
+      <Field label="Assignee"><Select value={v('who', t?.assignee ?? assignees[0])} onChange={set('who')}>{assignees.map((x) => <option key={x}>{x}</option>)}</Select></Field>
       <div className="field-row">
-        <Field label="Task type"><Select value={v('type', 'In-home Consultation')} onChange={set('type')}>{['In-home Consultation', 'Quote Preparation', 'Follow-up', 'Measurement'].map((t) => <option key={t}>{t}</option>)}</Select></Field>
-        <Field label="Assignee"><Select value={v('who', 'Test Designer')} onChange={set('who')}>{designers.map((t) => <option key={t}>{t}</option>)}</Select></Field>
+        <Field label="Due date" required hint={date && !iso ? 'Use MM/DD/YYYY, e.g. 10/03/2026' : undefined}><TextInput value={date} onChange={set('date')} placeholder="MM/DD/YYYY" inputMode="numeric" autoFocus={!!d.resume} /></Field>
+        <Field label="Time" optional><Select value={v('time', t?.time ?? '')} onChange={set('time')}><option value="">No time</option>{TIMES.map((x) => <option key={x}>{x}</option>)}</Select></Field>
       </div>
-      <Field label="Due date"><TextInput type="datetime-local" value={v('due', '2026-10-02T10:00')} onChange={set('due')} /></Field>
-      <Field label="Description" optional><TextArea value={v('desc')} onChange={set('desc')} placeholder="What needs to happen?" /></Field>
+      <Field label="Description" optional><TextArea value={v('desc', t?.desc ?? '')} onChange={set('desc')} placeholder="What needs to happen?" /></Field>
     </>
-    footer = <><Btn onClick={close}>Cancel</Btn><Btn kind="primary" disabled={!v('title', (d.title as string) ?? '').trim()} onClick={() => { const t = v('title', (d.title as string) ?? '').trim(); close(); if (editing) { onRenameTask(editing, t); say('Task updated') } else say(`“${t}” added (demo)`) }}>{editing ? 'Save changes' : 'Add task'}</Btn></>
+    const ready = !!name.trim() && !!iso && !(d.resume && iso! < TODAY)
+    const data = { name: name.trim(), type: type || undefined, assignee: v('who', t?.assignee ?? assignees[0]), due: iso ?? '', time: v('time', t?.time ?? '') || undefined, desc: v('desc', t?.desc ?? '') || undefined }
+    footer = <><Btn onClick={close}>Cancel</Btn><Btn kind="primary" disabled={!ready} onClick={() => { close(); if (t) onSaveTask({ ...t, ...data }, d.resume ? `“${data.name}” resumed · due ${fmtDue(data.due)}` : undefined); else onAddTask(data) }}>{t ? (d.resume ? 'Resume task' : 'Save changes') : 'Add task'}</Btn></>
   } else if (dialog?.kind === 'attach') {
     title = d.p ? 'Add files' : 'Attach files'; subtitle = d.p ? undefined : <>To “{d.title as string}”</>
     body = <>

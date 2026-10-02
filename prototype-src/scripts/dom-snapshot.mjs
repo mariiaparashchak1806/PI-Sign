@@ -90,7 +90,7 @@ for (const name of names) {
       const range = document.createRange(); range.selectNodeContents(tn); const rs = [...range.getClientRects()].filter((r) => r.width > 0.5); if (!rs.length) return null
       const L = Math.min(...rs.map((r) => r.left)), T = Math.min(...rs.map((r) => r.top)), Rr = Math.max(...rs.map((r) => r.right)), B = Math.max(...rs.map((r) => r.bottom))
       const lines = new Set(rs.map((r) => Math.round(r.top))).size
-      return textItem(txt, cs, L - ox, T - oy, Rr - L, B - T, lines > 1 ? { ml: 1 } : (cs.textOverflow === 'ellipsis' ? { el: 1 } : undefined))
+      return textItem(txt, cs, L - ox, T - oy, Rr - L, B - T, lines > 1 ? { ml: 1, al: cs.textAlign === 'center' ? 'C' : undefined } : (cs.textOverflow === 'ellipsis' ? { el: 1 } : undefined))
     }
     function walk(el, ox, oy, out, depth) {
       const cs = getComputedStyle(el); if (!vis(cs)) return

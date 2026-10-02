@@ -256,3 +256,9 @@
 
 - Needs attention (Option 2, Concept 2): chevron on the left of the title and turning like Activity; wired to the rendered tree (Concept 2's block now collapses and its links act).
 - Card chevrons on the right everywhere (designer): Needs attention back on the right, Activity's chevron moved to the right of its header; nothing else changed.
+
+## 2026-10-02 — Concept 1 · Option 1 tabs, modals and menus transferred to Figma
+- Section "Prototype → Figma" (366:5502) in vyOOWtUkyDYhIeVOYL6p0b holds 33 frames built from the live prototype. Row 1 has the tabs: Agenda, Files & Photos (list / grid), Labors (+ row edit), Materials, Countertops, Payment Plan (+ not fully scheduled), Signed documents, Messages, Forms. Rows 2–3 have the modals, menus and the toast: Add / Edit task, Task actions, Attach files, Task done + Undo, Edit lead, Pick assignees, Edit contact, Lead / Project / Status / Line item menus, Add project, Add from wishlist, Delete project, Add labors / materials / countertops, Replace from catalog, Photo viewer, AI Assistant.
+- Pipeline: scripts/dom-snapshot.mjs (Playwright, per state → extraction/snap/<state>.json) → scripts/figma-payloads.mjs (extraction/snap/fig/NN-*.js; bundles/ batches them) → the builder (scripts/figma-build.js, stored in the section as the hidden text "_builder"). Each frame is a copy of the Overview frame 19:973 (or of an already built tab frame) with the active tab set and the snapshot drawn on top. Icons are components "ic/<hash>" in the frame "Prototype icons".
+- After building, word-split text runs were merged into single layers so the spaces come back (e.g. "Add labors to Kitchen", "12 of 12").
+- Known gaps: dashed drop-zone borders are drawn solid; photos and thumbnails are grey placeholders; layers are absolutely positioned (no auto layout). The original design frames were not touched.

@@ -35,6 +35,7 @@ function build(n, parent) {
     else if (n.el) { t.textAutoResize = 'NONE'; t.resize(Math.max(1, n.w + (n.al === 'R' ? 0 : 1)), Math.max(1, n.h)); t.textTruncation = 'ENDING'; if (n.al === 'R') t.textAlignHorizontal = 'RIGHT' }
     else t.textAutoResize = 'WIDTH_AND_HEIGHT'
     t.textAlignVertical = 'CENTER'
+    if (n.al === 'C') t.textAlignHorizontal = 'CENTER'
     t.x = n.x; t.y = n.y + (n.el ? 0 : (n.h - t.height) / 2)
     t.name = n.s.slice(0, 40)
     return t

@@ -2,9 +2,9 @@
  *  Structure follows the PiSuite staging tabs; content is the lead's data from the mock; the staging
  *  "Insufficient permissions" errors are replaced by the real data or an empty state. */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Banknote, Bold, ChevronDown, Download, Eye, FileText, Italic, List, ListOrdered, Lock, Mail, MessageSquare, MoreHorizontal, Paperclip, PenLine, Plus, RefreshCw, Send, Strikethrough, Trash2, Underline, X } from 'lucide-react'
+import { Banknote, Bold, ChevronDown, Download, Eye, FileText, Italic, List, ListOrdered, Lock, Mail, MessageSquare, MoreHorizontal, Paperclip, PenLine, Pencil, Plus, RefreshCw, Send, Strikethrough, Trash2, Underline, X } from 'lucide-react'
 import { SUMMARY, itemsLabel, lineTotal, money, type CatalogKind, type Estimate, type Line } from '../lib/estimate'
-import { Field, Select, Stepper, Switch, TextInput } from './Form'
+import { Field, Select, Switch, TextInput } from './Form'
 import { Menu, type MenuState } from './Overlay'
 import type { Msg, MsgFile } from './LeadDialogs'
 
@@ -26,8 +26,14 @@ function Empty({ icon, title, text }: { icon: ReactNode; title: string; text?: s
 }
 
 // ---------- Labors / Materials / Countertops ----------
-// One list per project (Kitchen → Bathroom → Basement): quantities change in place, ⋯ replaces or removes a
-// line, each project adds from the catalog straight into itself. Bathroom's drawn totals stay as a summary row.
+// One list per project (Kitchen → Bathroom → Basement). Rows are read-only; ⋯ → Edit opens that one row as an inline
+// form (Title, Qty + unit, Unit price, optional Description) with a live total and subtotal, Save / Cancel, Enter / Esc.
+// Opening another row with unsaved changes asks "Save changes to …?" first. Save and Remove show a toast with Undo.
+type Draft = { name: string; qty: string; price: string; desc: string; descOpen: boolean }
+const toDraft = (l: Line): Draft => ({ name: l.name, qty: String(l.qty), price: String(l.price), desc: l.desc ?? '', descOpen: !!l.desc })
+const numOf = (v: string) => (v.trim() === '' ? NaN : Number(v.replace(',', '.')))
+const unitOf = (l: Line) => l.unit ?? 'pcs'
+
 export function EstimateTab({ kind, projects, estimate, setEstimate, onCatalog, say }: {
   kind: CatalogKind; projects: string[]; estimate: Estimate; setEstimate: (f: (e: Estimate) => Estimate) => void
   onCatalog: (t: { kind: CatalogKind; project: string; replace?: Line }) => void; say: (t: string, undo?: () => void) => void
@@ -36,15 +42,41 @@ export function EstimateTab({ kind, projects, estimate, setEstimate, onCatalog, 
   const [showSale, setShowSale] = useState(true)
   const [closed, setClosed] = useState<string[]>([])
   const [menu, setMenu] = useState<MenuState>(null)
+  const [editing, setEditing] = useState<{ p: string; id: string; draft: Draft } | null>(null)
+  const [pending, setPending] = useState<{ p: string; id: string } | null>(null) // Edit clicked on another row while this one is dirty
   const noun = kind.toLowerCase()
+  const lineOf = (p: string, id: string) => (estimate[p]?.[kind] ?? []).find((l) => l.id === id)
+  const setLines = (p: string, f: (ls: Line[]) => Line[]) => setEstimate((e) => ({ ...e, [p]: { ...e[p], [kind]: f(e[p]?.[kind] ?? []) } }))
+  // the row being edited counts with its draft values, so totals update live
+  const live = (p: string, l: Line): Line => {
+    if (editing?.p !== p || editing.id !== l.id) return l
+    const q = numOf(editing.draft.qty), pr = numOf(editing.draft.price)
+    return { ...l, qty: q > 0 ? q : 0, price: pr >= 0 ? pr : l.price }
+  }
   const groups = projects.map((p) => {
     const ls = estimate[p]?.[kind] ?? []
     const sum = SUMMARY[p]?.[kind]
-    return { p, ls, sum, count: ls.length + (sum?.items ?? 0), value: ls.reduce((a, l) => a + lineTotal(l), 0) + (sum?.total ?? 0) }
+    return { p, ls, sum, count: ls.length + (sum?.items ?? 0), value: ls.reduce((a, l) => a + lineTotal(live(p, l)), 0) + (sum?.total ?? 0) }
   })
   const allCount = groups.reduce((a, g) => a + g.count, 0), allValue = groups.reduce((a, g) => a + g.value, 0)
-  const setLines = (p: string, f: (ls: Line[]) => Line[]) => setEstimate((e) => ({ ...e, [p]: { ...e[p], [kind]: f(e[p]?.[kind] ?? []) } }))
-  const cols = `minmax(0,1fr) 148px${showCost ? ' 110px' : ''}${showSale ? ' 110px 120px' : ''} 28px`
+  const errorsOf = (d: Draft) => ({ name: d.name.trim() ? '' : 'Title can’t be empty', qty: numOf(d.qty) > 0 ? '' : 'Qty must be greater than 0', price: numOf(d.price) >= 0 ? '' : 'Enter a price' })
+  const dirty = (e: NonNullable<typeof editing>) => { const l = lineOf(e.p, e.id), d = e.draft; return !!l && (d.name.trim() !== l.name || numOf(d.qty) !== l.qty || numOf(d.price) !== l.price || d.desc.trim() !== (l.desc ?? '')) }
+  const startEdit = (p: string, l: Line) => {
+    if (editing && (editing.p !== p || editing.id !== l.id) && dirty(editing)) { setPending({ p, id: l.id }); return }
+    setPending(null); setEditing({ p, id: l.id, draft: toDraft(l) })
+  }
+  const save = (then?: { p: string; id: string } | null) => {
+    if (!editing) return
+    const e = errorsOf(editing.draft); if (e.name || e.qty || e.price) return
+    const prev = lineOf(editing.p, editing.id)!, { p, id, draft } = editing
+    const next: Line = { ...prev, name: draft.name.trim(), qty: numOf(draft.qty), price: numOf(draft.price), desc: draft.desc.trim() || undefined }
+    setLines(p, (x) => x.map((y) => (y.id === id ? next : y)))
+    say(`${next.name} updated`, () => setLines(p, (x) => x.map((y) => (y.id === id ? prev : y))))
+    open(then)
+  }
+  const open = (then?: { p: string; id: string } | null) => { setPending(null); const l = then && lineOf(then.p, then.id); setEditing(then && l ? { p: then.p, id: then.id, draft: toDraft(l) } : null) }
+  const setDraft = (patch: Partial<Draft>) => setEditing((e) => (e ? { ...e, draft: { ...e.draft, ...patch } } : e))
+  const cols = `minmax(0,1fr) 148px${showCost ? ' 110px' : ''}${showSale ? ' 120px 120px' : ''} 28px`
   return (
     <Card title={<span className="est-title">{kind}<span className="est-meta">{itemsLabel(allCount)}{showSale && allCount > 0 && <> · {money(allValue)}</>}</span></span>}
       right={<div className="est-switches"><Switch on={showCost} onChange={setShowCost} label="Show cost" /><Switch on={showSale} onChange={setShowSale} label="Show sale" /></div>}>
@@ -77,19 +109,64 @@ export function EstimateTab({ kind, projects, estimate, setEstimate, onCatalog, 
                     <span />
                   </div>
                 )}
-                {ls.map((l) => (
-                  <div key={l.id} className="tline est-row" role="row">
-                    <span role="cell" className="tline-name">{l.name}{l.code && <em>{l.code}</em>}</span>
-                    <span role="cell"><Stepper value={l.qty} unit={l.unit} label={`Quantity of ${l.name}`} onChange={(qty) => setLines(p, (x) => x.map((y) => (y.id === l.id ? { ...y, qty } : y)))} /></span>
-                    {showCost && <span role="cell" className="num muted">{l.cost != null ? money(l.cost) : '—'}</span>}
-                    {showSale && <><span role="cell" className="num muted">{money(l.price)}</span><span role="cell" className="num strong">{money(lineTotal(l))}</span></>}
-                    <button className="icon-plain" data-id={`est-${l.id}`} aria-label={`Actions for ${l.name}`} aria-haspopup="menu" onClick={() => setMenu(menu?.key === l.id ? null : { key: l.id, anchorId: `est-${l.id}`, width: 220, items: [
-                      { label: 'Replace from catalog', icon: <RefreshCw size={16} />, onSelect: () => onCatalog({ kind, project: p, replace: l }) },
-                      '-',
-                      { label: 'Remove', danger: true, icon: <Trash2 size={16} />, onSelect: () => { let prev: Line[] = []; setLines(p, (x) => { prev = x; return x.filter((y) => y.id !== l.id) }); say(`${l.name} removed from ${p}`, () => setLines(p, () => prev)) } },
-                    ] })}><MoreHorizontal size={16} /></button>
-                  </div>
-                ))}
+                {ls.map((l) => {
+                  if (editing?.p === p && editing.id === l.id) {
+                    const d = editing.draft, err = errorsOf(d), bad = !!(err.name || err.qty || err.price), lv = live(p, l)
+                    return (
+                      <div key={l.id} className="est-edit" role="row" aria-label={`Editing ${l.name}`}
+                        onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); open(null) } else if (e.key === 'Enter' && !(e.target as HTMLElement).matches('textarea') && !bad) { e.preventDefault(); save() } }}>
+                        <div className="tline est-row">
+                          <span role="cell" className="est-field">
+                            <input className={`input${err.name ? ' invalid' : ''}`} aria-label="Title" autoFocus value={d.name} onChange={(e) => setDraft({ name: e.target.value })} />
+                            {err.name && <em className="field-error">{err.name}</em>}
+                          </span>
+                          <span role="cell" className="est-field">
+                            <span className="affix"><input className={`input${err.qty ? ' invalid' : ''}`} aria-label="Qty" inputMode="decimal" value={d.qty} onChange={(e) => setDraft({ qty: e.target.value })} onFocus={(e) => e.target.select()} /><em>{unitOf(l)}</em></span>
+                            {err.qty && <em className="field-error">{err.qty}</em>}
+                          </span>
+                          {showCost && <span role="cell" className="num muted">{l.cost != null ? money(l.cost) : '—'}</span>}
+                          {showSale && <>
+                            <span role="cell" className="est-field">
+                              <span className="affix pre"><em>$</em><input className={`input${err.price ? ' invalid' : ''}`} aria-label="Unit price" inputMode="decimal" value={d.price} onChange={(e) => setDraft({ price: e.target.value })} onFocus={(e) => e.target.select()} /></span>
+                              {err.price && <em className="field-error">{err.price}</em>}
+                            </span>
+                            <span role="cell" className="num strong">{money(lineTotal(lv))}</span>
+                          </>}
+                          <span />
+                        </div>
+                        <div className="est-edit-foot">
+                          {d.descOpen
+                            ? <textarea className="input est-desc" aria-label="Description" placeholder="Description (optional)" rows={2} autoFocus={!d.desc} value={d.desc} onChange={(e) => setDraft({ desc: e.target.value })} />
+                            : <button type="button" className="link-btn est-add-desc" onClick={() => setDraft({ descOpen: true })}><Plus size={14} />Add description</button>}
+                          <span className="est-edit-actions">
+                            {pending ? <>
+                              <span className="est-prompt">Save changes to {l.name}?</span>
+                              <button type="button" className="link-btn est-cancel" onClick={() => open(pending)}>Discard</button>
+                              <button type="button" className="btn btn-primary btn-sm" disabled={bad} onClick={() => save(pending)}>Save</button>
+                            </> : <>
+                              <button type="button" className="link-btn est-cancel" onClick={() => open(null)}>Cancel</button>
+                              <button type="button" className="btn btn-primary btn-sm" disabled={bad} onClick={() => save()}>Save</button>
+                            </>}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return (
+                    <div key={l.id} className="tline est-row" role="row">
+                      <span role="cell" className="tline-name">{l.name}{l.code && <em>{l.code}</em>}{l.desc && <em>{l.desc}</em>}</span>
+                      <span role="cell" className="est-qty">{l.qty} {unitOf(l)}</span>
+                      {showCost && <span role="cell" className="num muted">{l.cost != null ? money(l.cost) : '—'}</span>}
+                      {showSale && <><span role="cell" className="num muted">{money(l.price)}</span><span role="cell" className="num strong">{money(lineTotal(l))}</span></>}
+                      <button className="icon-plain" data-id={`est-${l.id}`} aria-label={`Actions for ${l.name}`} aria-haspopup="menu" onClick={() => setMenu(menu?.key === l.id ? null : { key: l.id, anchorId: `est-${l.id}`, width: 220, items: [
+                        { label: 'Edit', icon: <Pencil size={16} />, onSelect: () => startEdit(p, l) },
+                        { label: 'Replace from catalog', icon: <RefreshCw size={16} />, onSelect: () => onCatalog({ kind, project: p, replace: l }) },
+                        '-',
+                        { label: 'Remove', danger: true, icon: <Trash2 size={16} />, onSelect: () => { let prev: Line[] = []; setLines(p, (x) => { prev = x; return x.filter((y) => y.id !== l.id) }); say(`${l.name} removed`, () => setLines(p, () => prev)) } },
+                      ] })}><MoreHorizontal size={16} /></button>
+                    </div>
+                  )
+                })}
                 {showSale && <div className="tline est-row subtotal" role="row"><span role="cell" className="tline-name">Subtotal</span><span />{showCost && <span />}<span /><span role="cell" className="num strong">{money(value)}</span><span /></div>}
               </div>
             ) : (

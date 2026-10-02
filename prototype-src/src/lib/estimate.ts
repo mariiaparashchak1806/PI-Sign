@@ -4,7 +4,7 @@
 export type CatalogKind = 'Materials' | 'Labors' | 'Countertops'
 export const KINDS: CatalogKind[] = ['Materials', 'Labors', 'Countertops']
 
-export type Line = { id: string; name: string; qty: number; unit?: string; price: number; cost?: number; code?: string }
+export type Line = { id: string; name: string; qty: number; unit?: string; price: number; cost?: number; code?: string; desc?: string }
 export type Estimate = Record<string, Partial<Record<CatalogKind, Line[]>>>
 export type Summary = Record<string, Partial<Record<CatalogKind, { items: number; total: number }>>>
 

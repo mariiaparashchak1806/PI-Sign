@@ -160,3 +160,9 @@
 - Table header: "Created by" → "Assignee" (values = the drawn names; no assignee data in the mock), select-all checkbox and the unnamed ⋯ column removed (no bulk actions).
 - Edit / Add task: the task's own date, US format MM/DD/YYYY + Time (No time default), Task type and Assignee full width (no truncation), "Created by" in the subtitle.
 - Checks: scripts/agenda-check.mjs 66/66 (22 per page × option 1, option 2, concept 2); controls 51/56/29, agenda tab 26; 0 console errors.
+
+## 2026-10-02 — Labors / Materials / Countertops: rows read-only, inline Edit per row (designer's prompt)
+- View: Qty as text ("8 pcs", "42 sq ft"; lines without a unit read "pcs"), Unit price / Total as text; ⋯ → Edit · Replace from catalog · — · Remove.
+- Edit (one row at a time, highlighted: light background + 1px border): Title, Qty + unit, Unit price ($, editable for every line — the mock has no "price locked" flag), Unit cost read-only, "+ Add description" → textarea; Total and the group subtotal recalc live; Cancel (text) + Save (primary small); Enter saves, Esc cancels. Edit on another row with unsaved changes → "Save changes to <item>?" Save / Discard in the open row.
+- Validation: Title not empty, Qty > 0 (error under the field, Save disabled). Save → toast "<item> updated · Undo"; Remove → toast "<item> removed · Undo".
+- Checks: scripts/estimate-edit-check.mjs 34/34 (option 1, option 2); controls labors 18, materials, overview; 0 console errors.

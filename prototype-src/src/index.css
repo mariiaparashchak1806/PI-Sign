@@ -648,3 +648,22 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .agenda-empty { padding: 20px 16px; border-top: 1px solid var(--color-border); font-size: 14px; color: var(--color-text-secondary); }
 .warn-text { color: var(--color-warning); }
 .check-hit.is-disabled { opacity: .45; cursor: not-allowed; }
+/* Estimate row: inline edit (one row at a time) */
+.est-qty { font-variant-numeric: tabular-nums; }
+.est-edit { background: var(--color-bg-expanded); box-shadow: inset 0 0 0 1px var(--color-border-control); border-bottom: 1px solid var(--color-border); }
+.est-edit > .tline { border-bottom: 0; align-items: start; padding-top: 12px; padding-bottom: 6px; }
+.est-edit .est-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.est-edit .input { height: 36px; background: var(--color-surface); }
+.est-edit .affix .input { padding-right: 44px; }
+.est-edit .affix.pre .input { padding-left: 26px; padding-right: 12px; }
+.est-edit .num.strong, .est-edit .num.muted { line-height: 36px; }
+.input.invalid { border-color: var(--color-danger); }
+.field-error { font-style: normal; font-size: 13px; line-height: 18px; color: var(--color-danger); }
+.est-edit-foot { display: flex; align-items: flex-start; gap: 16px; padding: 0 20px 12px 46px; }
+.est-desc { flex: 1; height: auto; min-height: 56px; padding: 8px 12px; resize: vertical; line-height: 1.5; }
+.est-add-desc { font-size: 14px; color: var(--color-text-secondary); padding: 6px 0; }
+.est-add-desc:hover { color: var(--color-text-primary); }
+.est-edit-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.est-cancel { font-size: 14px; font-weight: 500; color: var(--color-text-secondary); }
+.est-cancel:hover { color: var(--color-text-primary); }
+.est-prompt { font-size: 14px; color: var(--color-text-primary); }

@@ -23,7 +23,7 @@ for (const path of ['concept-1/', 'concept-1/option-2/', 'concept-2/']) {
   check(/2 open tasks · 1 on hold/.test(await count()), 'counter with on hold', await count())
   m = await menu('Measure'); check(m.includes('Resume') && !m.includes('Put on hold'), 'on hold menu has Resume', m.join('|'))
   await p.keyboard.press('Escape')
-  m = await menu('Prepare'); check(m.some((x) => x.startsWith('Delete task') && x.includes('[disabled]')), 'Delete disabled for another author (Mark Davis)', m.join('|'))
+  m = await menu('Prepare'); check(m.some((x) => x.startsWith('Delete task') && !x.includes('[disabled]')) && !(await p.locator('text=Mark Davis').count()), 'all tasks are the user’s own (no Mark Davis) → Delete enabled', m.join('|'))
   await pickMenu('Cancel task')
   r = await rows(); check(r.length === 2 && r.some((x) => x.includes('Measure')) && !r.some((x) => x.includes('Prepare')), 'cancelled hidden, on-hold task still listed', JSON.stringify(r))
   check(/1 open task · 1 on hold/.test(await count()), 'counter after cancel', await count())

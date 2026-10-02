@@ -144,7 +144,9 @@ const makeTabs = (TT: typeof T) => (TT.byId.get(TABS)!.k ?? []).filter((k) => !k
 })
 const TABS_BY_CONCEPT = { 1: makeTabs(T), 2: makeTabs(T2) }
 const TASK_TPL = node(taskRows.find((t) => t.initial === 'upcoming')!.id)
-const TASKS0: Task[] = taskRows.map((t) => { const by = named(t.id, 'Created by').txt!; return { id: t.id, name: t.name.txt!, createdBy: by, assignee: by, due: toIso(named(t.id, 'Due date').txt!), state: t.initial === 'done' ? 'done' : 'open' } })
+// every task is the signed-in user's own (designer, Oct 2: other people don't leave tasks for the user — the mock's
+// "Mark Davis" is not used as author / assignee for now)
+const TASKS0: Task[] = taskRows.map((t) => { const by = CURRENT_USER; return { id: t.id, name: t.name.txt!, createdBy: by, assignee: by, due: toIso(named(t.id, 'Due date').txt!), state: t.initial === 'done' ? 'done' : 'open' } })
 const viewPill = (v: TaskView) => (v === 'overdue' || v === 'upcoming' || v === 'done' ? pillStyle(v) : v === 'today' ? { bg: 'var(--color-warning-bg)', fg: 'var(--color-warning)' } : { bg: 'var(--color-bg-subtle)', fg: 'var(--color-text-secondary)' })
 const OVERDUE_COLOR = segColor(node(taskRows.find((r) => r.initial === 'overdue')!.due))
 const FILE_SUMMARY: [string, string][] = [['Kitchen', '93:7332'], ['Bathroom', '93:7378'], ['Basement', find('93:7343', (n) => n.t === 'TEXT' && /files?$/.test(n.txt ?? ''))!.id]]
@@ -362,24 +364,28 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
       })
     }
   }
-  // Columns: Project and Status keep a fixed width, the five amount columns share the rest equally (header, project
-  // rows and Total use the same widths; the space of the row ⋯ button is kept in the header and the Total row).
-  // Show cost hides Total (index 4), Show sale hides Sales (index 5) — the remaining columns take the freed space.
+  // Columns (designer, Oct 2): Project · Status next to the name · the five amount columns share the rest equally ·
+  // the row ⋯ slot. Header, project rows and Total keep the same edges (rows without a status cell get a spacer).
+  // Show cost hides Total (index 4), Show sale hides Sales (index 5) — the other amount columns take the space.
   const dataRows = PD_TOTAL_ROW ? [...PROJECT_ROWS, PD_TOTAL_ROW] : PROJECT_ROWS
+  // the card is HUG in Figma (732 = its fixed columns); with flexible columns it fills its column instead
+  patches[PD] = { ...patches[PD], style: { ...patches[PD]?.style, width: '100%', alignSelf: 'stretch' } }
   const rkids = (id: string) => (RT.byId.get(id)?.k ?? []).filter((k) => !k.hidden)
   const rowW = RT.byId.get(PROJECT_ROWS[0]) ? rkids(PROJECT_ROWS[0]) : []
-  const GAP = RT.byId.get(PD_COLHEAD)?.al?.gap ?? 12, PROJ_W = rkids(PD_COLHEAD)[0]?.w ?? 120, STATUS_W = 120, MORE_W = rowW[7]?.w ?? 32
+  const GAP = 8, PROJ_W = 96, STATUS_W = 100, MORE_W = rowW[7]?.w ?? 32 // tighter than the mock's 12 so "Countertops" fits its column
   const fixed = (w: number) => ({ width: w, minWidth: w, flex: 'none' as const })
   ;[PD_COLHEAD, ...dataRows].forEach((r) => {
     const ks = rkids(r); if (!ks.length) return
-    const isTotal = r === PD_TOTAL_ROW
-    patches[r] = { ...patches[r], style: { ...patches[r]?.style, gap: GAP, ...(r === PD_COLHEAD || ks.length < 8 ? { paddingRight: 16 + (ks.length < 7 ? STATUS_W + GAP : 0) + MORE_W + GAP } : {}) } }
+    const isTotal = r === PD_TOTAL_ROW, hasStatus = ks.length >= 7, hasMore = ks.length >= 8
+    patches[r] = { ...patches[r], style: { ...patches[r]?.style, gap: GAP, ...(!hasMore ? { paddingRight: 16 + MORE_W + GAP } : {}) } }
     ks.forEach((c, i) => {
       const hide = (i === 4 && !showCost) || (i === 5 && !showSales)
-      const style = i === 0 ? fixed(PROJ_W) : i <= 5 ? { flex: '1 1 0', minWidth: 0, width: 'auto' } : i === 6 ? fixed(STATUS_W) : fixed(MORE_W)
+      const style = i === 0 ? { ...fixed(PROJ_W), order: 0, ...(!hasStatus ? { marginRight: STATUS_W + GAP } : {}) }
+        : i <= 5 ? { flex: '1 1 0', minWidth: 0, width: 'auto', order: 2, ...(r === PD_COLHEAD ? { overflow: 'visible', whiteSpace: 'nowrap' as const } : {}) }
+        : i === 6 ? { ...fixed(STATUS_W), order: 1 } : { ...fixed(MORE_W), order: 3 }
       patches[c.id] = { ...patches[c.id], ...(hide ? { hidden: true } : {}), style: { ...patches[c.id]?.style, ...style } }
     })
-    if (isTotal && ks.length >= 8) ks.slice(6).forEach((c) => (patches[c.id] = { ...patches[c.id], style: { ...patches[c.id]?.style, visibility: 'hidden' } }))
+    if (isTotal && hasStatus) ks.slice(6).forEach((c) => (patches[c.id] = { ...patches[c.id], style: { ...patches[c.id]?.style, visibility: 'hidden' } }))
   })
   const liveProjects = projectRows.filter((r) => !deletedRows.includes(r.id))
   patches[find(PD_HEAD, (n) => n.t === 'TEXT' && /projects?$/.test(n.txt ?? ''))!.id] = { txt: `${liveProjects.length} project${liveProjects.length === 1 ? '' : 's'}` }
@@ -504,6 +510,13 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   on('72:8984', { render: () => <FigmaNode key="msgw" node={MSGW} parent={RT.parentOf.get('72:8984') ?? null} /> })
   if (lastMsg) { patches[MW.name] = { txt: lastMsg.author }; patches[MW.at] = { txt: lastMsg.at }; patches[MW.text] = { txt: lastMsg.text || (lastMsg.files?.length ? `${lastMsg.files.length} file${lastMsg.files.length === 1 ? '' : 's'}` : '') }; patches[MW.initials] = { txt: initials(lastMsg.author) } }
   else patches[MW.last] = { hidden: true }
+  // Concept 2 draws its own Messages frame (Figma 334:11136, date on the right of the name) → same data, its ids
+  const MW2 = { name: '334:11147', at: '334:11148', text: '334:11149', initials: '334:11145', viewAll: '334:11139', last: '334:11141' }
+  if (concept === 2 && T2.byId.has(MW2.name)) {
+    if (lastMsg) { patches[MW2.name] = { txt: lastMsg.author }; patches[MW2.at] = { txt: lastMsg.at }; patches[MW2.text] = { txt: lastMsg.text || (lastMsg.files?.length ? `${lastMsg.files.length} file${lastMsg.files.length === 1 ? '' : 's'}` : '') }; patches[MW2.initials] = { txt: initials(lastMsg.author) } }
+    else patches[MW2.last] = { hidden: true }
+    if (tab !== 'messages') on(MW2.viewAll, { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
+  }
   if (tabsOn && tab !== 'messages') on(MW.viewAll, { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
   if (tabsOn) SIGNED_LINKS.forEach((id) => on(id, { onClick: () => setTab('agreements'), title: 'Open the Signed documents tab' }))
   if (tab !== 'files') on('93:7192', { onClick: () => setTab('files'), title: 'Open the Files & Photos tab' })
@@ -606,7 +619,11 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     // Designer: no Assign button in this layout — the "Not assigned" value opens Pick Assignees
     on('124:2748', { onClick: () => setEditing('assign'), title: designer ? 'Change assignees' : 'Assign designer', className: 'value-hover' })
     if (designer) patches['124:2755'] = { txt: designer, color: 'var(--color-text-primary)' }
-    if (tabsOn && tab !== 'payment') on('124:2704', { onClick: () => setTab('payment'), title: 'Open the Payment Plan tab' })
+    // Payment plan = a text button like the Designer value (no dropdown look): no border, no chevron
+    patches['124:2704'] = { style: { borderColor: 'transparent', padding: '0 4px 0 8px', minHeight: 30, justifyContent: 'flex-start' } }
+    patches['124:2706'] = { hidden: true }
+    patches['124:2705'] = { ...patches['124:2705'], style: { fontSize: 13, lineHeight: '20px', fontWeight: 400, color: 'rgba(17,17,21,1)' } }
+    if (tab !== 'payment') on('124:2704', { onClick: () => setTab('payment'), title: 'Open the Payment Plan tab', className: 'value-hover' })
     patches['124:2805'] = { txt: contact.phone }; patches['124:2818'] = { txt: contact.email }; patches['124:2829'] = { txt: contact.address }
     ;[['124:2797', contact.phone, 'Phone number'], ['124:2810', contact.email, 'Email'], ['124:2819', contact.address, 'Address']].forEach(([id, v, l]) => on(id, { onClick: copy(v, l), title: `Copy ${l.toLowerCase()}`, className: 'value-hover' }))
     const lead2: [string, string][] = [['124:2741', leadInfo.store], ['124:2769', leadInfo.source], ['124:2780', leadInfo.start], ['124:2789', houseLabel(leadInfo)]]
@@ -736,25 +753,27 @@ function Dialogs({ dialog, close, say, wish, assignees, onSaveTask, onAddTask, o
     body = <div className="wish-list">{saved.map((s) => <div key={s.n} className="wish-row"><b>{s.n}</b><span className={s.d === 'No description' ? 'muted' : ''}>{s.d}</span><span className="chip">{s.c}</span><Btn onClick={() => { close(); say(`${s.n} added from wishlist (demo)`) }}>Add</Btn></div>)}</div>
     footer = <Btn onClick={close}>Close</Btn>
   } else if (dialog?.kind === 'task') {
-    // Add task (no task in data) / Edit task — same fields; dates in US format, the task's own date and time
+    // Add task / Edit task — the staging original's three fields only: Task (select), Due Date, Description
+    // (dates in US format MM/DD/YYYY + time). The assignee stays as it is (the current user for a new task).
     const t = d.task as Task | undefined
     const date = v('date', t ? isoToUs(t.due) : ''), iso = usToIso(date)
-    const name = v('title', t?.name ?? ''), type = v('type', t?.type ?? '')
+    const name = v('title', t?.name ?? '')
+    const options = t && !taskTypes.includes(t.name) ? [t.name, ...taskTypes] : taskTypes
     title = t ? 'Edit task' : 'Add task'
-    subtitle = d.resume ? <span className="warn-text">The due date ({fmtDue(t!.due)}) has passed — pick a new one to resume.</span> : t ? <>Created by {t.createdBy}</> : undefined
+    subtitle = d.resume ? <span className="warn-text">The due date ({fmtDue(t!.due)}) has passed — pick a new one to resume.</span> : undefined
     width = 520
     body = <>
-      <Field label="Title" required><TextInput value={name} onChange={set('title')} placeholder="e.g. Confirm cabinet colour" autoFocus={!d.resume} /></Field>
-      <Field label="Task type"><Select value={type} onChange={set('type')}><option value="">Select type…</option>{taskTypes.map((x) => <option key={x}>{x}</option>)}</Select></Field>
-      <Field label="Assignee"><Select value={v('who', t?.assignee ?? assignees[0])} onChange={set('who')}>{assignees.map((x) => <option key={x}>{x}</option>)}</Select></Field>
-      <div className="field-row">
-        <Field label="Due date" required hint={date && !iso ? 'Use MM/DD/YYYY, e.g. 10/03/2026' : undefined}><TextInput value={date} onChange={set('date')} placeholder="MM/DD/YYYY" inputMode="numeric" autoFocus={!!d.resume} /></Field>
-        <Field label="Time" optional><Select value={v('time', t?.time ?? '')} onChange={set('time')}><option value="">No time</option>{TIMES.map((x) => <option key={x}>{x}</option>)}</Select></Field>
-      </div>
-      <Field label="Description" optional><TextArea value={v('desc', t?.desc ?? '')} onChange={set('desc')} placeholder="What needs to happen?" /></Field>
+      <Field label="Task" required><Select value={name} onChange={set('title')} autoFocus={!d.resume}><option value="">Select task…</option>{options.map((x) => <option key={x}>{x}</option>)}</Select></Field>
+      <Field label="Due Date" required hint={date && !iso ? 'Use MM/DD/YYYY, e.g. 10/03/2026' : undefined}>
+        <div className="field-row tight">
+          <TextInput value={date} onChange={set('date')} placeholder="MM/DD/YYYY" inputMode="numeric" aria-label="Due date" autoFocus={!!d.resume} />
+          <Select value={v('time', t?.time ?? '')} onChange={set('time')} aria-label="Time"><option value="">No time</option>{TIMES.map((x) => <option key={x}>{x}</option>)}</Select>
+        </div>
+      </Field>
+      <Field label="Description"><TextArea value={v('desc', t?.desc ?? '')} onChange={set('desc')} placeholder="Description" /></Field>
     </>
     const ready = !!name.trim() && !!iso && !(d.resume && iso! < TODAY)
-    const data = { name: name.trim(), type: type || undefined, assignee: v('who', t?.assignee ?? assignees[0]), due: iso ?? '', time: v('time', t?.time ?? '') || undefined, desc: v('desc', t?.desc ?? '') || undefined }
+    const data = { name: name.trim(), type: taskTypes.includes(name) ? name : t?.type, assignee: t?.assignee ?? assignees[0], due: iso ?? '', time: v('time', t?.time ?? '') || undefined, desc: v('desc', t?.desc ?? '') || undefined }
     footer = <><Btn onClick={close}>Cancel</Btn><Btn kind="primary" disabled={!ready} onClick={() => { close(); if (t) onSaveTask({ ...t, ...data }, d.resume ? `“${data.name}” resumed · due ${fmtDue(data.due)}` : undefined); else onAddTask(data) }}>{t ? (d.resume ? 'Resume task' : 'Save changes') : 'Add task'}</Btn></>
   } else if (dialog?.kind === 'attach') {
     title = d.p ? 'Add files' : 'Attach files'; subtitle = d.p ? undefined : <>To “{d.title as string}”</>

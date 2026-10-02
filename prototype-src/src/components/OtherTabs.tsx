@@ -153,12 +153,12 @@ export function EstimateTab({ kind, projects, estimate, setEstimate, onCatalog, 
                     )
                   }
                   return (
-                    <div key={l.id} className="tline est-row" role="row">
+                    <div key={l.id} className="tline est-row hover-row" role="row">
                       <span role="cell" className="tline-name">{l.name}{l.code && <em>{l.code}</em>}{l.desc && <em>{l.desc}</em>}</span>
                       <span role="cell" className="est-qty">{l.qty} {unitOf(l)}</span>
                       {showCost && <span role="cell" className="num muted">{l.cost != null ? money(l.cost) : '—'}</span>}
                       {showSale && <><span role="cell" className="num muted">{money(l.price)}</span><span role="cell" className="num strong">{money(lineTotal(l))}</span></>}
-                      <button className="icon-plain" data-id={`est-${l.id}`} aria-label={`Actions for ${l.name}`} aria-haspopup="menu" onClick={() => setMenu(menu?.key === l.id ? null : { key: l.id, anchorId: `est-${l.id}`, width: 220, items: [
+                      <button className={`icon-plain more-on-hover${menu?.key === l.id ? ' is-open' : ''}`} data-id={`est-${l.id}`} aria-label={`Actions for ${l.name}`} aria-haspopup="menu" onClick={() => setMenu(menu?.key === l.id ? null : { key: l.id, anchorId: `est-${l.id}`, width: 220, items: [
                         { label: 'Edit', icon: <Pencil size={16} />, onSelect: () => startEdit(p, l) },
                         { label: 'Replace from catalog', icon: <RefreshCw size={16} />, onSelect: () => onCatalog({ kind, project: p, replace: l, show: { cost: showCost, sale: showSale } }) },
                         '-',
@@ -241,7 +241,7 @@ export function PaymentTab({ total, saved, onSave, say }: { total: number; saved
               <label role="cell" className="affix"><NumInput label={`Share of payment ${i + 1}`} value={r.share} format={(n) => String(n)} onChange={(n) => set(i, { share: Math.min(100, n) })} /><em>%</em></label>
               <label role="cell" className="affix pre"><em>$</em><NumInput label={`Amount of payment ${i + 1}`} value={amount(r.share)} format={(n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} onChange={(n) => set(i, { share: Math.round(Math.min(total, n) / total * 1e6) / 1e4 })} /></label>
               <input role="cell" className="input" aria-label={`Description of payment ${i + 1}`} placeholder="e.g. Deposit, due on signing" value={r.desc} onChange={(e) => set(i, { desc: e.target.value })} />
-              <input role="cell" className="input" type="date" aria-label={`Due date of payment ${i + 1}`} value={r.due} onChange={(e) => set(i, { due: e.target.value })} />
+              <input role="cell" className={`input${r.due && !/^(0?[1-9]|1[0-2])\/(0?[1-9]|[12]\d|3[01])\/\d{4}$/.test(r.due.trim()) ? ' is-invalid' : ''}`} type="text" inputMode="numeric" placeholder="MM/DD/YYYY" title="US date, MM/DD/YYYY" aria-label={`Due date of payment ${i + 1}`} value={r.due} onChange={(e) => set(i, { due: e.target.value })} />
               <select role="cell" className="input select" aria-label={`Method of payment ${i + 1}`} value={r.method} onChange={(e) => set(i, { method: e.target.value })}>{PAY_METHODS.map((m) => <option key={m}>{m}</option>)}</select>
             </div>
           ))}

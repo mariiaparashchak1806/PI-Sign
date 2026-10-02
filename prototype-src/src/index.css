@@ -741,3 +741,8 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .cpk-subtotal b { font-weight: 600; font-variant-numeric: tabular-nums; }
 .cpk-foot .btn { height: 40px; justify-content: center; gap: 6px; }
 .input.select.cpk-select.wide { width: 200px; }
+/* Concept 2: the tab content column is ~730 px → the Payment Plan table uses tighter columns so it fits without scrolling */
+.tab-content.in-row .pay-row { grid-template-columns: 20px 84px 118px minmax(110px, 1fr) 132px 132px; gap: 8px; padding-left: 16px; padding-right: 16px; }
+.tab-content.in-row .pay-row .input.select { padding-right: 30px; background-position: right 10px center; }
+.input.is-invalid { border-color: var(--color-danger, rgba(194,65,12,1)); }
+.field-row.tight > * { flex: 1 1 0; min-width: 0; }

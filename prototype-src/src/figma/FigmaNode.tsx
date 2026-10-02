@@ -68,13 +68,30 @@ function paint(fills: FNode['fill']): string | undefined {
   return undefined
 }
 
+/** Did Figma lay the children out ignoring this frame's stroke? Children of an auto-layout frame start at the padding
+ *  edge when the stroke is excluded and at padding + stroke when it's included — read from any side that has a stroke. */
+function strokeExcluded(n: FNode) {
+  if (!n.stroke?.c || n.stroke.a === 'OUTSIDE') return false
+  if (!n.al) return !!n.k?.length // free-positioned children are placed from the outer edge in Figma
+  const w = Array.isArray(n.stroke.w) ? n.stroke.w : [n.stroke.w, n.stroke.w, n.stroke.w, n.stroke.w]
+  const ks = (n.k ?? []).filter((k) => !k.hidden && !k.abs)
+  if (!ks.length) return false
+  const [pt, pr, pb, pl] = n.al.p, near = (a: number, b: number) => Math.abs(a - b) < 0.6
+  const sides: [number, number, number][] = [
+    [w[0], Math.min(...ks.map((k) => k.y)), pt], [w[3], Math.min(...ks.map((k) => k.x)), pl],
+    [w[2], n.h - Math.max(...ks.map((k) => k.y + k.h)), pb], [w[1], n.w - Math.max(...ks.map((k) => k.x + k.w)), pr],
+  ]
+  let excl = 0, incl = 0
+  for (const [bw, edge, pad] of sides) { if (!bw) continue; if (near(edge, pad)) excl++; else if (near(edge, pad + bw)) incl++ }
+  return excl > 0 && incl === 0
+}
+
 function sizing(n: FNode, parent: FNode | null, s: CSSProperties) {
   const pl = parent?.al?.m
   if (parent && (n.abs || !pl)) {
-    // CSS positions from the padding box, Figma from the outer edge → subtract the parent's inside / center border
-    const bw = parent.stroke?.c && parent.stroke.a !== 'OUTSIDE' ? (Array.isArray(parent.stroke.w) ? parent.stroke.w : [parent.stroke.w, parent.stroke.w, parent.stroke.w, parent.stroke.w]) : [0, 0, 0, 0]
-    const ox = (parent.t === 'GROUP' ? parent.x : 0) + (bw[3] ?? 0)
-    const oy = (parent.t === 'GROUP' ? parent.y : 0) + (bw[0] ?? 0)
+    // (parents with children draw their stroke as an overlay, not a CSS border → Figma's offsets apply as they are)
+    const ox = parent.t === 'GROUP' ? parent.x : 0
+    const oy = parent.t === 'GROUP' ? parent.y : 0
     Object.assign(s, { position: 'absolute', left: px(n.x - ox), top: px(n.y - oy) })
     if (n.t !== 'TEXT' || n.ar === 'NONE') Object.assign(s, { width: px(n.w), height: px(n.h) })
     else if (n.ar === 'HEIGHT') s.width = px(n.w)
@@ -107,8 +124,9 @@ function box(n: FNode, s: CSSProperties, patch?: Patch) {
     if (n.stroke.a === 'OUTSIDE') s.boxShadow = `0 0 0 ${px(w[0])} ${c}`
     else Object.assign(s, { borderStyle: n.stroke.dash ? 'dashed' : 'solid', borderColor: c, borderWidth: w.map(px).join(' ') })
   }
-  // every Secondary Button has the same 1px #27272A 15% stroke on white (some instances in the mock lost it)
-  if (n.comp === 'Secondary Button') Object.assign(s, { borderStyle: 'solid', borderWidth: '1px', borderColor: 'rgba(39,39,42,0.15)', background: patch?.bg ?? 'rgba(255,255,255,1)' })
+  // every secondary-style button (Secondary Button, the ⋯ Icon button) has the same 1px #27272A 15% stroke on white
+  // (some instances in the mock lost it)
+  if (n.comp === 'Secondary Button' || n.comp === 'Icon button') Object.assign(s, { borderStyle: 'solid', borderWidth: '1px', borderColor: 'rgba(39,39,42,0.15)', background: patch?.bg ?? 'rgba(255,255,255,1)' })
   if (Array.isArray(n.r)) s.borderRadius = n.r.map(px).join(' ')
   else if (n.r) s.borderRadius = px(n.r)
   const shadows = (n.fx ?? []).filter((e) => e.t === 'DROP_SHADOW' || e.t === 'INNER_SHADOW')
@@ -198,6 +216,8 @@ export function FigmaNode({ node, parent = null }: { node: FNode; parent?: FNode
     const w = Array.isArray(node.stroke?.w) ? node.stroke!.w[0] : (node.stroke?.w ?? 1)
     const vertical = Math.abs(Math.abs(node.rot ?? 0) - 90) < 1
     Object.assign(s, vertical ? { width: px(w), height: px(node.w) } : { width: px(node.w), height: px(w) }, { background: color(node.stroke?.c) })
+    // a Figma line is 0 thick in auto layout (the stroke straddles it) → negative margins keep it out of the flow
+    if (parent?.al && !node.abs && node.stroke?.a !== 'INSIDE') Object.assign(s, vertical ? { marginLeft: px(-w / 2), marginRight: px(-w / 2) } : { marginTop: px(-w / 2), marginBottom: px(-w / 2) })
     el = <div {...common} style={{ ...s, ...patch?.style }} />
   } else {
     if (parent) sizing(node, parent, s)
@@ -221,10 +241,21 @@ export function FigmaNode({ node, parent = null }: { node: FNode; parent?: FNode
       if (s.width === undefined && !s.flex) s.width = px(node.w)
     }
     if (handler?.after) s.position = s.position ?? 'relative'
+    // Figma frames with "strokes excluded from layout" let children sit under the stroke; a CSS border would push them in →
+    // those frames draw the stroke as an overlay on top, so the content keeps its Figma position and size
+    let overlay: CSSProperties | undefined
+    if (s.borderWidth && node.k?.length && strokeExcluded(node)) {
+      const { borderStyle, borderColor, borderWidth } = s
+      overlay = { position: 'absolute', inset: 0, borderStyle, borderColor: (patch?.style?.borderColor as string) ?? borderColor, borderWidth, borderRadius: 'inherit', pointerEvents: 'none' }
+      delete s.borderStyle; delete s.borderColor; delete s.borderWidth
+      s.position = s.position ?? 'relative'
+    }
+    const pstyle = overlay && patch?.style?.borderColor ? (({ borderColor: _bc, ...rest }) => rest)(patch.style) : patch?.style
     el = (
-      <div {...common} style={{ ...s, ...patch?.style }}>
+      <div {...common} style={{ ...s, ...pstyle }}>
         {node.k?.map((c) => <FigmaNode key={c.id} node={c} parent={node} />)}
         {handler?.after}
+        {overlay && <span aria-hidden="true" className="fig-stroke" style={overlay} />}
       </div>
     )
   }

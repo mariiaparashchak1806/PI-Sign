@@ -243,3 +243,6 @@
 - Column order and widths follow the updated component (Figma 226:15063, Variant2): Project 120 · Status 130 · Materials 65 · Labors 60 · Countertops 87 · Total 60 · Sales 60 · ⋯ 32, gap 12 — header / rows / Total edges at 16·148·290·367·439·538·610·682 exactly as drawn. Hiding Total or Sales lets the other amount columns grow into the space (flex-basis = Figma width). scripts/cols-check.mjs 12/12 (+ console).
 - Multi-viewport (§6): the page was a fixed 1440 px (#root) → at 1200 px it scrolled sideways by 240 px. #root is now fluid up to 1440, Main / Content give up width below that. scripts/viewport-check.mjs: 1440×900, 1440×630, 1200×900 × three pages — no sideways scroll, top bar pinned, Concept 2 lead column inside the viewport, tabs visible.
 - Diff vs fresh Figma screenshots: Concept 2 4.32%, Concept 1 · Option 1 4.26% (remainder: sidebar pinned to 100vh vs the full-height frame, page ends with the content, hover-only ⋯, Agenda header, text shaping).
+
+## 2026-10-02 — Switch colour
+- Show cost / Show sale switches are #48443E when on in every concept (Concept 1 · Option 2 and Concept 2 variants draw them green in the mock); off stays #D0D7D5.

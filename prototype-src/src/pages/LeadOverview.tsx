@@ -359,7 +359,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
         const pair = pairs[i]; if (!pair) return
         const sw = (RT.byId.get(pair.id) ?? pair).k?.find(isSw); if (!sw) return
         const isOn = on_ as boolean
-        patches[sw.id] = { bg: isOn ? undefined : 'var(--color-switch-off)', style: { justifyContent: isOn ? 'flex-end' : 'flex-start', transition: 'background .15s' } }
+        patches[sw.id] = { bg: isOn ? 'var(--color-brand-dark)' : 'var(--color-switch-off)', // on = #48443E everywhere (concept 2's variant draws it green)
+         style: { justifyContent: isOn ? 'flex-end' : 'flex-start', transition: 'background .15s' } }
         const toggle = () => (set as (f: (v: boolean) => boolean) => void)((v) => !v)
         // the whole "switch + label" pair is the hit area
         on(pair.id, { onClick: toggle, title: label as string, className: 'switch-hit' })

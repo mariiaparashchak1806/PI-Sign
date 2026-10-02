@@ -193,3 +193,6 @@
 
 ## 2026-10-02 — Card-title info as a pill
 - "4 items · $4,000" (Labors / Materials / Countertops), Payment Plan "N payments · $…", Messages and Forms counts now use the Figma count pill like "3 projects" (fill #F2F3F0, 1px #E5E5E5, r 8, 4/8 px, Poppins Medium 12/19 #6B7068), centred on the title.
+
+## 2026-10-02 — Subtotal rows white
+- Labors / Materials / Countertops tabs: Subtotal rows have a white background (were the grey expanded fill), per designer.

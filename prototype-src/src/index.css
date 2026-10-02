@@ -322,7 +322,7 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .tline-name { flex: 1; min-width: 0; }
 .tline-unit { color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 .tline-total { width: 110px; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
-.tline.subtotal { background: var(--color-bg-expanded); min-height: 44px; }
+.tline.subtotal { background: var(--color-surface); min-height: 44px; }
 .tline.subtotal .tline-name { color: var(--color-text-secondary); }
 .tline.subtotal .tline-total { font-weight: 600; }
 .tline-qty { display: inline-flex; align-items: center; gap: 6px; }

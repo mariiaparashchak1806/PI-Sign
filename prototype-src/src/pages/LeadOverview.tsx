@@ -245,7 +245,16 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   // Lead card — "Show details" is the drawn alternate state (hidden frame in the mock)
   if (LEGACY_LEAD) { patches[LEAD_COLLAPSED] = { hidden: showDetails }; patches[LEAD_DETAILS] = { hidden: !showDetails } }
   // "Hide details" variant is drawn at a fixed 712 px; it fills the row like the "Show details" instance next to Contact
-  if (LEAD_COLLAPSED === '264:51998') patches[LEAD_DETAILS] = { ...patches[LEAD_DETAILS], style: { flex: '1 1 0', minWidth: 0, width: 'auto' } }
+  if (LEAD_COLLAPSED === '264:51998') {
+    patches[LEAD_DETAILS] = { ...patches[LEAD_DETAILS], style: { flex: '1 1 0', minWidth: 0, width: 'auto' } }
+    // the two variants differ in Figma (card padding 12 vs 16, facts row fixed at 678 px, second row 190 px columns) →
+    // the open card follows the closed one so nothing moves when the details open
+    const D = (id: string) => `I109:6980;${id}`
+    patches[D('93:9967')] = { style: { padding: 16 } }
+    ;['93:9978', '93:10362'].forEach((id) => (patches[D(id)] = { style: { width: '100%' } }))
+    ;['93:10176', '180:3548'].forEach((id) => (patches[D(id)] = { style: { flex: '1 1 0', minWidth: 0, width: 'auto' } }))
+    patches[D('180:3549')] = { style: { width: '100%' } }
+  }
   on(showDetailsToggle, { onClick: () => setShowDetails(true), title: 'Show details' })
   on(hideDetailsToggle, { onClick: () => setShowDetails(false), title: 'Hide details' })
   if (designer) notAssignedTexts.forEach((id) => (patches[id] = { txt: designer }))

@@ -222,3 +222,6 @@
 - Top bar (breadcrumbs, search, avatar, AI Assistant) is sticky at the top on every concept / option / tab (Main clips instead of hiding overflow). Concept 2's lead column now pins under it (top 80, height 100vh − 100).
 - Project Details "Show cost" / "Show sale" switches toggle the Total / Sales columns again in Concept 1 · Option 1 and Concept 2 (the Oct 2 frame names the switch "Track"; Concept 2's variant keeps its own switch ids inside the shared pair ids).
 - Checks: scripts/sticky-top-check.mjs 5/5 (replaces the legacy sticky-check), switches on all three pages, controls, overview-sync, agenda; 0 console errors.
+
+## 2026-10-02 — Lead card: no jump on Show / Hide details (Figma 264:51777)
+- The two variants differ in Figma: "Hide details" (109:6979) has card padding 12 (16 in "Show details"), a facts row fixed at 678 px and 190 px columns in the second row → opening moved the header 4 px up and Designer 10 px left. The open card now follows the closed one (padding 16, facts rows full width, second-row columns share the width like the first); only the footer moves down as the details open. Figma components left as they are (worth aligning there too).

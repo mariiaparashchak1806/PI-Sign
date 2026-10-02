@@ -234,6 +234,11 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   if (LEAD_WRAP === '109:5225') { patches['25:4990'] = { style: { gap: 16 } }; patches[LEAD_WRAP] = { style: { flex: '1 1 0', minWidth: 0 } } } // the current frame already has the gap
   // Left menu is always pinned to the viewport
   patches['19:974'] = { style: { position: 'sticky', top: 0, height: '100vh', alignSelf: 'flex-start' } }
+  // Top bar (breadcrumbs, search, avatar, AI Assistant) stays pinned to the top in every concept; Main clips
+  // instead of hiding overflow so it doesn't become the sticky container
+  const MAIN = RT.parentOf.get('19:1070')
+  if (MAIN) patches[MAIN.id] = { ...patches[MAIN.id], style: { ...patches[MAIN.id]?.style, overflow: 'clip' } }
+  patches['19:1070'] = { ...patches['19:1070'], style: { ...patches['19:1070']?.style, position: 'sticky', top: 0, zIndex: 30 } }
   // Page ends where the content ends (the Figma frame has fixed heights); overflow: clip keeps sticky working
   patches[root.id] = { style: { minHeight: '100vh', overflow: 'clip' } }
   patches[CONTENT] = { style: { height: 'auto', padding: RT.byId.get(CONTENT)!.al!.p.map((v, i) => `${i === 2 ? 48 : v}px`).join(' ') } }
@@ -332,14 +337,17 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     on(btn('Add from wishlist'), { onClick: () => setDialog({ kind: 'wishlist' }), title: 'Add from wishlist' })
     on(btn('Add project'), { onClick: () => setDialog({ kind: 'project' }), title: 'Add project' })
     if (PD_TOGGLES) {
-      const switches = T.findAll(node(PD_TOGGLES), (n) => n.n === 'Switch')
+      // "switch + label" pairs; the switch is "Switch" (Oct 1) or "Track" (Oct 2). Concept 2's variant keeps its own
+      // switch ids inside the shared pair ids → the switch is looked up in the rendered tree (RT)
+      const isSw = (n: FNode) => n.n === 'Switch' || n.n === 'Track'
+      const pairs = T.findAll(node(PD_TOGGLES), (n) => !!n.k?.some(isSw))
       ;[[showCost, setShowCost, 'Show cost'], [showSales, setShowSales, 'Show sale']].forEach(([on_, set, label], i) => {
-        const sw = switches[i]; if (!sw) return
+        const pair = pairs[i]; if (!pair) return
+        const sw = (RT.byId.get(pair.id) ?? pair).k?.find(isSw); if (!sw) return
         const isOn = on_ as boolean
         patches[sw.id] = { bg: isOn ? undefined : 'var(--color-switch-off)', style: { justifyContent: isOn ? 'flex-end' : 'flex-start', transition: 'background .15s' } }
         const toggle = () => (set as (f: (v: boolean) => boolean) => void)((v) => !v)
         // the whole "switch + label" pair is the hit area
-        const pair = T.find(node(PD_TOGGLES), (n) => !!n.k?.some((k) => k.id === sw.id))!
         on(pair.id, { onClick: toggle, title: label as string, className: 'switch-hit' })
         handlers[pair.id] = { ...handlers[pair.id], render: (_n, el) => <span key={pair.id} role="switch" aria-checked={isOn} aria-label={label as string} style={{ display: 'contents' }}>{el}</span> }
       })
@@ -570,10 +578,10 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     const LEAD2 = '124:2658'
     // the lead card grows (layoutGrow 1) inside an auto-height column → keep its own height in the browser
     patches[LEAD2] = { style: { flex: 'none' } }
-    // Overview: the lead column is pinned to the viewport height; only the right column scrolls with the page
+    // Overview: the lead column is pinned under the sticky top bar (60 px + 20 px gap); only the right column scrolls
     // (Main and Content clip in Figma → `overflow: clip` instead of hidden so they don't become scroll containers)
     if (tab === 'overview') ['124:2617', '19:1099'].forEach((id) => (patches[id] = { ...patches[id], style: { ...patches[id]?.style, overflow: 'clip' } }))
-    if (tab === 'overview') patches['124:2656'] = { style: { position: 'sticky', top: 20, alignSelf: 'flex-start', height: 'calc(100vh - 40px)', overflowY: 'auto', overscrollBehavior: 'contain', scrollbarWidth: 'thin', borderRadius: 12 } }
+    if (tab === 'overview') patches['124:2656'] = { style: { position: 'sticky', top: 80, alignSelf: 'flex-start', height: 'calc(100vh - 100px)', overflowY: 'auto', overscrollBehavior: 'contain', scrollbarWidth: 'thin', borderRadius: 12 } }
     patches['124:2673'] = { txt: fullName }
     on('124:2680', { onClick: () => open('lead-more', '124:2680', [
       { label: 'Copy lead link', icon: <Link2 {...I} />, onSelect: () => { navigator.clipboard?.writeText(location.href); say('Lead link copied') } },

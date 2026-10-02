@@ -217,3 +217,8 @@
 - One picker for Labors, Materials, Countertops (src/components/CatalogPicker.tsx; LaborsCatalog / ProductCatalog / CatalogParts removed): "Add <kind> to Kitchen" · left categories (All + count, sentence case) · search "by name or SKU / code" · Show cost / Show price switches in the dialog (start from the table it was opened from): Show cost → Cost + Multiplier columns, Show price → Price · filter row: All brands / All vendors / In stock only (products), All sub categories / All tags (labors) + "N of M" · rows: thumbnail (products), name + specs · SKU, $0.00 prices ("/ sq ft" when the catalog has a unit), "+ Add" → − n + and a green row · right "Selected · N" + Clear, items with − n + and totals, Subtotal, "Add N items to Kitchen".
 - Replace mode: "Replace “<item>” in Kitchen", "Replace" per row, no selection panel.
 - Checks: scripts/catalog-check.mjs 42/42 (option 1, option 2, concept 2), overview-sync, estimate-edit, concept2, controls; 0 console errors.
+
+## 2026-10-02 — Sticky top bar everywhere; Show cost / Show sale switches fixed
+- Top bar (breadcrumbs, search, avatar, AI Assistant) is sticky at the top on every concept / option / tab (Main clips instead of hiding overflow). Concept 2's lead column now pins under it (top 80, height 100vh − 100).
+- Project Details "Show cost" / "Show sale" switches toggle the Total / Sales columns again in Concept 1 · Option 1 and Concept 2 (the Oct 2 frame names the switch "Track"; Concept 2's variant keeps its own switch ids inside the shared pair ids).
+- Checks: scripts/sticky-top-check.mjs 5/5 (replaces the legacy sticky-check), switches on all three pages, controls, overview-sync, agenda; 0 console errors.

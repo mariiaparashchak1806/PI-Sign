@@ -251,3 +251,5 @@
 - Concept 1 · Option 2 renders the current Project Details component (Figma 226:15063, Default variant — the same instance as Option 1: green "Scheduled", group header rows, compact items, Subtotal rows); build_option2.py splices it in.
 - Link-style Secondary Buttons (no fill and no stroke in the mock, e.g. Preview PDF) stay plain; every other secondary button keeps the 27272A 15% stroke.
 - Labors / Materials / Countertops tabs: project group header rows #F7F6F2 (hover a shade darker).
+
+- Concept 2 Messages "View all →" arrow restored (the new frame 334:11136 had no exported icon).

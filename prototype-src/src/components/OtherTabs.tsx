@@ -36,7 +36,7 @@ const unitOf = (l: Line) => l.unit ?? 'pcs'
 
 export function EstimateTab({ kind, projects, estimate, setEstimate, onCatalog, say }: {
   kind: CatalogKind; projects: string[]; estimate: Estimate; setEstimate: (f: (e: Estimate) => Estimate) => void
-  onCatalog: (t: { kind: CatalogKind; project: string; replace?: Line }) => void; say: (t: string, undo?: () => void) => void
+  onCatalog: (t: { kind: CatalogKind; project: string; replace?: Line; show?: { cost: boolean; sale: boolean } }) => void; say: (t: string, undo?: () => void) => void
 }) {
   const [showCost, setShowCost] = useState(false)
   const [showSale, setShowSale] = useState(true)
@@ -91,7 +91,7 @@ export function EstimateTab({ kind, projects, estimate, setEstimate, onCatalog, 
                 <span className="files-group-count">{count ? itemsLabel(count) : `No ${noun}`}</span>
               </button>
               {showSale && count > 0 && <span className="tgroup-total">{money(value)}</span>}
-              {count > 0 && <button className="btn btn-secondary btn-sm" onClick={() => onCatalog({ kind, project: p })}><Plus size={16} />Add from catalog</button>}
+              {count > 0 && <button className="btn btn-secondary btn-sm" onClick={() => onCatalog({ kind, project: p, show: { cost: showCost, sale: showSale } })}><Plus size={16} />Add from catalog</button>}
             </div>
             {isOpen && (count ? (
               <div className="tlines est-lines" role="table" aria-label={`${p} ${noun}`} style={{ ['--est-cols' as string]: cols }}>
@@ -160,7 +160,7 @@ export function EstimateTab({ kind, projects, estimate, setEstimate, onCatalog, 
                       {showSale && <><span role="cell" className="num muted">{money(l.price)}</span><span role="cell" className="num strong">{money(lineTotal(l))}</span></>}
                       <button className="icon-plain" data-id={`est-${l.id}`} aria-label={`Actions for ${l.name}`} aria-haspopup="menu" onClick={() => setMenu(menu?.key === l.id ? null : { key: l.id, anchorId: `est-${l.id}`, width: 220, items: [
                         { label: 'Edit', icon: <Pencil size={16} />, onSelect: () => startEdit(p, l) },
-                        { label: 'Replace from catalog', icon: <RefreshCw size={16} />, onSelect: () => onCatalog({ kind, project: p, replace: l }) },
+                        { label: 'Replace from catalog', icon: <RefreshCw size={16} />, onSelect: () => onCatalog({ kind, project: p, replace: l, show: { cost: showCost, sale: showSale } }) },
                         '-',
                         { label: 'Remove', danger: true, icon: <Trash2 size={16} />, onSelect: () => { let prev: Line[] = []; setLines(p, (x) => { prev = x; return x.filter((y) => y.id !== l.id) }); say(`${l.name} removed`, () => setLines(p, () => prev)) } },
                       ] })}><MoreHorizontal size={16} /></button>
@@ -174,7 +174,7 @@ export function EstimateTab({ kind, projects, estimate, setEstimate, onCatalog, 
                 <span className="empty-icon"><FileText size={22} strokeWidth={1.6} /></span>
                 <b>No {noun} in {p} yet</b>
                 <span>Pick them from the catalog — quantities can be changed here afterwards.</span>
-                <button className="btn btn-secondary" onClick={() => onCatalog({ kind, project: p })}><Plus size={16} />Add from catalog</button>
+                <button className="btn btn-secondary" onClick={() => onCatalog({ kind, project: p, show: { cost: showCost, sale: showSale } })}><Plus size={16} />Add from catalog</button>
               </div>
             ))}
           </div>

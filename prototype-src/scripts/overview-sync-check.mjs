@@ -18,7 +18,7 @@ ok(await add.count() === 3, 'three Add from catalog links', await add.count())
 for (const [i, k] of ['Materials', 'Labors', 'Countertops'].entries()) {
   await add.nth(i).click(); await p.waitForTimeout(400)
   const t = await p.locator('.dialog.catalog .dialog-title').innerText().catch(() => '')
-  ok(t === k, `Add from catalog #${i + 1} → ${k}`, t); await p.keyboard.press('Escape'); await p.waitForTimeout(300)
+  ok(t === `Add ${k.toLowerCase()} to Kitchen`, `Add from catalog #${i + 1} → ${k}`, t); await p.keyboard.press('Escape'); await p.waitForTimeout(300)
 }
 const item = p.locator('[data-n^="Line item"]').filter({ hasText: 'Shaker base cabinet' }).first()
 await item.hover(); await item.locator('[data-n="Icon button"]').click(); await p.waitForTimeout(250)

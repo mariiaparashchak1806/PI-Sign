@@ -1,30 +1,18 @@
-/** Labors "Add from catalog" — redrawn 1:1 from the PiSuite staging picker (Oct 1–2 screenshots), in the
- *  prototype's styling: title "Labors" · categories on the left (ALL first) · toolbar with the cost ($) and
- *  sale price toggles, "Search labors", Sub Category and Tags · table # / LABOR / [COST / MULTIPLIER] / PRICE /
- *  ACTIONS with editable values and PICK · picked items on the right (cost, − n +, ×) · RESET / OK. */
+/** Labors "Add from catalog" — staging picker reworked after the designer's review (Oct 2):
+ *  title says where the labors go ("Add labors to Kitchen") · Cost / Sale columns follow the table it was opened
+ *  from (no own toggle) · prices are read-only text with the unit ($5.40 / pcs) · a row click or "+" picks an item,
+ *  the picked row is highlighted and gets − n + · categories in sentence case with counts, Sub Category depends on
+ *  the category, active filters as removable chips, search runs across all categories · no "#" column, internal codes
+ *  only on hover · the right panel is the selection: "No labors selected yet" → list with qty and totals →
+ *  "Clear" / "Add 3 labors · $4,320". */
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { createPortal } from 'react-dom'
-import { Banknote, Check, DollarSign, Minus, Package, PackageSearch, Plus, Search, ShoppingCart, X } from 'lucide-react'
+import { PackageSearch, RefreshCw, Search, X } from 'lucide-react'
 import { spring } from '../lib/springs'
 import { CATALOG, type CatalogItem, type CatalogKind, type Line } from '../lib/estimate'
 import type { CatalogTarget } from './CatalogDialog'
-
-type Edit = { cost?: number; multiplier?: number; price?: number }
-const num = (v: string) => { const n = Number(v.replace(',', '.').replace(/[^\d.]/g, '')); return Number.isFinite(n) ? n : 0 }
-const usd = (n: number) => `${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`
-const r2 = (n: number) => Math.round(n * 100) / 100
-
-function Field({ label, value, onChange }: { label: string; value: number | undefined; onChange: (n: number) => void }) {
-  const [draft, setDraft] = useState<string | null>(null)
-  return (
-    <label className="lc-field">
-      <span>{label}</span>
-      <input inputMode="decimal" aria-label={label} value={draft ?? (value ?? '')} onFocus={(e) => { setDraft(String(value ?? '')); requestAnimationFrame(() => e.target.select()) }}
-        onBlur={() => setDraft(null)} onChange={(e) => { setDraft(e.target.value); onChange(num(e.target.value)) }} />
-    </label>
-  )
-}
+import { Chips, PickedPanel, RowPick, addPick, perUnit, setPickQty, togglePick, type Pick } from './CatalogParts'
 
 export function LaborsCatalog({ target, onClose, onAdd, onReplace }: {
   target: CatalogTarget
@@ -35,79 +23,84 @@ export function LaborsCatalog({ target, onClose, onAdd, onReplace }: {
   const { categories, items } = CATALOG.Labors
   const [cat, setCat] = useState('All')
   const [search, setSearch] = useState('')
-  const [showCost, setShowCost] = useState(false)
-  const [showPrice, setShowPrice] = useState(true)
-  const [edits, setEdits] = useState<Record<string, Edit>>({})
-  const [cart, setCart] = useState<{ code: string; qty: number }[]>([])
-  useEffect(() => { if (target) { setCat('All'); setSearch(''); setEdits({}); setCart([]) } }, [target])
+  const [picks, setPicks] = useState<Pick[]>([])
+  useEffect(() => { if (target) { setCat('All'); setSearch(''); setPicks([]) } }, [target])
   useEffect(() => {
     if (!target) return
     const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key)
   }, [target, onClose])
 
-  const val = (it: CatalogItem) => ({ cost: edits[it.code]?.cost ?? it.cost, multiplier: edits[it.code]?.multiplier ?? it.multiplier, price: edits[it.code]?.price ?? it.price })
-  const setVal = (it: CatalogItem, k: keyof Edit, n: number) => setEdits((e) => {
-    const cur = { ...val(it), ...e[it.code], [k]: n }
-    // cost × multiplier = price (as in the catalog); editing the price directly keeps it
-    if (k !== 'price' && cur.cost != null && cur.multiplier != null) cur.price = r2(cur.cost * cur.multiplier)
-    return { ...e, [it.code]: cur }
-  })
-  const shown = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return items.filter((it) => (cat === 'All' || it.category === cat) && (!q || it.name.toLowerCase().includes(q) || it.code.includes(q)))
-  }, [items, cat, search])
+  const show = { cost: target?.show?.cost ?? false, sale: target?.show?.sale ?? true }
+  const showSale = show.sale || !show.cost // one price column at least
+  const counts = useMemo(() => Object.fromEntries(categories.map((c) => [c, items.filter((i) => i.category === c).length])), [categories, items])
+  const q = search.trim().toLowerCase()
+  // search runs across all categories; otherwise the chosen category filters the list
+  const shown = useMemo(() => items.filter((it) => (q ? it.name.toLowerCase().includes(q) || it.code.includes(q) : cat === 'All' || it.category === cat)), [items, cat, q])
   const byCode = (c: string) => items.find((i) => i.code === c)!
-  const pick = (it: CatalogItem) => {
-    if (target?.replace) { const v = val(it); onReplace('Labors', target.project, target.replace, { ...it, ...v }); return }
-    setCart((c) => (c.some((x) => x.code === it.code) ? c.map((x) => (x.code === it.code ? { ...x, qty: x.qty + 1 } : x)) : [...c, { code: it.code, qty: 1 }]))
-  }
-  const setQty = (code: string, qty: number) => setCart((c) => c.map((x) => (x.code === code ? { ...x, qty: Math.max(1, qty) } : x)))
-  const ok = () => target && onAdd('Labors', target.project, cart.map(({ code, qty }) => { const it = byCode(code); return { item: { ...it, ...val(it) }, qty } }))
-  const cols = `32px minmax(220px,1fr)${showCost ? ' 104px 92px' : ''}${showPrice ? ' 104px' : ''} 96px`
+  const qtyOf = (code: string) => picks.find((p) => p.code === code)?.qty
+  const replace = target?.replace
+  const choose = (it: CatalogItem) => (replace ? onReplace('Labors', target!.project, replace, it) : setPicks((c) => togglePick(c, it.code)))
+  const ok = () => target && onAdd('Labors', target.project, picks.map(({ code, qty }) => ({ item: byCode(code), qty })))
+  const cols = `minmax(240px,1fr)${show.cost ? ' 130px' : ''}${showSale ? ' 130px' : ''} 112px`
+  const chips = [
+    ...(cat !== 'All' && !q ? [{ key: 'cat', label: cat, onRemove: () => setCat('All') }] : []),
+    ...(q ? [{ key: 'q', label: `“${search.trim()}” in all categories`, onRemove: () => setSearch('') }] : []),
+  ]
 
   return createPortal(
     <AnimatePresence>
       {target && (
         <motion.div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <motion.div role="dialog" aria-modal="true" aria-label="Labors" className="dialog catalog lc" initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={spring.calm}>
+          <motion.div role="dialog" aria-modal="true" aria-label={replace ? `Replace ${replace.name}` : `Add labors to ${target.project}`} className="dialog catalog lc cp" initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={spring.calm}>
             <div className="dialog-head">
-              <div className="dialog-title">Labors</div>
+              <div>
+                <div className="dialog-title">{replace ? <>Replace “{replace.name}”</> : <>Add labors to {target.project}</>}</div>
+                {replace && <div className="dialog-sub">{target.project} · Labors — pick the labor to use instead</div>}
+              </div>
               <button className="icon-plain" aria-label="Close" onClick={onClose}><X size={18} /></button>
             </div>
             <div className="catalog-body">
-              <nav className="lc-nav" aria-label="Categories">
-                {['All', ...categories].map((c) => (
-                  <button key={c} className={`lc-nav-item${cat === c ? ' on' : ''}`} aria-current={cat === c ? 'true' : undefined} onClick={() => setCat(c)}>{c}</button>
-                ))}
+              <nav className="lc-nav cp-nav" aria-label="Categories">
+                {['All', ...categories].map((c) => {
+                  const n = c === 'All' ? items.length : counts[c]
+                  const on = !q && cat === c
+                  return (
+                    <button key={c} className={`lc-nav-item${on ? ' on' : ''}`} aria-current={on ? 'true' : undefined} onClick={() => { setCat(c); setSearch('') }}>
+                      <span>{c === 'All' ? 'All labors' : c}</span>{n > 0 && <span className="cp-count">{n}</span>}
+                    </button>
+                  )
+                })}
               </nav>
               <div className="catalog-main">
                 <div className="lc-toolbar">
-                  <div className="lc-toggles" role="group" aria-label="Columns">
-                    <button className={showCost ? 'on' : ''} aria-pressed={showCost} title="Show cost" onClick={() => setShowCost((v) => !v)}><DollarSign size={18} /></button>
-                    <button className={showPrice ? 'on' : ''} aria-pressed={showPrice} title="Show sale price" onClick={() => setShowPrice((v) => !v)}><Banknote size={18} /></button>
-                  </div>
-                  <div className="lc-search"><Search size={16} /><input className="input" placeholder="Search labors" aria-label="Search labors" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-                  <select className="input select lc-select" aria-label="Sub Category" defaultValue=""><option value="">Sub Category</option></select>
-                  <select className="input select lc-select" aria-label="Tags" defaultValue=""><option value="">Tags</option></select>
+                  <div className="lc-search"><Search size={16} /><input className="input" placeholder="Search all labors" aria-label="Search all labors" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+                  <select className="input select lc-select" aria-label="Sub Category" disabled={cat === 'All' || !!q} title={cat === 'All' || q ? 'Choose a category first' : undefined} defaultValue="">
+                    <option value="">{cat === 'All' || q ? 'Sub Category' : 'All sub categories'}</option>
+                  </select>
+                  <select className="input select lc-select" aria-label="Tags" defaultValue=""><option value="">All tags</option></select>
                 </div>
+                <Chips chips={chips} onClearAll={() => { setCat('All'); setSearch('') }} />
                 {shown.length ? (
                   <div className="lc-table" role="table" aria-label="Labors catalog" style={{ ['--lc-cols' as string]: cols }}>
                     <div className="lc-row head" role="row">
-                      <span role="columnheader">#</span><span role="columnheader">Labor</span>
-                      {showCost && <><span role="columnheader" className="num">Cost</span><span role="columnheader" className="num">Multiplier</span></>}
-                      {showPrice && <span role="columnheader" className="num">Price</span>}
-                      <span role="columnheader" className="act">Actions</span>
+                      <span role="columnheader">Labor</span>
+                      {show.cost && <span role="columnheader" className="num">Cost</span>}
+                      {showSale && <span role="columnheader" className="num">Sale price</span>}
+                      <span role="columnheader" className="act"><span className="sr-only">Add</span></span>
                     </div>
-                    {shown.map((it, i) => {
-                      const v = val(it)
+                    {shown.map((it) => {
+                      const picked = qtyOf(it.code)
                       return (
-                        <div key={it.code} className="lc-row" role="row">
-                          <span role="cell" className="lc-n">{i + 1}</span>
-                          <span role="cell" className="lc-name"><b>{it.name}</b>{!it.code.startsWith('mock-') && <em>{it.code}</em>}</span>
-                          {showCost && <><Field label="Cost" value={v.cost} onChange={(n) => setVal(it, 'cost', n)} /><Field label="Multiplier" value={v.multiplier} onChange={(n) => setVal(it, 'multiplier', n)} /></>}
-                          {showPrice && <Field label="Price" value={v.price} onChange={(n) => setVal(it, 'price', n)} />}
-                          <span role="cell" className="act"><button className="btn btn-primary btn-sm lc-pick" onClick={() => pick(it)}><ShoppingCart size={16} />{target.replace ? 'Select' : 'Pick'}</button></span>
+                        <div key={it.code} className={`lc-row cp-row${picked ? ' is-picked' : ''}`} role="row" aria-selected={!!picked} tabIndex={0} title={replace ? `Use ${it.name}` : picked ? 'Click to remove' : 'Click to add'}
+                          onClick={() => choose(it)} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), choose(it))}>
+                          <span role="cell" className="lc-name"><b>{it.name}</b>{!it.code.startsWith('mock-') && <em className="cp-code">{it.code}</em>}{q && it.category && <em className="cp-cat">{it.category}</em>}</span>
+                          {show.cost && <span role="cell" className="num cp-cost">{perUnit(it.cost, it)}</span>}
+                          {showSale && <span role="cell" className="num cp-price">{perUnit(it.price, it)}</span>}
+                          <span role="cell" className="act">
+                            {replace ? <button type="button" className="cp-add" aria-label={`Replace with ${it.name}`} title="Replace with this" onClick={(e) => { e.stopPropagation(); choose(it) }}><RefreshCw size={16} /></button>
+                              : <RowPick picked={picked} name={it.name} onAdd={() => setPicks((c) => addPick(c, it.code))} onQty={(n) => setPicks((c) => setPickQty(c, it.code, n))} />}
+                          </span>
                         </div>
                       )
                     })}
@@ -116,43 +109,11 @@ export function LaborsCatalog({ target, onClose, onAdd, onReplace }: {
                   <div className="empty-state">
                     <span className="empty-icon"><PackageSearch size={24} strokeWidth={1.6} /></span>
                     <b>No labors found</b>
-                    <span>{search.trim() ? 'Try another name or code.' : 'This category isn’t loaded in the prototype.'}</span>
+                    <span>{q ? 'Try another name or code.' : 'This category isn’t loaded in the prototype.'}</span>
                   </div>
                 )}
               </div>
-              <aside className="catalog-side lc-side" aria-label="Picked labors">
-                {cart.length ? (
-                  <div className="lc-cart">
-                    {cart.map(({ code, qty }) => {
-                      const it = byCode(code), v = val(it)
-                      return (
-                        <div key={code} className="lc-cart-row">
-                          <span className="lc-thumb" aria-hidden="true" />
-                          <div className="lc-cart-main">
-                            <b title={it.name}>{it.name}</b>
-                            <span>{usd(v.cost ?? v.price)}</span>
-                            <div className="lc-qty">
-                              <button aria-label={`Decrease ${it.name}`} disabled={qty <= 1} onClick={() => setQty(code, qty - 1)}><Minus size={16} /></button>
-                              <span>{qty}</span>
-                              <button aria-label={`Increase ${it.name}`} onClick={() => setQty(code, qty + 1)}><Plus size={16} /></button>
-                            </div>
-                          </div>
-                          <button className="icon-plain" aria-label={`Remove ${it.name}`} onClick={() => setCart((c) => c.filter((x) => x.code !== code))}><X size={16} /></button>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="empty-state">
-                    <span className="empty-icon"><Package size={24} strokeWidth={1.6} /></span>
-                    <b>No item found</b>
-                  </div>
-                )}
-                <div className="catalog-foot">
-                  <button className="btn btn-secondary" disabled={!cart.length} onClick={() => setCart([])}>Reset</button>
-                  <button className="btn btn-primary" disabled={!cart.length} onClick={ok}><Check size={16} />OK</button>
-                </div>
-              </aside>
+              {!replace && <PickedPanel noun="labors" picks={picks} byCode={byCode} setQty={(code, n) => setPicks((c) => setPickQty(c, code, n))} onClear={() => setPicks([])} onAdd={ok} />}
             </div>
           </motion.div>
         </motion.div>

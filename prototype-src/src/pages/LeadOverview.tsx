@@ -389,7 +389,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     on(it.id, { className: 'hover-row' }); on(it.more, { className: moreCls(it.more) })
     on(it.more, { onClick: () => open(`item-${it.id}`, it.more, [
       { label: 'Edit quantity & price', icon: <Pencil {...I} />, onSelect: () => notInPrototype('Inline quantity editing') },
-      { label: 'Replace from catalog', icon: <RefreshCw {...I} />, onSelect: () => { const kind = groupOf(it.id); setCatalog({ kind, project: 'Kitchen', replace: estimate.Kitchen?.[kind]?.find((l) => l.name === it.name) }) } },
+      { label: 'Replace from catalog', icon: <RefreshCw {...I} />, onSelect: () => { const kind = groupOf(it.id); setCatalog({ kind, project: 'Kitchen', replace: estimate.Kitchen?.[kind]?.find((l) => l.name === it.name), show: { cost: showCost, sale: showSales } }) } },
       { label: 'Duplicate', icon: <CopyPlus {...I} />, onSelect: () => say(`${it.name} duplicated (demo)`) },
       { label: 'Move to project', icon: <MoveRight {...I} />, meta: '›', onSelect: () => open(`move-${it.id}`, it.more, projectRows.filter((p) => p.name !== 'Kitchen').map((p) => ({ label: p.name, onSelect: () => say(`${it.name} moved to ${p.name} (demo)`) })), 200) },
       '-',
@@ -398,7 +398,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   })
   // "Add from catalog" per group (Materials · Labors · Countertops, in drawn order)
   const CATALOG_GROUPS: CatalogKind[] = ['Materials', 'Labors', 'Countertops']
-  KITCHEN_GROUPS.forEach((g, i) => T.findAll(g, (n) => n.n === 'Link Button').forEach((b) => on(b.id, { onClick: () => setCatalog({ kind: CATALOG_GROUPS[i], project: 'Kitchen' }), title: `Add ${CATALOG_GROUPS[i].toLowerCase()} from catalog` })))
+  KITCHEN_GROUPS.forEach((g, i) => T.findAll(g, (n) => n.n === 'Link Button').forEach((b) => on(b.id, { onClick: () => setCatalog({ kind: CATALOG_GROUPS[i], project: 'Kitchen', show: { cost: showCost, sale: showSales } }), title: `Add ${CATALOG_GROUPS[i].toLowerCase()} from catalog` })))
   const groupOf = (id: string) => CATALOG_GROUPS[KITCHEN_GROUPS.findIndex((g) => !!T.find(g, (n) => n.id === id))] ?? 'Materials'
 
   // Agenda

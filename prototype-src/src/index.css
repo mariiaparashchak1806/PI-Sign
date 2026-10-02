@@ -451,8 +451,10 @@ button { font: inherit; color: inherit; background: none; border: 0; }
 .tswitch.on .tswitch-track { background: var(--color-brand-dark); }
 .tswitch.on .tswitch-knob { transform: translateX(14px); }
 .tswitch:focus-visible { outline: 2px solid var(--color-brand-dark); outline-offset: 3px; border-radius: 4px; }
-.est-title { display: inline-flex; align-items: baseline; gap: 10px; }
-.est-meta { font-size: 14px; font-weight: 400; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+/* extra info next to a card title = the Figma count pill ("3 projects", Pill 206:6835): #F2F3F0 fill, #E5E5E5 1px, r 8, 4/8, Poppins Medium 12/19 #6B7068 */
+.est-title { display: inline-flex; align-items: center; gap: 8px; }
+.est-meta { display: inline-flex; align-items: center; height: 24px; padding: 4px 8px; border: 1px solid rgba(229,229,229,1); border-radius: 8px; background: rgba(242,243,240,1);
+  font-size: 12px; line-height: 19px; font-weight: 500; letter-spacing: -0.01em; color: rgba(107,112,104,1); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .est-switches { display: flex; gap: 20px; }
 .est-head { cursor: default; padding: 8px 20px 8px 12px; }
 .est-head:hover { background: var(--color-bg-table-header); }

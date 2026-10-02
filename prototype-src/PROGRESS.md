@@ -190,3 +190,6 @@
 - Concept 2 keeps the Oct 1 Concept 1 widgets (src/figma/tree-c1-shared.json) — its frame wasn't part of this sync.
 - Photo viewer: "Move to folder" removed (not in the original platform).
 - Checks: diff vs Figma 4.23% (all in the sidebar column — pinned 100vh in the browser — and the intended deviations); overview-sync-check 14/14; agenda-check 66/66; estimate-edit-check, product-catalog-check, labors-catalog-check, messages-check, ai-panel-check, files-check ok; controls ok; 0 console errors.
+
+## 2026-10-02 — Card-title info as a pill
+- "4 items · $4,000" (Labors / Materials / Countertops), Payment Plan "N payments · $…", Messages and Forms counts now use the Figma count pill like "3 projects" (fill #F2F3F0, 1px #E5E5E5, r 8, 4/8 px, Poppins Medium 12/19 #6B7068), centred on the title.

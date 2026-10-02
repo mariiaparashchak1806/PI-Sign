@@ -261,7 +261,7 @@ export function PaymentTab({ total, saved, onSave, say }: { total: number; saved
 
 // ---------- Signed documents ----------
 export function AgreementsTab({ say, confirm }: { say: (t: string) => void; confirm: (d: { title: string; body: string; ok: string; run: () => void }) => void }) {
-  const init = { start: '2026-10-03', from: '30', to: '35', senior: false, permits: false }
+  const init = { start: '10/03/2026', from: '30', to: '35', senior: false, permits: false } // US date format (MM/DD/YYYY)
   const [s, setS] = useState(init)
   const [saved, setSaved] = useState(init)
   const [notesDirty, setNotesDirty] = useState(false)
@@ -272,7 +272,7 @@ export function AgreementsTab({ say, confirm }: { say: (t: string) => void; conf
   const fmt = (cmd: string) => { notes.current?.focus(); document.execCommand(cmd); setNotesDirty(true) }
   const tools: [string, ReactNode, string][] = [['bold', <Bold size={16} />, 'Bold'], ['italic', <Italic size={16} />, 'Italic'], ['underline', <Underline size={16} />, 'Underline'], ['strikeThrough', <Strikethrough size={16} />, 'Strikethrough'], ['insertUnorderedList', <List size={16} />, 'Bulleted list'], ['insertOrderedList', <ListOrdered size={16} />, 'Numbered list']]
   return (
-    <Card title="Signed documents" right={<span className="muted">via PiSign</span>} narrow>
+    <Card title="Signed documents" right={<span className="muted">via PiSign</span>}>
       <div className="sig-row">
         <span className="sig-icon"><FileText size={18} strokeWidth={1.7} /></span>
         <div className="sig-main"><b>Agreement</b><span>Sent by Anna Kovalenko via PiSign · 10 min ago</span></div>
@@ -283,7 +283,7 @@ export function AgreementsTab({ say, confirm }: { say: (t: string) => void; conf
       </button>
       {settingsOpen && (
         <div className="tcard-body">
-          <Field label="Estimated job start date"><TextInput type="date" value={s.start} onChange={(e) => setS({ ...s, start: e.target.value })} /></Field>
+          <Field label="Estimated job start date" hint={s.start && !/^(0?[1-9]|1[0-2])\/(0?[1-9]|[12]\d|3[01])\/\d{4}$/.test(s.start.trim()) ? 'Use MM/DD/YYYY, e.g. 10/03/2026' : undefined}><TextInput value={s.start} placeholder="MM/DD/YYYY" inputMode="numeric" onChange={(e) => setS({ ...s, start: e.target.value })} /></Field>
           <label className="catalog-check"><input type="checkbox" checked={s.senior} onChange={(e) => setS({ ...s, senior: e.target.checked })} />Buyer is older than 65 years old</label>
           <Field label="Estimated job duration (business days)">
             <div className="range"><TextInput type="number" min={1} aria-label="From" value={s.from} onChange={(e) => setS({ ...s, from: e.target.value })} /><span>–</span><TextInput type="number" min={1} aria-label="To" value={s.to} onChange={(e) => setS({ ...s, to: e.target.value })} /></div>
@@ -391,7 +391,7 @@ export function FormsTab({ email, say, confirm }: { email: string; say: (t: stri
   const [sent, setSent] = useState<string | null>(null)
   const send = () => confirm({ title: `${sent ? 'Resend' : 'Email'} the Credit Card Form?`, body: `Cheryl Isaac gets a link to the form at ${email}.`, ok: sent ? 'Resend form' : 'Send form', run: () => { const prev = sent; setSent(new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })); say(`Credit Card Form sent to ${email}`, () => setSent(prev)) } })
   return (
-    <Card title={<span className="est-title">Forms<span className="est-meta">1</span></span>} narrow>
+    <Card title={<span className="est-title">Forms<span className="est-meta">1</span></span>}>
       <div className="form-row">
         <span className="form-icon"><FileText size={18} strokeWidth={1.6} /></span>
         <div className="form-info">

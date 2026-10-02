@@ -178,3 +178,6 @@
 - Brand / Vendor / search filter the rows; PICK again = +1; OK adds to the project the dialog was opened for; Replace from catalog → "Select". Materials uses the same layout with the mock's two items (no staging Materials data).
 - The reworked picker (categories nav + selection with subtotal) is retired; CatalogDialog only routes Labors → LaborsCatalog, Materials / Countertops → ProductCatalog. Row editing in all three tabs is the shared inline Edit.
 - Checks: scripts/product-catalog-check.mjs 25/25 (option 1, option 2 × Countertops, Materials), labors-catalog-check ok; controls; 0 console errors.
+
+## 2026-10-02 — Signed documents and Forms full width
+- Both tab cards dropped the 760 px centered width — full width like every other tab. Estimated job start date is a US MM/DD/YYYY field (was the locale date picker showing 03.10.2026).

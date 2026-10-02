@@ -3,13 +3,14 @@
  *  "Add" turns into a quantity stepper in place, and the selection on the right shows quantities, line
  *  totals and the subtotal before the single primary action "Add N items to <project>".
  *  Items are the first page of the staging Labors catalog + the mock's own lines (see lib/estimate). */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { createPortal } from 'react-dom'
 import { Check, Package, Plus, Search, X } from 'lucide-react'
 import { spring } from '../lib/springs'
 import { CATALOG, type CatalogItem, type CatalogKind, type Line } from '../lib/estimate'
 import { Stepper, Switch } from './Form'
+import { LaborsCatalog } from './LaborsCatalog'
 
 export type { CatalogKind }
 export type CatalogTarget = { kind: CatalogKind; project: string; replace?: Line } | null
@@ -18,7 +19,7 @@ export type CatalogTarget = { kind: CatalogKind; project: string; replace?: Line
 const money2 = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const realCode = (c: string) => (c.startsWith('mock-') ? '' : c)
 
-export function CatalogDialog({ target, projects, onClose, onAdd, onReplace }: {
+function GenericCatalog({ target, projects, onClose, onAdd, onReplace }: {
   target: CatalogTarget
   projects: string[]
   onClose: () => void
@@ -179,4 +180,17 @@ export function CatalogDialog({ target, projects, onClose, onAdd, onReplace }: {
     </AnimatePresence>,
     document.body,
   )
+}
+
+type Props = Parameters<typeof GenericCatalog>[0]
+// Labors uses the picker redrawn from the staging original; Materials / Countertops keep the reworked one.
+// The last kind is remembered so the closing animation plays in the same dialog.
+export function CatalogDialog(props: Props) {
+  const last = useRef<CatalogKind>('Labors')
+  if (props.target) last.current = props.target.kind
+  const labors = last.current === 'Labors'
+  return <>
+    <LaborsCatalog {...props} target={labors ? props.target : null} />
+    <GenericCatalog {...props} target={labors ? null : props.target} />
+  </>
 }

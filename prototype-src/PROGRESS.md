@@ -143,3 +143,8 @@
 
 ## 2026-10-02 — Icon button (⋯) stroke
 - The exporter takes the "Icon button" component for an icon (name starts with "Icon"); its SVG includes the shadow and is 34 px wide, so in the 32 px box the stroke was clipped. FigmaNode now draws Icon button like the other buttons (fill, 1 px stroke rgba(39,39,42,.15), radius 6, shadows, dots) — header ⋯ on Option 1, Option 2 and Concept 2 now matches Figma 206:5637.
+
+## 2026-10-02 — Labors "Add from catalog" redrawn from the staging original (all concepts/variants)
+- Designer's request: "поки перемальовуємо те що в оригіналі" → new src/components/LaborsCatalog.tsx, 1:1 with the staging picker in prototype styling: title "Labors"; categories on the left (ALL first, uppercase, active = brand dark); toolbar: $ (cost) / banknote (sale price) toggles, "Search labors", Sub Category, Tags (no options known → placeholder only); table # · LABOR (name + code) · [COST · MULTIPLIER] · PRICE · ACTIONS with editable floating-label fields (cost × multiplier recalculates price) and PICK; right panel: picked items (thumbnail placeholder, name, cost "3.00 USD", − n +, ×) or "No item found"; RESET / OK.
+- PICK again = +1; OK adds the picked labors (with edited values) to the project the dialog was opened for; Replace from catalog → PICK reads "Select" and replaces the line. Materials / Countertops keep the reworked picker (CatalogDialog routes by kind and remembers it for the exit animation).
+- Checks: scripts/labors-catalog-check.mjs (option 1, option 2 Labors tab; Concept 2 and Option 1 Overview links; Materials still reworked) — all ok, 0 console errors; controls 52/57/30, labors tab 19.

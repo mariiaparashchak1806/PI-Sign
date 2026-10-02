@@ -503,7 +503,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
 
   // Activity
   patches[ACTIVITY_BODY] = { hidden: !activityOpen }
-  patches[find(ACTIVITY_HEAD, (n) => !!n.icon)!.id] = { style: { transform: activityOpen ? 'none' : 'rotate(180deg)', transition: 'transform .18s var(--spring-snappy)' } }
+  // chevron on the right of the header like the other cards (designer, Oct 2) — order last, pushed to the edge
+  patches[find(ACTIVITY_HEAD, (n) => !!n.icon)!.id] = { style: { order: 99, marginLeft: 'auto', transform: activityOpen ? 'none' : 'rotate(180deg)', transition: 'transform .18s var(--spring-snappy)' } }
   on(ACTIVITY_HEAD, { onClick: () => setActivityOpen((v) => !v), title: activityOpen ? 'Collapse activity' : 'Expand activity', className: 'row-hover' })
 
   // Right column
@@ -594,10 +595,9 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     })
     const head = (NA.k ?? [])[0], countText = RT.find(head, (n) => n.t === 'TEXT' && /actions?$/.test(n.txt ?? ''))
     if (countText) patches[countText.id] = { txt: `${live.length} action${live.length === 1 ? '' : 's'}` }
-    // chevron on the left of the title and turning like Activity's (designer, Oct 2)
-    const chev = RT.find(head, (n) => !!n.icon && /chev/.test(n.n)), bar = chev && RT.parentOf.get(chev.id)
-    if (bar) patches[bar.id] = { style: { justifyContent: 'flex-start', gap: 8 } }
-    if (chev) patches[chev.id] = { style: { order: -1, transform: needsOpen ? 'rotate(180deg)' : 'none', transition: 'transform .18s var(--spring-snappy)' } }
+    // chevron stays on the right of the header (designer, Oct 2: card chevrons sit on the right everywhere)
+    const chev = RT.find(head, (n) => !!n.icon && /chev/.test(n.n))
+    if (chev) patches[chev.id] = { style: { transform: needsOpen ? 'none' : 'rotate(180deg)', transition: 'transform .18s var(--spring-snappy)' } }
     on(head.id, { onClick: () => setNeedsOpen((v) => !v), title: needsOpen ? 'Collapse' : 'Expand', className: 'row-hover' })
     ;(NA.k ?? []).slice(1).forEach((k) => { if (!needsOpen) patches[k.id] = { hidden: true } })
     if (!live.length) patches[NA.id] = { hidden: true }

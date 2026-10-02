@@ -107,7 +107,7 @@ for (const name of names) {
       let kids = out, nx = ox, ny = oy
       if (painted && !off(r)) {
         const bw = ['Top', 'Right', 'Bottom', 'Left'].map((s) => (cs[`border${s}Style`] !== 'none' && rgba(cs[`border${s}Color`]) ? parseFloat(cs[`border${s}Width`]) : 0))
-        const bc = rgba(cs.borderTopColor) ?? rgba(cs.borderBottomColor) ?? rgba(cs.borderLeftColor) ?? rgba(cs.borderRightColor)
+        const bc = ['Top', 'Right', 'Bottom', 'Left'].map((sd, i) => (bw[i] > 0 ? rgba(cs[`border${sd}Color`]) : null)).find(Boolean) // a side that is actually drawn
         const label = el.dataset?.n || el.getAttribute('aria-label') || (typeof el.className === 'string' && el.className.split(' ')[0]) || tag.toLowerCase()
         const node = { t: 'f', x: r1(r.left - ox), y: r1(r.top - oy), w: r1(r.width), h: r1(r.height), n: label.slice(0, 40) }
         const bg = rgba(cs.backgroundColor); if (bg) node.bg = bg

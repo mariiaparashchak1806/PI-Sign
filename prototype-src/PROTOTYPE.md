@@ -52,7 +52,7 @@
 - Deviation: the designer's task menu says "Delete project" — shown as "Delete task" (it deletes the task).
 - Assumption: Basement's "2 files" from the Overview summary are placed in Before Photos (the mock doesn't say which folder).
 - Deviation: 16 px gap between the Contact and Lead cards (0 in the mock), per designer.
-- Add from catalog: "Add <kind> to <project>"; Cost / Sale columns follow the table it was opened from; read-only prices with unit; row click or "+" picks, picked rows get − n +; Labors categories (sentence case, counts) + chips + search across categories; selection panel "Selected N" → "Clear" / "Add N … · $X"; Replace mode from ⋯ (row click swaps the line).
+- Add from catalog: Figma 264:49341 — one picker for all kinds: categories, search, Show cost (Cost + Multiplier) / Show price (Price) switches starting from the table, brand / vendor / in stock or sub category / tags + "N of M", "+ Add" → stepper, "Selected · N" + Clear, Subtotal, "Add N items to Kitchen"; Replace mode from ⋯.
 - All tabs are built (see PROGRESS.md 2026-09-30). Not itemised in the mock → not invented: Bathroom lines, payment amounts/dates.
 - Oct 2 sync deviations: row ⋯ (project, line item, task) stay hover-only (drawn always visible); Agenda keeps the agreed header (Assignee, no select-all) and Due today state; Kitchen status reads "Scheduled" as drawn — picking it from the status menu shows "Scheduled Leads" (the platform's status name); Countertops line total "$1,200" for 42 sq ft × $65 and Total-row values are kept exactly as drawn (not recalculated).
 - Photo viewer: view, prev/next, rename, download, delete, Add more — no "Move to folder" (not on the platform).

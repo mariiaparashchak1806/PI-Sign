@@ -6,7 +6,7 @@ import { Banknote, Bold, ChevronDown, Download, Eye, FileText, Italic, List, Lis
 import { SUMMARY, itemsLabel, lineTotal, money, type CatalogKind, type Estimate, type Line } from '../lib/estimate'
 import { Field, Select, Switch, TextInput } from './Form'
 import { Menu, type MenuState } from './Overlay'
-import type { Msg, MsgFile } from './LeadDialogs'
+import type { MsgFile } from './LeadDialogs'
 
 function Card({ title, left, right, children, narrow }: { title: ReactNode; left?: ReactNode; right?: ReactNode; children: ReactNode; narrow?: boolean }) {
   return (
@@ -321,14 +321,15 @@ export function AgreementsTab({ say, confirm }: { say: (t: string) => void; conf
 }
 
 // ---------- Messages ----------
-// Staging: "Messages (9)" feed — avatar, author, full date, message card with attachments (thumbnail, name,
-// lock = private, size, download). Kept as a feed; adds the channel on each message and a composer with
-// channel, attachments and the "Private" switch, so the feed and replying live in one place.
+// Messages = the team's internal thread on this lead (employees, not the client — client SMS/email live in the
+// header's Messages dialog). Staging: "Messages (9)" feed — avatar, author, full date, message card with
+// attachments (thumbnail, name, lock = private, size, download). Composer: text, Attach, "Private" for files.
+export type TeamMsg = { author: string; at: string; text: string; files?: MsgFile[] }
 const kb = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 102.4) / 10)} KB`)
-const initials = (s: string) => s.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()
-export function MessagesTab({ name, phone, email, messages, onSend, say }: { name: string; phone: string; email: string; messages: Msg[]; onSend: (m: Msg) => void; say: (t: string) => void }) {
+export const initials = (s: string) => s.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+export const teamStamp = (d = new Date()) => `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+export function MessagesTab({ me, messages, onSend, say }: { me: string; messages: TeamMsg[]; onSend: (m: TeamMsg) => void; say: (t: string) => void }) {
   const [text, setText] = useState('')
-  const [ch, setCh] = useState<Msg['ch']>('SMS')
   const [files, setFiles] = useState<MsgFile[]>([])
   const [priv, setPriv] = useState(false)
   const feed = useRef<HTMLDivElement>(null)
@@ -336,53 +337,47 @@ export function MessagesTab({ name, phone, email, messages, onSend, say }: { nam
   useEffect(() => { feed.current?.scrollTo({ top: 1e6, behavior: 'smooth' }) }, [messages])
   const send = () => {
     const t = text.trim(); if (!t && !files.length) return
-    onSend({ out: true, ch, text: t, when: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }), files: files.map((f) => ({ ...f, private: priv })) })
+    onSend({ author: me, at: teamStamp(), text: t, files: files.map((f) => ({ ...f, private: priv })) })
     setText(''); setFiles([]); setPriv(false)
   }
   return (
     <Card title={<span className="est-title">Messages<span className="est-meta">{messages.length}</span></span>}>
       <div className="msg-feed" ref={feed}>
-        {messages.length ? messages.map((m, i) => {
-          const who = m.out ? 'You' : name
-          return (
-            <article key={i} className={`msg${m.out ? ' out' : ''}`}>
-              <span className="msg-avatar" aria-hidden="true">{initials(m.out ? 'You' : name)}</span>
-              <div className="msg-main">
-                <header><b>{who}</b><span className="msg-ch">{m.ch}</span><time>{m.when}</time></header>
-                <div className="msg-card">
-                  {m.text && <p>{m.text}</p>}
-                  {!!m.files?.length && <div className="msg-files">{m.files.map((f, j) => (
-                    <div key={j} className="msg-file">
-                      <div className="msg-file-thumb">{f.src ? <img src={f.src} alt="" /> : <FileText size={22} strokeWidth={1.6} />}</div>
-                      <div className="msg-file-meta">
-                        <span className="msg-file-name" title={f.name}>{f.name}</span>
-                        {f.private && <span className="msg-private" title="Private — visible to your team only"><Lock size={14} />Private</span>}
-                        <span className="msg-size">{kb(f.size)}</span>
-                        <a className="icon-plain" aria-label={`Download ${f.name}`} title="Download" href={f.src} download={f.name} onClick={(e) => { if (!f.src) { e.preventDefault(); say(`${f.name} downloaded`) } }}><Download size={16} /></a>
-                      </div>
+        {messages.length ? messages.map((m, i) => (
+          <article key={i} className={`msg${m.author === me ? ' out' : ''}`}>
+            <span className="msg-avatar" aria-hidden="true">{initials(m.author)}</span>
+            <div className="msg-main">
+              <header><b>{m.author === me ? `${m.author} (you)` : m.author}</b><time>{m.at}</time></header>
+              <div className="msg-card">
+                {m.text && <p>{m.text}</p>}
+                {!!m.files?.length && <div className="msg-files">{m.files.map((f, j) => (
+                  <div key={j} className="msg-file">
+                    <div className="msg-file-thumb">{f.src ? <img src={f.src} alt="" /> : <FileText size={22} strokeWidth={1.6} />}</div>
+                    <div className="msg-file-meta">
+                      <span className="msg-file-name" title={f.name}>{f.name}</span>
+                      {f.private && <span className="msg-private" title="Private — only you and managers see this file"><Lock size={14} />Private</span>}
+                      <span className="msg-size">{kb(f.size)}</span>
+                      <a className="icon-plain" aria-label={`Download ${f.name}`} title="Download" href={f.src} download={f.name} onClick={(e) => { if (!f.src) { e.preventDefault(); say(`${f.name} downloaded`) } }}><Download size={16} /></a>
                     </div>
-                  ))}</div>}
-                </div>
+                  </div>
+                ))}</div>}
               </div>
-            </article>
-          )
-        }) : <Empty icon={<MessageSquare size={22} strokeWidth={1.6} />} title="No messages yet" text={`Messages with ${name} appear here.`} />}
+            </div>
+          </article>
+        )) : <Empty icon={<MessageSquare size={22} strokeWidth={1.6} />} title="No messages yet" text="Notes and files for the team working on this lead appear here." />}
       </div>
       <div className="msg-compose">
         {files.length > 0 && <div className="msg-chips">
           {files.map((f, i) => <span key={i} className="msg-chip"><Paperclip size={14} />{f.name}<em>{kb(f.size)}</em><button className="icon-plain" aria-label={`Remove ${f.name}`} onClick={() => setFiles((x) => x.filter((_, j) => j !== i))}><X size={14} /></button></span>)}
-          <Switch on={priv} onChange={setPriv} label="Private — team only" />
+          <Switch on={priv} onChange={setPriv} label="Private files" />
         </div>}
-        <textarea className="input msg-text" rows={2} placeholder={ch === 'SMS' ? `Text ${name} at ${phone}` : `Email ${name} at ${email}`} aria-label="Message" value={text}
+        <textarea className="input msg-text" rows={2} placeholder="Write a message to the team…" aria-label="Message" value={text}
           onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} />
         <div className="msg-actions">
-          <div className="seg" role="radiogroup" aria-label="Channel">
-            {(['SMS', 'Email'] as const).map((c) => <button key={c} role="radio" aria-checked={ch === c} className={ch === c ? 'on' : ''} onClick={() => setCh(c)}>{c}</button>)}
-          </div>
           <button className="btn btn-secondary" onClick={() => pick.current?.click()}><Paperclip size={16} />Attach</button>
           <input ref={pick} type="file" multiple hidden onChange={(e) => { const l = [...(e.target.files ?? [])].map((f) => ({ name: f.name, size: f.size, src: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined })); setFiles((x) => [...x, ...l]); e.target.value = '' }} />
-          <span className="msg-hint">Enter to send · Shift+Enter for a new line</span>
-          <button className="btn btn-primary" disabled={!text.trim() && !files.length} onClick={send}><Send size={16} />Send {ch}</button>
+          <span className="msg-hint">Visible to your team only · Enter to send, Shift+Enter for a new line</span>
+          <button className="btn btn-primary" disabled={!text.trim() && !files.length} onClick={send}><Send size={16} />Send</button>
         </div>
       </div>
     </Card>

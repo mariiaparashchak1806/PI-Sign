@@ -5,6 +5,7 @@ import { CircleX, Copy, CopyPlus, Sparkles, Download, FileText, Heart, Info, Mov
 import tree from '../figma/tree.json'
 import treeC1o2 from '../figma/tree-c1o2.json'
 import aiPanelTree from '../figma/ai-panel.json'
+import messagesWidget from '../figma/messages-widget.json'
 import tree2 from '../figma/tree2.json'
 import { FigmaNode, OverridesProvider, indexTree, type FNode, type Handler, type Patch } from '../figma/FigmaNode'
 import { Btn, Dialog, Menu, Toast, type MenuItem, type MenuState, type ToastState } from '../components/Overlay'
@@ -15,7 +16,7 @@ import { AssignDialog, MessagesDialog, type Assignees, type Msg } from '../compo
 import { FILES0, FILES0_C2, FilesTab, countIn, hasRequired, type FilesState, type Folder, type FileItem } from '../components/FilesTab'
 import { CatalogDialog, type CatalogKind, type CatalogTarget } from '../components/CatalogDialog'
 import { ESTIMATE0, type CatalogItem, type Estimate, type Line } from '../lib/estimate'
-import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab, plansLabel, splitEvenly, type PayRow } from '../components/OtherTabs'
+import { AgreementsTab, EstimateTab, FormsTab, MessagesTab, PaymentTab, initials, plansLabel, splitEvenly, type PayRow, type TeamMsg } from '../components/OtherTabs'
 
 // Concept 2 (Figma 124:1753): shared widgets carry concept-1 ids (scripts/build_concept2.py), so the same handlers apply.
 // ai-panel.json (Figma 236:4266 "AI chat panel — improved") is the AI Assistant side panel shared by every concept.
@@ -75,6 +76,12 @@ const TP = indexTree(aiPanelTree as unknown as FNode)
 const AIP = TP.byId.get('236:4266')!
 const AIP_THREAD = '236:4288', AIP_CONVO = '236:4284'
 const node2 = (id: string) => TP.byId.get(id)!
+// Messages widget (Figma "Summary / Messages" 296:13036): the team's last internal message, replaces the old
+// client-SMS summary (72:8984) on every page. Seed = the message drawn in the component.
+const TM = indexTree(messagesWidget as unknown as FNode)
+const MSGW = TM.byId.get('310:13676')!
+const MW = { name: 'I310:13676;184:7478', at: 'I310:13676;296:13028', text: 'I310:13676;184:7479', initials: 'I310:13676;296:13034', viewAll: 'I310:13676;184:7470', last: 'I310:13676;184:7472' }
+const TEAM0: TeamMsg[] = [{ author: TM.byId.get(MW.name)!.txt!, at: TM.byId.get(MW.at)!.txt!, text: TM.byId.get(MW.text)!.txt! }]
 const PD_TOTAL_ROW = (node(PD).k ?? []).find((k) => k.n === 'Row / Total' && !k.hidden)?.id
 const NEEDS = T.find(root, (n) => n.n === 'Section - Needs attention')
 // Signed documents card (summary in the old snapshot, "widget" in the current frame): every link/button opens its tab
@@ -146,7 +153,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const [showDetails, setShowDetails] = useState(fixture === 'details')
   const [assignees, setAssignees] = useState<Assignees>({ designer: null, pm: null })
   const designer = assignees.designer
-  const [messages, setMessages] = useState<Msg[]>([{ out: false, ch: 'SMS', text: 'Thanks, see you tomorrow!', when: '5:02 PM' }])
+  const [messages, setMessages] = useState<Msg[]>([{ out: false, ch: 'SMS', text: 'Thanks, see you tomorrow!', when: '5:02 PM' }]) // client SMS — header Messages dialog
+  const [team, setTeam] = useState<TeamMsg[]>(TEAM0) // team's internal messages — widget + Messages tab
   const [kitchenOpen, setKitchenOpen] = useState(fixture !== 'kitchen-collapsed' && concept === 1)
   const [aiOpen, setAiOpen] = useState(false)
   const [needsOpen, setNeedsOpen] = useState(true)
@@ -464,7 +472,12 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   on(ACTIVITY_HEAD, { onClick: () => setActivityOpen((v) => !v), title: activityOpen ? 'Collapse activity' : 'Expand activity', className: 'row-hover' })
 
   // Right column
-  if (tabsOn) on('93:6062', { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
+  // Messages widget → the team's latest message
+  const lastMsg = team[team.length - 1]
+  on('72:8984', { render: () => <FigmaNode key="msgw" node={MSGW} parent={RT.parentOf.get('72:8984') ?? null} /> })
+  if (lastMsg) { patches[MW.name] = { txt: lastMsg.author }; patches[MW.at] = { txt: lastMsg.at }; patches[MW.text] = { txt: lastMsg.text || (lastMsg.files?.length ? `${lastMsg.files.length} file${lastMsg.files.length === 1 ? '' : 's'}` : '') }; patches[MW.initials] = { txt: initials(lastMsg.author) } }
+  else patches[MW.last] = { hidden: true }
+  if (tabsOn && tab !== 'messages') on(MW.viewAll, { onClick: () => setTab('messages'), title: 'Open the Messages tab' })
   if (tabsOn) SIGNED_LINKS.forEach((id) => on(id, { onClick: () => setTab('agreements'), title: 'Open the Signed documents tab' }))
   if (tab !== 'files') on('93:7192', { onClick: () => setTab('files'), title: 'Open the Files & Photos tab' })
   FILE_SUMMARY.forEach(([p, id]) => { const n = countIn(files, p); patches[id] = { txt: `${n} file${n === 1 ? '' : 's'}` } })
@@ -486,7 +499,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
           : tab === 'labors' || tab === 'materials' || tab === 'countertops' ? <EstimateTab key={tab} kind={(tab.charAt(0).toUpperCase() + tab.slice(1)) as CatalogKind} projects={liveProjects.map((p) => p.name)} estimate={estimate} setEstimate={setEstimate} onCatalog={setCatalog} say={say} />
           : tab === 'payment' ? <PaymentTab total={13128} saved={payPlan} onSave={setPayPlan} say={say} />
           : tab === 'agreements' ? <AgreementsTab say={say} confirm={confirm} />
-          : tab === 'messages' ? <MessagesTab name={fullName} phone={contact.phone} email={contact.email} messages={messages} onSend={(m) => { setMessages((x) => [...x, m]); say(`${m.ch} sent to ${fullName}`) }} say={say} />
+          : tab === 'messages' ? <MessagesTab me={CURRENT_USER} messages={team} onSend={(m) => { setTeam((x) => [...x, m]); say('Message sent to the team') }} say={say} />
           : <FormsTab email={contact.email} say={say} confirm={confirm} />}
       </div>
     ) })

@@ -166,3 +166,9 @@
 - Edit (one row at a time, highlighted: light background + 1px border): Title, Qty + unit, Unit price ($, editable for every line — the mock has no "price locked" flag), Unit cost read-only, "+ Add description" → textarea; Total and the group subtotal recalc live; Cancel (text) + Save (primary small); Enter saves, Esc cancels. Edit on another row with unsaved changes → "Save changes to <item>?" Save / Discard in the open row.
 - Validation: Title not empty, Qty > 0 (error under the field, Save disabled). Save → toast "<item> updated · Undo"; Remove → toast "<item> removed · Undo".
 - Checks: scripts/estimate-edit-check.mjs 34/34 (option 1, option 2); controls labors 18, materials, overview; 0 console errors.
+
+## 2026-10-02 — Messages = team's internal thread (designer: "це про комунікацію між працівниками, а не з клієнтом")
+- Old client-SMS summary (72:8984, "Cheryl Isaac · SMS · Thanks, see you tomorrow!") replaced on every page by the Figma widget "Summary / Messages" (component 296:13036, instance 310:13676 → src/figma/messages-widget.json): "Messages · View all →", last message card (avatar initials, author, "Oct 2, 2026 at 12:37", text). Seed = the drawn message (Tobby Domson).
+- Messages tab: team feed (avatar, author — "(you)" for Test Designer —, date, message card, attachments with Private / size / download); composer "Write a message to the team…", Attach, "Private files" switch, Send; no SMS/Email channel. Sending updates the widget. Client SMS stays in the header Messages dialog (staging modal).
+- View all → Messages tab (Concept 1 options; Concept 2 tabs stay inert).
+- Checks: scripts/messages-check.mjs 12/12; controls overview pages + messages tab; 0 console errors.

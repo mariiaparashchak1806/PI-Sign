@@ -4,7 +4,6 @@ import { spring } from '../lib/springs'
 import { CircleX, Copy, CopyPlus, Sparkles, Download, FileText, Heart, Info, MoveRight, Paperclip, Pause, Pencil, Play, Plus, RefreshCw, RotateCcw, Trash2, Archive, Link2 } from 'lucide-react'
 import tree from '../figma/tree.json'
 import treeC1o2 from '../figma/tree-c1o2.json'
-import treeShared from '../figma/tree-c1-shared.json' // Concept 1 widgets as of Oct 1 — Concept 2 keeps using them
 import aiPanelTree from '../figma/ai-panel.json'
 import messagesWidget from '../figma/messages-widget.json'
 import tree2 from '../figma/tree2.json'
@@ -598,7 +597,11 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     if (hasRequired(files, 'Bathroom')) patches['124:3730'] = { hidden: true }
     if (hasRequired(files, 'Basement')) patches['109:10756'] = { hidden: true }
     // Kitchen row expands into the drawn line items (the same block as concept 1)
-    on('93:8375', { render: (_n, el) => <>{el}{kitchenOpen && !deletedRows.includes('93:8375') && <FigmaNode key="kx" node={node('42:10573')} parent={n2('42:10511')} />}</> })
+    // (concept 2's Project Details variant has no line items drawn → the Kitchen groups of concept 1 · option 1)
+    on('93:8375', { render: (_n, el) => <>{el}{kitchenOpen && !deletedRows.includes('93:8375') && KITCHEN_GROUPS.map((g) => <FigmaNode key={g.id} node={g} parent={n2('42:10511')} />)}</> })
+    // tabs overflow the right column: the last visible tab fades out (gradient label in the mock)
+    patches[TABS] = { ...patches[TABS], style: { ...patches[TABS]?.style, maskImage: 'linear-gradient(to right, #000 calc(100% - 64px), transparent)', WebkitMaskImage: 'linear-gradient(to right, #000 calc(100% - 64px), transparent)' } }
+    if (T2.byId.has('I226:15366;319:9022')) patches['I226:15366;319:9022'] = { style: { transform: kitchenOpen ? 'rotate(90deg)' : 'none', transition: 'transform .18s var(--spring-snappy)' } }
     // AI Assistant lives in the top bar here → opens the same assistant card in a side panel
     on('124:3631', { onClick: () => setAiOpen((v) => !v), title: 'AI Assistant' })
   }
@@ -674,7 +677,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
 // Concept 1 has two variants: Option 1 = Figma 19:973, Option 2 = Figma 184:3568
 const Page1o1 = makePage(tree)
 const Page1o2 = makePage(treeC1o2)
-const Page2 = makePage(treeShared) // Concept 2 shares the Concept 1 widgets (scripts/build_concept2.py) — frozen at the Oct 1 version
+const Page2 = makePage(tree) // Concept 2 shares the current Concept 1 widgets (scripts/build_concept2.py)
 export default function LeadOverview({ concept = 1, option = 1 }: { concept?: Concept; option?: 1 | 2 }) {
   return concept === 2 ? <Page2 concept={2} /> : option === 2 ? <Page1o2 concept={1} /> : <Page1o1 concept={1} />
 }

@@ -22,11 +22,12 @@ def walk(a, b, depth=99):
 right = C2['124:2986']
 by = lambda name: next((k['id'] for k in right['k'] if k['n'].startswith(name)), None)
 pd = next((k['id'] for k in right['k'] if k['t'] == 'INSTANCE' and k['n'].startswith('Project Details')), None)
-PAIRS = [  # (c2, c1, depth)
+sd = next((n['id'] for n in C2.values() if n['n'].startswith('Signed documents widget') and not n.get('hidden')), None)
+PAIRS = [  # (c2, c1, depth) — Oct 2 frame: tabs moved into the right column, Messages widget + Activity under the cards
     ('124:1753', '19:973', 0), ('124:1754', '19:974', 99), ('124:2627', '19:1099', 0), ('124:2618', '19:1070', 99),
-    ('124:3395', '19:1100', 99), ('132:1828', '19:1210', 99), ('124:2986', '19:1231', 0),   # right column = tab content area
-    (pd, '42:10511', 99), ('124:3104', '42:10916', 99), ('124:3450', '93:4854', 99),
-    ('206:7079', '179:2999', 99), ('124:3707', '93:7185', 99), ('124:3706', '93:7184', 0), ('124:3637', '72:8984', 99),
+    ('124:3395', '19:1100', 99), (by('Tabs') or '132:1828', '19:1210', 99), ('124:2986', '19:1231', 0),   # right column = tab content area
+    (pd, '42:10511', 99), (by('Agenda'), '42:10916', 99), (by('Activity'), '93:4854', 99),
+    (sd, '179:2999', 99), ('124:3707', '93:7185', 99), ('124:3706', '93:7184', 0), (by('Summary / Messages'), '310:13676', 99),
 ]
 for a, b, d in PAIRS:
     if a in C2 and b in C1: walk(C2[a], C1[b], d)

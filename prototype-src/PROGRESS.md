@@ -196,3 +196,9 @@
 
 ## 2026-10-02 — Subtotal rows white
 - Labors / Materials / Countertops tabs: Subtotal rows have a white background (were the grey expanded fill), per designer.
+
+## 2026-10-02 — Figma → prototype sync, Concept 2 (124:1753)
+- Fresh export (extraction/concept2-2026-10-02.json → concept2-export.json) → scripts/build_concept2.py → src/figma/tree2.json; 440 nodes share Concept 1 ids. Diff vs Oct 1: +323 / −324 visible nodes.
+- As drawn now: tabs sit in the right column above the cards (last tab fades out); Needs attention; Project Details = the shared component (Variant2: Preview PDF / Add from wishlist / Add project, Show cost / Show sale switches, green "Scheduled" pills, Basement "-", Total row); Agenda instance; Signed documents + Files and photos side by side; Messages widget (team thread) moved from the lead column into the right column; Activity with the time on the right.
+- Concept 2 is built on the current Concept 1 widgets again (tree-c1-shared.json removed); Kitchen expands into the Option 1 Kitchen groups (Materials / Labors / Countertops, Add from catalog, compact items) — this variant has no line items drawn.
+- Checks: diff vs Figma 4.52% (sidebar column pinned in the browser, page ends with the content, agreed Agenda deviations); controls concept-2 27/27, concept-1 49/49; concept2-check, agenda-check 66/66, messages, labors/product catalogs, AI panel, files, estimate edit, overview-sync 14/14; 0 console errors.

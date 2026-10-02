@@ -4,7 +4,6 @@ import { spring } from '../lib/springs'
 import { CircleX, Copy, CopyPlus, Sparkles, Download, FileText, Heart, Info, MoveRight, Paperclip, Pause, Pencil, Play, Plus, RefreshCw, RotateCcw, Trash2, Archive, Link2 } from 'lucide-react'
 import tree from '../figma/tree.json'
 import treeC1o2 from '../figma/tree-c1o2.json'
-import treeShared from '../figma/tree-c1-shared.json' // Concept 1 widgets as of Oct 1 — Concept 2 keeps using them
 import aiPanelTree from '../figma/ai-panel.json'
 import messagesWidget from '../figma/messages-widget.json'
 import tree2 from '../figma/tree2.json'
@@ -61,16 +60,12 @@ const I = { size: 16, strokeWidth: 1.8 } as const
 const fixture = new URLSearchParams(location.search).get('fixture')
 
 // ---------- ids resolved from the Figma tree ----------
-// lead card: Oct 2 frame = component 264:51777 — "Show details" instance 264:51998 + the hidden "Hide details" 109:6980
-const LEAD_COLLAPSED = T.byId.has('109:3765') ? '109:3765' : '264:51998', LEAD_DETAILS = '109:6980'
+const LEAD_COLLAPSED = '109:3765', LEAD_DETAILS = '109:6980'
 // older snapshot wraps both lead states in 109:5225; the current frame puts them straight into the header row
 // Concept 1 · Option 2 (Figma 184:3568) has one merged lead card instead of the two lead states
 const LEAD_CARD2 = T.byId.has('206:5636') ? '206:5636' : undefined
 const LEAD_WRAP = T.byId.has('109:5225') ? '109:5225' : LEAD_CARD2 ?? '25:4990'
-const PD = '42:10511', PD_COLHEAD = '93:8360'
-const isMore = (n: FNode) => n.n === 'Button' || n.n === 'Icon button' // row ⋯ ("Icon button" since Oct 2)
-// Kitchen expanded: one block (older snapshots) or, since Oct 2, a "Group header / …" frame per kind right under the row
-const KITCHEN_GROUPS = T.byId.has('42:10573') ? kidsOf('42:10573') : (node(PD).k ?? []).filter((k) => !k.hidden && (k.k ?? []).some((c) => c.n.startsWith('Group header')))
+const PD = '42:10511', PD_COLHEAD = '93:8360', KITCHEN_EXPANDED = '42:10573'
 const PD_HEAD = (node(PD).k ?? [])[0].id
 const PD_TOGGLES = T.find(node(PD), (n) => n.n === 'Table toolbar')?.id // current design: Show cost / Show sale switches
 const PROJECT_ROWS = ['93:8375', '42:10700', '42:10752']
@@ -95,19 +90,18 @@ const SIGNED_LINKS = T.findAll(SIGNED_CARD, (n) => n.n === 'Link Button' || n.n 
 
 const projectRows: ProjectRow[] = PROJECT_ROWS.map((id) => {
   const kids = kidsOf(id)
-  const pill = kids.find((k) => k.n.startsWith('Pill')) ?? find(id, (n) => n.n.startsWith('Pill'))
+  const pill = kids.find((k) => k.n.startsWith('Pill'))
   return {
     id, name: named(id, 'Name').txt!, pill: pill?.id, pillLabel: pill ? textIn(pill.id).id : undefined,
-    more: kids.find(isMore)!.id, chevron: find(id, (n) => /^icon\/chev/.test(n.n))!.id, sales: kids[5].id,
+    more: kids.find((k) => k.n === 'Button')!.id, chevron: find(id, (n) => /^icon\/chev/.test(n.n))!.id, sales: kids[5].id,
   }
 })
-const lineItems = KITCHEN_GROUPS.flatMap((g) => T.findAll(g, (n) => (n.n.startsWith('Item /') || n.n.startsWith('Line item')) && kidsOf(n.id).some(isMore)))
-  .map((it) => ({ id: it.id, name: (T.find(it, (n) => n.n === 'Name') ?? T.find(it, (n) => n.t === 'TEXT'))!.txt!, more: kidsOf(it.id).find(isMore)!.id }))
+const lineItems = T.findAll(node(KITCHEN_EXPANDED), (n) => n.n.startsWith('Item /')).map((it) => ({ id: it.id, name: named(it.id, 'Name').txt!, more: kidsOf(it.id).find((k) => k.n === 'Button')!.id }))
 
 const taskRows = kidsOf(AGENDA).filter((k) => k.n.startsWith('Row / Task')).map((r) => {
   const pill = find(r.id, (n) => n.n.startsWith('Pill'))!
   const s = textIn(pill.id).txt!.toLowerCase() as TaskStatus
-  return { id: r.id, name: named(r.id, 'Name'), checkbox: named(r.id, 'Checkbox').id, pill: pill.id, pillLabel: textIn(pill.id).id, due: named(r.id, 'Due date').id, more: kidsOf(r.id).find(isMore)!.id, initial: s }
+  return { id: r.id, name: named(r.id, 'Name'), checkbox: named(r.id, 'Checkbox').id, pill: pill.id, pillLabel: textIn(pill.id).id, due: named(r.id, 'Due date').id, more: kidsOf(r.id).find((k) => k.n === 'Button')!.id, initial: s }
 })
 const CHECK_OFF = node(taskRows.find((t) => t.initial !== 'done')!.checkbox)
 const CHECK_ON = node(taskRows.find((t) => t.initial === 'done')!.checkbox)
@@ -240,8 +234,6 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   patches[CONTENT] = { style: { height: 'auto', padding: RT.byId.get(CONTENT)!.al!.p.map((v, i) => `${i === 2 ? 48 : v}px`).join(' ') } }
   // Lead card — "Show details" is the drawn alternate state (hidden frame in the mock)
   if (LEGACY_LEAD) { patches[LEAD_COLLAPSED] = { hidden: showDetails }; patches[LEAD_DETAILS] = { hidden: !showDetails } }
-  // "Hide details" variant is drawn at a fixed 712 px; it fills the row like the "Show details" instance next to Contact
-  if (LEAD_COLLAPSED === '264:51998') patches[LEAD_DETAILS] = { ...patches[LEAD_DETAILS], style: { flex: '1 1 0', minWidth: 0, width: 'auto' } }
   on(showDetailsToggle, { onClick: () => setShowDetails(true), title: 'Show details' })
   on(hideDetailsToggle, { onClick: () => setShowDetails(false), title: 'Hide details' })
   if (designer) notAssignedTexts.forEach((id) => (patches[id] = { txt: designer }))
@@ -366,7 +358,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   patches[find(PD_HEAD, (n) => n.t === 'TEXT' && /projects?$/.test(n.txt ?? ''))!.id] = { txt: `${liveProjects.length} project${liveProjects.length === 1 ? '' : 's'}` }
 
   // Project rows
-  ;[...(T.byId.has('42:10573') ? [node('42:10573')] : []), ...KITCHEN_GROUPS].forEach((g) => (patches[g.id] = { hidden: !kitchenOpen || deletedRows.includes('93:8375') }))
+  patches[KITCHEN_EXPANDED] = { hidden: !kitchenOpen || deletedRows.includes('93:8375') }
   patches[projectRows[0].chevron] = { style: { transform: kitchenOpen ? 'none' : 'rotate(-90deg)', transition: 'transform .18s var(--spring-snappy)' } }
   on('93:8375', { onClick: () => setKitchenOpen((v) => !v), title: kitchenOpen ? 'Collapse Kitchen' : 'Expand Kitchen', className: 'row-hover' })
   projectRows.forEach((r) => {
@@ -399,8 +391,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   })
   // "Add from catalog" per group (Materials · Labors · Countertops, in drawn order)
   const CATALOG_GROUPS: CatalogKind[] = ['Materials', 'Labors', 'Countertops']
-  KITCHEN_GROUPS.forEach((g, i) => T.findAll(g, (n) => n.n === 'Link Button').forEach((b) => on(b.id, { onClick: () => setCatalog({ kind: CATALOG_GROUPS[i], project: 'Kitchen' }), title: `Add ${CATALOG_GROUPS[i].toLowerCase()} from catalog` })))
-  const groupOf = (id: string) => CATALOG_GROUPS[KITCHEN_GROUPS.findIndex((g) => !!T.find(g, (n) => n.id === id))] ?? 'Materials'
+  kidsOf(KITCHEN_EXPANDED).forEach((g, i) => T.findAll(g, (n) => n.n === 'Link Button').forEach((b) => on(b.id, { onClick: () => setCatalog({ kind: CATALOG_GROUPS[i], project: 'Kitchen' }), title: `Add ${CATALOG_GROUPS[i].toLowerCase()} from catalog` })))
+  const groupOf = (id: string) => CATALOG_GROUPS[kidsOf(KITCHEN_EXPANDED).findIndex((g) => !!T.find(g, (n) => n.id === id))] ?? 'Materials'
 
   // Agenda
   const [removedItems, setRemovedItems] = useState<string[]>([])
@@ -432,8 +424,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   taskRows.forEach((r) => (patches[r.id] = { hidden: true }))
   patches[named('42:11146', 'Checkbox').id] = { style: { visibility: 'hidden' } }
   patches[named('42:11148', 'Header').id] = { txt: 'Assignee' }
-  const agendaHeaderMore = kidsOf('42:11145').find(isMore)?.id
-  if (agendaHeaderMore) patches[agendaHeaderMore] = { style: { visibility: 'hidden' } }
+  const agendaHeaderMore = kidsOf('42:11145').find((k) => k.n === 'Button')!.id
+  patches[agendaHeaderMore] = { style: { visibility: 'hidden' } }
   const openTasks = tasks.filter(isOpen), overdueN = tasks.filter((t) => viewOf(t) === 'overdue').length, holdN = tasks.filter((t) => t.state === 'hold').length
   const agendaCount = find(AGENDA_HEAD, (n) => n.t === 'TEXT' && /open tasks/.test(n.txt ?? ''))!
   patches[agendaCount.id] = { txt: `${openTasks.length} open task${openTasks.length === 1 ? '' : 's'}${overdueN && agendaCount.txt!.includes('overdue') ? ` · ${overdueN} overdue` : ''}${holdN ? ` · ${holdN} on hold` : ''}` }
@@ -449,7 +441,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const taskRow = (t: Task) => {
     const c = cloneAs(TASK_TPL, t.id), at = (name: string) => T.find(c, (n) => n.n === name)!.id
     const v = viewOf(t), ps = viewPill(v), closed = v === 'done' || v === 'cancelled', done = v === 'done'
-    const pill = T.find(c, (n) => n.n.startsWith('Pill'))!, pillText = T.find(pill, (n) => n.t === 'TEXT')!.id, more = (c.k ?? []).find(isMore)!.id, cb = at('Checkbox')
+    const pill = T.find(c, (n) => n.n.startsWith('Pill'))!, pillText = T.find(pill, (n) => n.t === 'TEXT')!.id, more = (c.k ?? []).find((k) => k.n === 'Button')!.id, cb = at('Checkbox')
     patches[at('Name')] = { txt: t.name, decoration: closed ? 'line-through' : 'none', color: closed ? segColor(doneName) : undefined }
     patches[at('Created by')] = { txt: t.assignee }
     patches[at('Due date')] = { txt: fmtDue(t.due), color: v === 'overdue' ? OVERDUE_COLOR : closed ? segColor(doneName) : undefined }
@@ -598,13 +590,13 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     if (hasRequired(files, 'Bathroom')) patches['124:3730'] = { hidden: true }
     if (hasRequired(files, 'Basement')) patches['109:10756'] = { hidden: true }
     // Kitchen row expands into the drawn line items (the same block as concept 1)
-    on('93:8375', { render: (_n, el) => <>{el}{kitchenOpen && !deletedRows.includes('93:8375') && <FigmaNode key="kx" node={node('42:10573')} parent={n2('42:10511')} />}</> })
+    on('93:8375', { render: (_n, el) => <>{el}{kitchenOpen && !deletedRows.includes('93:8375') && <FigmaNode key="kx" node={node(KITCHEN_EXPANDED)} parent={n2('42:10511')} />}</> })
     // AI Assistant lives in the top bar here → opens the same assistant card in a side panel
     on('124:3631', { onClick: () => setAiOpen((v) => !v), title: 'AI Assistant' })
   }
 
   // Payment plan text on the lead card(s) follows the saved plan
-  ;['109:3925', '109:3830', 'I109:6980;109:3283', 'I264:51998;264:51750', '231:20343', '124:2705'].forEach((id) => (patches[id] = { ...patches[id], txt: payPlan.length ? plansLabel(payPlan.length) : 'Not set' }))
+  ;['109:3925', '109:3830', 'I109:6980;109:3283', '231:20343', '124:2705'].forEach((id) => (patches[id] = { ...patches[id], txt: payPlan.length ? plansLabel(payPlan.length) : 'Not set' }))
 
   // ---------- AI Assistant side panel (Figma 236:4266) ----------
   const ask = (q: string) => { if (!q.trim()) return; setAi((a) => [...a, { q, a: aiAnswers[q] ?? aiFallback }]); setTimeout(() => { const c = document.querySelector(`[data-id="${AIP_CONVO}"]`); c?.scrollTo({ top: c.scrollHeight, behavior: 'smooth' }) }, 60) }
@@ -674,7 +666,7 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
 // Concept 1 has two variants: Option 1 = Figma 19:973, Option 2 = Figma 184:3568
 const Page1o1 = makePage(tree)
 const Page1o2 = makePage(treeC1o2)
-const Page2 = makePage(treeShared) // Concept 2 shares the Concept 1 widgets (scripts/build_concept2.py) — frozen at the Oct 1 version
+const Page2 = makePage(tree) // Concept 2 shares the current Concept 1 widgets (scripts/build_concept2.py)
 export default function LeadOverview({ concept = 1, option = 1 }: { concept?: Concept; option?: 1 | 2 }) {
   return concept === 2 ? <Page2 concept={2} /> : option === 2 ? <Page1o2 concept={1} /> : <Page1o1 concept={1} />
 }

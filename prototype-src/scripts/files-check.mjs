@@ -1,4 +1,4 @@
-// Files & Photos v2: list, viewer (names, nav, rename, move, delete+undo), real upload, grid; both concepts.
+// Files & Photos v2: list, viewer (names, nav, rename, delete+undo), real upload, grid; both concepts.
 import { chromium } from 'playwright'
 import fs from 'fs'
 const out = process.argv[2] ?? 'extraction'
@@ -15,7 +15,7 @@ for (const c of ['', '&concept=2']) {
   console.log('viewer:', await p.locator('.pv .dialog-title').innerText(), '|', await p.locator('.pv .dialog-sub').innerText(), '|', await p.locator('.pv-name b').innerText(), '|', await p.locator('.pv-meta').innerText())
   await p.keyboard.press('ArrowRight'); await p.waitForTimeout(150); console.log('→', await p.locator('.pv-name b').innerText())
   await p.click('[aria-label="Rename"]'); await p.fill('.pv-rename', 'Left wall'); await p.keyboard.press('Enter'); await p.waitForTimeout(150); console.log('renamed', await p.locator('.pv-name b').innerText())
-  await p.click('text=Move to folder'); await p.click('.pv-move-menu >> text=3D Renderings >> nth=0'); await p.waitForTimeout(250); console.log('after move', await p.locator('.pv .dialog-sub').innerText(), '|', await p.locator('.toast').last().innerText())
+  console.log('no Move to folder', !(await p.locator('text=Move to folder').count()))
   await p.click('.pv >> text=Delete'); await p.waitForTimeout(250); console.log('after delete', await p.locator('.pv .dialog-sub').innerText(), '|', (await p.locator('.toast').last().innerText()).replace(/\n/g, ' '))
   await p.locator('.toast-undo').last().click(); await p.waitForTimeout(200); console.log('after undo', await p.locator('.pv .dialog-sub').innerText())
   await p.keyboard.press('Escape'); await p.waitForTimeout(300)

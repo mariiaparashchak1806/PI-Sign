@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { createPortal } from 'react-dom'
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Download, FileText, FolderInput, Image as ImageIcon, LayoutGrid, List, Maximize2, MoreHorizontal, Pencil, Trash2, Upload, X } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Download, FileText, Image as ImageIcon, LayoutGrid, List, Maximize2, MoreHorizontal, Pencil, Trash2, Upload, X } from 'lucide-react'
 import { spring } from '../lib/springs'
 
 export const FOLDERS = ['Before Photos', '3D Renderings', '2020 Files', 'Additional Material Photos'] as const
@@ -195,21 +195,20 @@ export function FilesTab({ projects, files, setFiles, say }: {
           </div>
         )
       })}
-      <PhotoViewer viewer={viewer} files={files} setViewer={setViewer} setFiles={setFiles} say={say} projects={projects} onAdd={pick} />
+      <PhotoViewer viewer={viewer} files={files} setViewer={setViewer} setFiles={setFiles} say={say} onAdd={pick} />
     </section>
   )
 }
 
-function PhotoViewer({ viewer, files, setViewer, setFiles, say, projects, onAdd }: {
+function PhotoViewer({ viewer, files, setViewer, setFiles, say, onAdd }: {
   viewer: Viewer; files: FilesState; setViewer: (v: Viewer) => void; setFiles: (f: (s: FilesState) => FilesState) => void
-  say: (t: string, undo?: () => void) => void; projects: string[]; onAdd: (p: string, f: Folder) => void
+  say: (t: string, undo?: () => void) => void; onAdd: (p: string, f: Folder) => void
 }) {
   const [editing, setEditing] = useState<string | null>(null)
-  const [moveOpen, setMoveOpen] = useState(false)
   const list = viewer ? files[viewer.project]?.[viewer.folder] ?? [] : []
   const i = viewer ? Math.min(viewer.index, list.length - 1) : 0
   const it = list[i]
-  const close = () => { setViewer(null); setEditing(null); setMoveOpen(false) }
+  const close = () => { setViewer(null); setEditing(null) }
   const go = (d: number) => viewer && list.length > 1 && setViewer({ ...viewer, index: (i + d + list.length) % list.length })
   useEffect(() => {
     if (!viewer) return
@@ -229,20 +228,6 @@ function PhotoViewer({ viewer, files, setViewer, setFiles, say, projects, onAdd 
     update((l) => l.filter((x) => x.id !== item.id))
     setViewer(list.length > 1 ? { ...viewer, index: Math.max(0, at - (at === list.length - 1 ? 1 : 0)) } : null)
     say(`${name} deleted`, () => update((l) => [...l.slice(0, at), item, ...l.slice(at)], project, folder))
-  }
-  const moveTo = (project: string, folder: Folder) => {
-    if (!viewer || !it) return
-    const from = { project: viewer.project, folder: viewer.folder }, item = it
-    setFiles((s) => {
-      const a = { ...s, [from.project]: { ...s[from.project], [from.folder]: (s[from.project]?.[from.folder] ?? []).filter((x) => x.id !== item.id) } }
-      return { ...a, [project]: { ...a[project], [folder]: [...(a[project]?.[folder] ?? []), item] } }
-    })
-    setMoveOpen(false)
-    setViewer(list.length > 1 ? { ...viewer, index: Math.max(0, i - (i === list.length - 1 ? 1 : 0)) } : null)
-    say(`Moved to ${project} · ${folder}`, () => setFiles((s) => {
-      const a = { ...s, [project]: { ...s[project], [folder]: (s[project]?.[folder] ?? []).filter((x) => x.id !== item.id) } }
-      return { ...a, [from.project]: { ...a[from.project], [from.folder]: [...(a[from.project]?.[from.folder] ?? []), item] } }
-    }))
   }
   const download = () => {
     if (!it) return
@@ -296,21 +281,6 @@ function PhotoViewer({ viewer, files, setViewer, setFiles, say, projects, onAdd 
               </div>
               <div className="pv-actions">
                 <button className="btn" onClick={download}><Download size={16} />Download</button>
-                <span className="pv-move">
-                  <button className="btn" aria-haspopup="menu" aria-expanded={moveOpen} onClick={() => setMoveOpen((v) => !v)}><FolderInput size={16} />Move to folder</button>
-                  {moveOpen && (
-                    <div className="menu pv-move-menu" role="menu">
-                      {projects.map((p) => (
-                        <div key={p}>
-                          <div className="menu-title">{p}</div>
-                          {FOLDERS.filter((f) => !(p === viewer.project && f === viewer.folder)).map((f) => (
-                            <button key={f} role="menuitem" className="menu-item" onClick={() => moveTo(p, f)}><span className="menu-label">{f}</span></button>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </span>
                 <span style={{ flex: 1 }} />
                 <button className="btn btn-danger-ghost" onClick={remove}><Trash2 size={16} />Delete</button>
               </div>

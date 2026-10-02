@@ -10,7 +10,7 @@ for (const path of ['concept-1/', 'concept-1/option-2/', 'concept-2/']) {
   const rows = () => p.evaluate(() => [...document.querySelectorAll('[data-id^="50:951#"][data-n^="Row / Task"]')].filter((e) => e.offsetParent).map((e) => e.innerText.replace(/\s+/g, ' ').trim()))
   const count = () => p.evaluate(() => [...document.querySelectorAll('[data-n="Agenda"] *, [data-id="42:10916"] *')].find((e) => /open task/.test(e.textContent) && e.children.length === 0)?.textContent)
   const row = (name) => p.locator('[data-id^="50:951#"][data-n^="Row / Task"]', { hasText: name }).first()
-  const menu = async (name) => { await row(name).hover(); await row(name).locator('[data-n="Button"]').first().click(); await p.waitForTimeout(250); const items = await p.locator('.menu .menu-item').evaluateAll((els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').trim() + (e.disabled ? ' [disabled]' : ''))); return items }
+  const menu = async (name) => { await row(name).hover(); await row(name).locator('[data-n="Button"], [data-n="Icon button"]').first().click(); await p.waitForTimeout(250); const items = await p.locator('.menu .menu-item').evaluateAll((els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').trim() + (e.disabled ? ' [disabled]' : ''))); return items }
   const pickMenu = async (label) => { await p.locator('.menu .menu-item', { hasText: label }).first().click(); await p.waitForTimeout(400) }
   console.log('==', path)
   let r = await rows()

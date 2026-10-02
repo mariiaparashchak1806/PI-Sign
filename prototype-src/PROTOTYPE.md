@@ -54,13 +54,15 @@
 - Deviation: 16 px gap between the Contact and Lead cards (0 in the mock), per designer.
 - Add from catalog: categories + search, items from the staging Labors catalog (first page) + mock lines, in-place qty stepper, selection with subtotal → adds lines to the chosen project; Replace mode from ⋯.
 - All tabs are built (see PROGRESS.md 2026-09-30). Not itemised in the mock → not invented: Bathroom lines, payment amounts/dates.
+- Oct 2 sync deviations: row ⋯ (project, line item, task) stay hover-only (drawn always visible); Agenda keeps the agreed header (Assignee, no select-all) and Due today state; Kitchen status reads "Scheduled" as drawn — picking it from the status menu shows "Scheduled Leads" (the platform's status name); Countertops line total "$1,200" for 42 sq ft × $65 and Total-row values are kept exactly as drawn (not recalculated).
+- Photo viewer: view, prev/next, rename, download, delete, Add more — no "Move to folder" (not on the platform).
 - Deviation: page ends where content ends (Figma frame has a fixed 2653 px height with empty space); left menu is sticky.
 
 ## Concepts
 - Switch at bottom-left (or `?concept=2`). Same state and actions in both; concept 2 = Figma 124:1753 (lead/price/contact column on the left, AI Assistant in the top bar → side panel).
 - Concept 2 deviations: Designer has no Assign button in the design — clicking the value opens Pick Assignees; Kitchen starts collapsed (as drawn) and expands into concept 1's line items.
 - Concept 2: only Overview is interactive in the tab bar (per designer); card links into tabs are inert.
-- Concept 1 follows the latest Figma 19:973 (Oct 1 sync); concept 2 keeps its own snapshot (tree-c2base.json). Switching concepts resets state.
+- Concept 1 · Option 1 follows the latest Figma 19:973 (Oct 2 sync); concept 2 keeps its own snapshot (tree2.json) and the Oct 1 Concept 1 widgets (tree-c1-shared.json). Switching concepts resets state.
 - Files & Photos: live in both concepts (concept 2: Overview + Files only). Seed file names/uploader for Basement are demo data.
 - Concept 1 = Figma 184:3568 (Option 2); old 19:973 at ?option=1. Needs attention links follow their labels (design text/label mismatch flagged to designer).
 

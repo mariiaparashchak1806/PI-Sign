@@ -181,3 +181,12 @@
 
 ## 2026-10-02 — Signed documents and Forms full width
 - Both tab cards dropped the 760 px centered width — full width like every other tab. Estimated job start date is a US MM/DD/YYYY field (was the locale date picker showing 03.10.2026).
+
+## 2026-10-02 — Figma → prototype sync, Concept 1 · Option 1 (19:973), eleken-prototype skill
+- Fresh export (extraction/c1o1-2026-10-02.json) → scripts/build_option1.py → src/figma/tree.json; 672 nodes keep their ids (name-matched walk), 30 new icons exported (icons.json). Diff vs Oct 1: +156 / −177 visible nodes, 54 changed.
+- Lead card: now component 264:51777 — "Show details" instance 264:51998 on the left, Contact card (320 px) on the right; "Show details" / "Hide details" switch to the hidden variant 109:6980 (exported separately: extraction/lead-hide-details-1002.json, spliced in by the build script), which fills the row.
+- Project Details: header Preview PDF / Add from wishlist / Add project, Show cost / Show sale switches, new column widths, Kitchen expanded = three "Group header / …" blocks (Materials · Labors · Countertops, "Add from catalog" each) with compact line items ("8 × $420") and Subtotal rows; status pill "Scheduled" green; Basement "-"; row ⋯ = "Icon button" (hover). Handlers re-bound: Kitchen collapse hides the three groups, item ⋯ menu, Add from catalog ×3 → Materials / Labors / Countertops pickers, project ⋯, status menu, column switches.
+- Agenda: new pill colours and Checkbox instances as drawn; row ⋯ is "Icon button". Right column: Signed documents widget, Files summary, Messages widget straight from the frame.
+- Concept 2 keeps the Oct 1 Concept 1 widgets (src/figma/tree-c1-shared.json) — its frame wasn't part of this sync.
+- Photo viewer: "Move to folder" removed (not in the original platform).
+- Checks: diff vs Figma 4.23% (all in the sidebar column — pinned 100vh in the browser — and the intended deviations); overview-sync-check 14/14; agenda-check 66/66; estimate-edit-check, product-catalog-check, labors-catalog-check, messages-check, ai-panel-check, files-check ok; controls ok; 0 console errors.

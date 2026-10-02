@@ -40,6 +40,15 @@ for a, b in PAIRS:
     if a in N and b in O: walk(N[a], O[b])
     else: print('skip', a, b)
 walk(tree, old)  # everything else that kept its name/structure
+# hidden instances come without children: the lead card's "Hide details" variant (109:6980) is exported on its own
+import os
+if os.path.exists('extraction/lead-hide-details-1002.json'):
+    hd = json.load(open('extraction/lead-hide-details-1002.json'))
+    def splice(n):
+        for i, k in enumerate(n.get('k') or []):
+            if k['id'] == '109:6980': hd['tree']['x'], hd['tree']['y'] = k['x'], k['y']; n['k'][i] = hd['tree']; return True
+            if splice(k): return True
+    splice(tree); exp.setdefault('icons', {}).update(hd['icons'])
 json.dump(tree, open('src/figma/tree.json', 'w'), separators=(',', ':'))
 icons = json.load(open('src/figma/icons.json')); added = 0
 src_icons = {**o2.get('icons', {}), **exp.get('icons', {})}

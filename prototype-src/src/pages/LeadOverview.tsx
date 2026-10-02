@@ -184,8 +184,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   const [editing, setEditing] = useState<null | 'lead' | 'contact' | 'assign' | 'messages'>(null)
   const [tabState, setTabState] = useState<TabKey>((new URLSearchParams(location.search).get('tab') as TabKey) || 'overview')
   // Concept 2 is presented on Overview only: other tabs are drawn but inert, and links into them are off
-  const tabsOn = concept === 1
-  const tabLive = (k?: TabKey) => !!k && (tabsOn || k === 'overview' || k === 'files') // concept 2: Overview + Files & Photos only
+  const tabsOn = true // every tab is live in every concept (concept 2 uses the concept 1 tab content, designer Oct 2)
+  const tabLive = (k?: TabKey) => !!k
   const tab: TabKey = tabLive(tabState) ? tabState : 'overview'
   const setTab = (t: TabKey) => { setTabState(t); setMenu(null); window.scrollTo({ top: 0 }) }
   const [files, setFiles] = useState<FilesState>(concept === 2 ? FILES0_C2 : FILES0)
@@ -362,22 +362,25 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
       })
     }
   }
-  // Columns filter: Total ("cost") = index 4, Sales = index 5 in the header and project rows (the summary footer has no columns)
+  // Columns: Project and Status keep a fixed width, the five amount columns share the rest equally (header, project
+  // rows and Total use the same widths; the space of the row ⋯ button is kept in the header and the Total row).
+  // Show cost hides Total (index 4), Show sale hides Sales (index 5) — the remaining columns take the freed space.
   const dataRows = PD_TOTAL_ROW ? [...PROJECT_ROWS, PD_TOTAL_ROW] : PROJECT_ROWS
-  const colCells = (i: number) => [kidsOf(PD_COLHEAD)[i].id, ...dataRows.map((r) => kidsOf(r)[i]?.id).filter(Boolean) as string[]]
-  if (!showCost) colCells(4).forEach((id) => (patches[id] = { hidden: true }))
-  if (!showSales) colCells(5).forEach((id) => (patches[id] = { hidden: true }))
-  // the width freed by hidden columns is shared by the remaining data columns (same delta in header and rows → stays aligned)
-  const hiddenCols = [!showCost && 4, !showSales && 5].filter((i): i is number => i !== false)
-  if (hiddenCols.length) {
-    const header = kidsOf(PD_COLHEAD), gap = node(PD_COLHEAD).al?.gap ?? 0
-    const visible = [0, 1, 2, 3, 4, 5].filter((i) => !hiddenCols.includes(i))
-    const delta = hiddenCols.reduce((a, i) => a + header[i].w + gap, 0) / visible.length
-    visible.forEach((i) => [header[i], ...dataRows.map((r) => kidsOf(r)[i])].forEach((c) => {
-      if (!c) return
-      patches[c.id] = { ...patches[c.id], style: { ...patches[c.id]?.style, width: c.w + delta, flexShrink: 0 } }
-    }))
-  }
+  const rkids = (id: string) => (RT.byId.get(id)?.k ?? []).filter((k) => !k.hidden)
+  const rowW = RT.byId.get(PROJECT_ROWS[0]) ? rkids(PROJECT_ROWS[0]) : []
+  const GAP = RT.byId.get(PD_COLHEAD)?.al?.gap ?? 12, PROJ_W = rkids(PD_COLHEAD)[0]?.w ?? 120, STATUS_W = 120, MORE_W = rowW[7]?.w ?? 32
+  const fixed = (w: number) => ({ width: w, minWidth: w, flex: 'none' as const })
+  ;[PD_COLHEAD, ...dataRows].forEach((r) => {
+    const ks = rkids(r); if (!ks.length) return
+    const isTotal = r === PD_TOTAL_ROW
+    patches[r] = { ...patches[r], style: { ...patches[r]?.style, gap: GAP, ...(r === PD_COLHEAD || ks.length < 8 ? { paddingRight: 16 + (ks.length < 7 ? STATUS_W + GAP : 0) + MORE_W + GAP } : {}) } }
+    ks.forEach((c, i) => {
+      const hide = (i === 4 && !showCost) || (i === 5 && !showSales)
+      const style = i === 0 ? fixed(PROJ_W) : i <= 5 ? { flex: '1 1 0', minWidth: 0, width: 'auto' } : i === 6 ? fixed(STATUS_W) : fixed(MORE_W)
+      patches[c.id] = { ...patches[c.id], ...(hide ? { hidden: true } : {}), style: { ...patches[c.id]?.style, ...style } }
+    })
+    if (isTotal && ks.length >= 8) ks.slice(6).forEach((c) => (patches[c.id] = { ...patches[c.id], style: { ...patches[c.id]?.style, visibility: 'hidden' } }))
+  })
   const liveProjects = projectRows.filter((r) => !deletedRows.includes(r.id))
   patches[find(PD_HEAD, (n) => n.t === 'TEXT' && /projects?$/.test(n.txt ?? ''))!.id] = { txt: `${liveProjects.length} project${liveProjects.length === 1 ? '' : 's'}` }
 
@@ -518,6 +521,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
   if (tab !== 'overview') {
     on(GRID, { render: () => (
       <div className={`tab-content${concept === 2 ? " in-row" : ""}`}>
+        {/* concept 2: the tabs sit inside the right column → keep them above the tab content */}
+        {concept === 2 && RT.byId.get(TABS) && <FigmaNode key="tabs" node={RT.byId.get(TABS)!} parent={RT.byId.get(GRID) ?? null} />}
         {tab === 'agenda' ? <FigmaNode node={node(AGENDA)} parent={node(LEFT_COL)} />
           : tab === 'files' ? <FilesTab projects={liveProjects.map((p) => p.name)} files={files} setFiles={setFiles} say={say} />
           : tab === 'labors' || tab === 'materials' || tab === 'countertops' ? <EstimateTab key={tab} kind={(tab.charAt(0).toUpperCase() + tab.slice(1)) as CatalogKind} projects={liveProjects.map((p) => p.name)} estimate={estimate} setEstimate={setEstimate} onCatalog={setCatalog} say={say} />
@@ -541,8 +546,6 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     on('206:6025', { onClick: () => setEditing('assign'), title: 'Assign designer' })
     on('206:6026', { onClick: () => open('lead-more', '206:6026', leadMore(), 220), title: 'Lead actions' })
     on('206:5963', { onClick: () => setEditing('contact'), title: 'Edit contact' })
-    // Contact edit: its stroke is at 15% opacity in the mock — same stroke as the Lead edit button (206:6015)
-    patches['206:5963'] = { ...patches['206:5963'], style: { ...patches['206:5963']?.style, borderColor: 'rgba(231,229,224,1)' } }
     on('206:6015', { onClick: () => setEditing('lead'), title: 'Edit lead' })
     on('206:6136', { onClick: () => setEditing('assign'), title: designer ? 'Change assignees' : 'Assign designer', className: 'value-hover' })
   }
@@ -617,7 +620,8 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     // (concept 2's Project Details variant has no line items drawn → the Kitchen groups of concept 1 · option 1)
     on('93:8375', { render: (_n, el) => <>{el}{kitchenOpen && !deletedRows.includes('93:8375') && KITCHEN_GROUPS.map((g) => <FigmaNode key={g.id} node={g} parent={n2('42:10511')} />)}</> })
     // tabs overflow the right column: the last visible tab fades out (gradient label in the mock)
-    patches[TABS] = { ...patches[TABS], style: { ...patches[TABS]?.style, maskImage: 'linear-gradient(to right, #000 calc(100% - 64px), transparent)', WebkitMaskImage: 'linear-gradient(to right, #000 calc(100% - 64px), transparent)' } }
+    // all tabs are live → the bar scrolls sideways (no scrollbar); the end padding lets the last tab clear the fade
+    patches[TABS] = { ...patches[TABS], style: { ...patches[TABS]?.style, overflowX: 'auto', overflowY: 'hidden', scrollbarWidth: 'none', paddingRight: 64, maskImage: 'linear-gradient(to right, #000 calc(100% - 64px), transparent)', WebkitMaskImage: 'linear-gradient(to right, #000 calc(100% - 64px), transparent)' } }
     if (T2.byId.has('I226:15366;319:9022')) patches['I226:15366;319:9022'] = { style: { transform: kitchenOpen ? 'rotate(90deg)' : 'none', transition: 'transform .18s var(--spring-snappy)' } }
     // AI Assistant lives in the top bar here → opens the same assistant card in a side panel
     on('124:3631', { onClick: () => setAiOpen((v) => !v), title: 'AI Assistant' })

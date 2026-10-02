@@ -225,3 +225,9 @@
 
 ## 2026-10-02 — Lead card: no jump on Show / Hide details (Figma 264:51777)
 - The two variants differ in Figma: "Hide details" (109:6979) has card padding 12 (16 in "Show details"), a facts row fixed at 678 px and 190 px columns in the second row → opening moved the header 4 px up and Designer 10 px left. The open card now follows the closed one (padding 16, facts rows full width, second-row columns share the width like the first); only the footer moves down as the details open. Figma components left as they are (worth aligning there too).
+
+## 2026-10-02 — Secondary buttons, Project Details columns, checkboxes, Concept 2 tabs
+- Every "Secondary Button" has the same 1px #27272A 15% stroke on white (Preview PDF and other instances without it in the mock included; the Option 2 Contact-edit override removed).
+- Project Details columns: Project 120 and Status 120 fixed, the five amount columns share the rest equally; header, project rows and Total share the same edges and keep the row ⋯ slot; hiding Total / Sales gives the space to the other amount columns (scripts/cols-check.mjs 12/12: 3 pages × 4 switch combinations).
+- Checkboxes: absolutely positioned children now subtract the parent's inside border (CSS positions from the padding box) → the check mark sits centred in the checked box (was 1px right / down); applies to every bordered frame.
+- Concept 2: all tabs are live with the Concept 1 tab content; the tab bar stays above the content on every tab (it lives in the right column there) and scrolls sideways (fade at the end, last tab clears it). scripts/concept2-tabs-check.mjs 11/11; controls on every Concept 2 tab: 42 / 25 / 18 / 18 / 18 / 18 / 17 / 18 / 18 / 18, 0 dead, 0 console errors.

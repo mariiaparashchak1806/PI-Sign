@@ -71,8 +71,10 @@ function paint(fills: FNode['fill']): string | undefined {
 function sizing(n: FNode, parent: FNode | null, s: CSSProperties) {
   const pl = parent?.al?.m
   if (parent && (n.abs || !pl)) {
-    const ox = parent.t === 'GROUP' ? parent.x : 0
-    const oy = parent.t === 'GROUP' ? parent.y : 0
+    // CSS positions from the padding box, Figma from the outer edge → subtract the parent's inside / center border
+    const bw = parent.stroke?.c && parent.stroke.a !== 'OUTSIDE' ? (Array.isArray(parent.stroke.w) ? parent.stroke.w : [parent.stroke.w, parent.stroke.w, parent.stroke.w, parent.stroke.w]) : [0, 0, 0, 0]
+    const ox = (parent.t === 'GROUP' ? parent.x : 0) + (bw[3] ?? 0)
+    const oy = (parent.t === 'GROUP' ? parent.y : 0) + (bw[0] ?? 0)
     Object.assign(s, { position: 'absolute', left: px(n.x - ox), top: px(n.y - oy) })
     if (n.t !== 'TEXT' || n.ar === 'NONE') Object.assign(s, { width: px(n.w), height: px(n.h) })
     else if (n.ar === 'HEIGHT') s.width = px(n.w)
@@ -105,6 +107,8 @@ function box(n: FNode, s: CSSProperties, patch?: Patch) {
     if (n.stroke.a === 'OUTSIDE') s.boxShadow = `0 0 0 ${px(w[0])} ${c}`
     else Object.assign(s, { borderStyle: n.stroke.dash ? 'dashed' : 'solid', borderColor: c, borderWidth: w.map(px).join(' ') })
   }
+  // every Secondary Button has the same 1px #27272A 15% stroke on white (some instances in the mock lost it)
+  if (n.comp === 'Secondary Button') Object.assign(s, { borderStyle: 'solid', borderWidth: '1px', borderColor: 'rgba(39,39,42,0.15)', background: patch?.bg ?? 'rgba(255,255,255,1)' })
   if (Array.isArray(n.r)) s.borderRadius = n.r.map(px).join(' ')
   else if (n.r) s.borderRadius = px(n.r)
   const shadows = (n.fx ?? []).filter((e) => e.t === 'DROP_SHADOW' || e.t === 'INNER_SHADOW')

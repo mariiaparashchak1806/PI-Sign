@@ -1,18 +1,31 @@
-// Show cost / Show sale off → remaining columns stretch (concept 1 switches, concept 2 columns popover).
+// Project Details columns: header, project rows and Total share the same column edges, the amount columns are equal
+// and the row is filled (no empty space before the ⋯ slot) — with every Show cost / Show sale combination, all concepts.
+// usage: node scripts/cols-check.mjs [base]
 import { chromium } from 'playwright'
-const out = process.argv[2] ?? 'extraction'
-const b = await chromium.launch({ channel: 'chrome' }); const p = await b.newPage({ viewport: { width: 1440, height: 900 } })
-const errs = []; p.on('console', (m) => m.type() === 'error' && errs.push(m.text()))
-const edges = () => p.evaluate(() => ['93:8360', '93:8375', '42:10752'].map((id) => { const row = document.querySelector(`[data-id="${id}"]`); return [...row.children].slice(0, 6).map((c) => Math.round(c.getBoundingClientRect().right)) }))
-await p.goto('http://localhost:5178/'); await p.waitForTimeout(500)
-const shot = async (name) => { const box = await p.locator('[data-id="42:10511"]').boundingBox(); await p.screenshot({ path: `${out}/${name}.png`, clip: { x: box.x, y: box.y, width: box.width, height: 330 } }) }
-console.log('both on  ', JSON.stringify(await edges()))
-await p.click('[role=switch][aria-label="Show sale"]'); await p.waitForTimeout(150)
-console.log('sale off ', JSON.stringify(await edges()))
-await p.click('[role=switch][aria-label="Show cost"]'); await p.waitForTimeout(150)
-console.log('both off ', JSON.stringify(await edges())); await shot('cols-off')
-await p.goto('http://localhost:5178/?concept=2'); await p.waitForTimeout(500)
-await p.click('[data-id="93:8348"]'); await p.waitForTimeout(200)
-await p.click('.menu >> text=Show cost'); await p.click('.menu >> text=Show sale'); await p.keyboard.press('Escape'); await p.waitForTimeout(200)
-console.log('c2 off   ', JSON.stringify(await edges())); await shot('cols-off-c2')
-console.log('errors', errs); await b.close()
+const base = process.argv[2] ?? 'http://localhost:5178'
+const b = await chromium.launch({ channel: 'chrome' }); const p = await b.newPage({ viewport: { width: 1440, height: 900 } }); let bad = 0
+const errs = []; p.on('pageerror', (e) => errs.push(e.message))
+for (const path of ['/concept-1/', '/concept-1/option-2/', '/concept-2/']) {
+  for (const [cost, sale] of [[1, 1], [0, 1], [1, 0], [0, 0]]) {
+    await p.goto(base + path, { waitUntil: 'networkidle' }); await p.waitForTimeout(300)
+    if (!cost) await p.locator('.switch-hit', { hasText: 'Show cost' }).first().click()
+    if (!sale) await p.locator('.switch-hit', { hasText: 'Show sale' }).first().click()
+    await p.waitForTimeout(200)
+    const res = await p.evaluate(() => {
+      const ids = ['93:8360', '93:8375', '42:10700', '42:10752', 'I226:14358;227:2695']
+      return ids.map((id) => { const r = document.querySelector(`[data-id="${CSS.escape(id)}"]`); if (!r) return null
+        const rb = r.getBoundingClientRect()
+        const cells = [...r.children].filter((c) => getComputedStyle(c).display !== 'none').map((c) => { const b = c.getBoundingClientRect(); return [Math.round(b.left - rb.left), Math.round(b.right - rb.left)] })
+        return { id, w: Math.round(rb.width), cells } })
+    })
+    const rows = res.filter(Boolean), head = rows[0]
+    const n = head.cells.length, amounts = head.cells.slice(1, n - 1).map(([l, r]) => r - l)
+    const aligned = rows.every((r) => head.cells.every((c, i) => !r.cells[i] || Math.abs(r.cells[i][1] - c[1]) <= 1))
+    const equal = Math.max(...amounts) - Math.min(...amounts) <= 1
+    const lastRow = rows[1].cells[rows[1].cells.length - 1][1]
+    const filled = Math.abs(lastRow - (rows[1].w - 16)) <= 1
+    const ok = aligned && equal && filled; if (!ok) bad++
+    console.log(ok ? 'ok  ' : 'FAIL', path, `cost ${cost} sale ${sale}`, JSON.stringify({ amounts, aligned, filled, head: head.cells, kitchen: rows[1].cells, total: rows[rows.length - 1].cells }))
+  }
+}
+console.log(errs.length ? 'FAIL ' + errs : 'ok   console clean'); await b.close(); process.exit(bad ? 1 : 0)

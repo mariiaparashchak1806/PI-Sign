@@ -61,7 +61,7 @@
 ## Concepts
 - Switch at bottom-left (or `?concept=2`). Same state and actions in both; concept 2 = Figma 124:1753 (lead/price/contact column on the left, AI Assistant in the top bar → side panel).
 - Concept 2 deviations: Designer has no Assign button in the design — clicking the value opens Pick Assignees; Kitchen starts collapsed (as drawn) and expands into concept 1's line items.
-- Concept 2: only Overview is interactive in the tab bar (per designer); card links into tabs are inert.
+- Concept 2: every tab is interactive (designer, Oct 2) with the Concept 1 tab content; the tab bar stays visible and scrolls sideways.
 - Concept 1 · Option 1 follows the latest Figma 19:973 (Oct 2 sync); concept 2 follows Figma 124:1753 (Oct 2 sync, tree2.json) on the current Concept 1 widgets. Switching concepts resets state.
 - Files & Photos: live in both concepts (concept 2: Overview + Files only). Seed file names/uploader for Basement are demo data.
 - Concept 1 = Figma 184:3568 (Option 2); old 19:973 at ?option=1. Needs attention links follow their labels (design text/label mismatch flagged to designer).

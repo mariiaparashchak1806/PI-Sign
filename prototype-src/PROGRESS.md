@@ -253,3 +253,5 @@
 - Labors / Materials / Countertops tabs: project group header rows #F7F6F2 (hover a shade darker).
 
 - Concept 2 Messages "View all →" arrow restored (the new frame 334:11136 had no exported icon).
+
+- Needs attention (Option 2, Concept 2): chevron on the left of the title and turning like Activity; wired to the rendered tree (Concept 2's block now collapses and its links act).

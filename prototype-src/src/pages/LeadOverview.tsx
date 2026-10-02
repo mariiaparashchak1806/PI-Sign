@@ -87,7 +87,6 @@ const MSGW = TM.byId.get('310:13676')!
 const MW = { name: 'I310:13676;184:7478', at: 'I310:13676;296:13028', text: 'I310:13676;184:7479', initials: 'I310:13676;296:13034', viewAll: 'I310:13676;184:7470', last: 'I310:13676;184:7472' }
 const TEAM0: TeamMsg[] = [{ author: TM.byId.get(MW.name)!.txt!, at: TM.byId.get(MW.at)!.txt!, text: TM.byId.get(MW.text)!.txt! }]
 const PD_TOTAL_ROW = (node(PD).k ?? []).find((k) => k.n === 'Row / Total' && !k.hidden)?.id
-const NEEDS = T.find(root, (n) => n.n === 'Section - Needs attention')
 // Signed documents card (summary in the old snapshot, "widget" in the current frame): every link/button opens its tab
 const SIGNED_CARD = (node('19:1233').k ?? []).find((c) => !c.hidden && !!T.find(c, (n) => n.t === 'TEXT' && n.txt === 'Signed documents'))!
 const SIGNED_LINKS = T.findAll(SIGNED_CARD, (n) => n.n === 'Link Button' || n.n === 'Secondary Button').map((n) => n.id)
@@ -565,11 +564,13 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
     on('206:6015', { onClick: () => setEditing('lead'), title: 'Edit lead' })
     on('206:6136', { onClick: () => setEditing('assign'), title: designer ? 'Change assignees' : 'Assign designer', className: 'value-hover' })
   }
-  if (NEEDS) {
+  // Needs attention lives in the rendered tree (Option 2's frame or Concept 2's), not in the shared widget tree
+  const NA = RT.find(R, (n) => n.n === 'Section - Needs attention' && !n.hidden)
+  if (NA) {
     // Needs attention: header collapses the list; each row's link runs its action; resolved rows disappear
-    const rows = (NEEDS.k ?? []).filter((k) => k.n.startsWith('Row / Task') && !k.hidden)
-    const label = (r: FNode) => T.find(r, (n) => n.n === 'Link Button')
-    const linkText = (r: FNode) => (label(r) ? T.find(label(r)!, (n) => n.t === 'TEXT')?.txt?.trim() : '') ?? ''
+    const rows = (NA.k ?? []).filter((k) => k.n.startsWith('Row / Task') && !k.hidden)
+    const label = (r: FNode) => RT.find(r, (n) => n.n === 'Link Button')
+    const linkText = (r: FNode) => (label(r) ? RT.find(label(r)!, (n) => n.t === 'TEXT')?.txt?.trim() : '') ?? ''
     const overdueRow = taskRows.find((t) => t.initial === 'overdue'), overdueTask = overdueRow && tasks.find((t) => t.id === overdueRow.id)
     const resolved = (r: FNode) => {
       const l = linkText(r)
@@ -591,13 +592,15 @@ return function LeadOverviewPage({ concept = 1 }: { concept?: Concept }) {
       }
       if (btn && act[l]) on(btn, { onClick: act[l], title: l })
     })
-    const head = (NEEDS.k ?? [])[0], countText = T.find(head, (n) => n.t === 'TEXT' && /actions?$/.test(n.txt ?? ''))
+    const head = (NA.k ?? [])[0], countText = RT.find(head, (n) => n.t === 'TEXT' && /actions?$/.test(n.txt ?? ''))
     if (countText) patches[countText.id] = { txt: `${live.length} action${live.length === 1 ? '' : 's'}` }
-    const chev = T.find(head, (n) => !!n.icon && /chev/.test(n.n))
-    if (chev) patches[chev.id] = { style: { transform: needsOpen ? 'none' : 'rotate(180deg)', transition: 'transform .18s var(--spring-snappy)' } }
+    // chevron on the left of the title and turning like Activity's (designer, Oct 2)
+    const chev = RT.find(head, (n) => !!n.icon && /chev/.test(n.n)), bar = chev && RT.parentOf.get(chev.id)
+    if (bar) patches[bar.id] = { style: { justifyContent: 'flex-start', gap: 8 } }
+    if (chev) patches[chev.id] = { style: { order: -1, transform: needsOpen ? 'rotate(180deg)' : 'none', transition: 'transform .18s var(--spring-snappy)' } }
     on(head.id, { onClick: () => setNeedsOpen((v) => !v), title: needsOpen ? 'Collapse' : 'Expand', className: 'row-hover' })
-    ;(NEEDS.k ?? []).slice(1).forEach((k) => { if (!needsOpen) patches[k.id] = { hidden: true } })
-    if (!live.length) patches[NEEDS.id] = { hidden: true }
+    ;(NA.k ?? []).slice(1).forEach((k) => { if (!needsOpen) patches[k.id] = { hidden: true } })
+    if (!live.length) patches[NA.id] = { hidden: true }
   }
 
   // ---------- concept 2: lead column + AI Assistant button (ids from Figma 124:1753) ----------

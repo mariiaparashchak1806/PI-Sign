@@ -57,16 +57,16 @@ for (const name of names) {
   const [q, act, parts, baseFrame, mode] = STATES[name]
   await p.goto(base + q, { waitUntil: 'networkidle' }); await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(300)
   if (act) { await act(p); await p.waitForTimeout(700) }
-  await p.evaluate(() => scrollTo(0, 0))
+  if (!parts.some((x) => x === MENU || x === TOAST)) await p.evaluate(() => scrollTo(0, 0)) // menus / toasts keep their page position
   if (parts[0] !== TOAST) await p.mouse.move(2, 898)
   const snap = await p.evaluate(({ parts, mode }) => {
     const rgba = (c) => { const m = c && c.match(/rgba?\(([^)]+)\)/); if (!m) return null; const v = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); const a = v[3] ?? 1; return a === 0 ? null : [v[0], v[1], v[2], Math.round(a * 100) / 100] }
     const r1 = (v) => Math.round(v * 10) / 10
-    const H = mode === 'page' ? document.documentElement.scrollHeight : innerHeight
+    const H = document.documentElement.scrollHeight // anything on the page counts (menus can open below the fold)
     const svgs = {}
     const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36) }
     const vis = (cs) => cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0.01
-    const off = (r) => r.width < 0.5 || r.height < 0.5 || r.bottom < 0 || r.top > H || r.right < 0 || r.left > 1440
+    const off = (r) => r.width < 0.5 || r.height < 0.5 || r.right < 0 || r.left > 1440
     const font = (cs) => cs.fontFamily.split(',')[0].replace(/["']/g, '').trim()
     function paints(el, cs) {
       if (rgba(cs.backgroundColor) || cs.backgroundImage.startsWith('linear')) return true
@@ -143,7 +143,7 @@ for (const name of names) {
       const els = [...document.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none'); if (!els.length) { out.push({ sel, missing: 1 }); continue }
       const el = els[els.length - 1], r = el.getBoundingClientRect()
       const k = []; walk(el, r.left, r.top, k, 0)
-      const tree = k[0]; if (tree) { tree.x = r1(r.left); tree.y = r1(r.top + (mode === 'page' ? scrollY : 0)) }
+      const tree = k[0]; if (tree) { tree.x = r1(r.left); tree.y = r1(r.top + scrollY) } // page coordinates
       out.push({ sel, tree })
     }
     return { h: H, parts: out, svgs }

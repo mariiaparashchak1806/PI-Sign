@@ -1,0 +1,5 @@
+const P = {"name":"lead-menu","title":"Menu · Lead actions","base":"overview","mode":"view","h":2369,"tab":"Overview","col":8,"row":2900,"parts":[{"sel":".menu","tree":{"t":"f","x":843,"y":135,"w":220,"h":131,"n":"menu","bg":[255,255,255,1],"bw":1,"bc":[230,232,227,1],"r":10,"sh":[{"c":[0,0,0,0.12],"x":0,"y":8,"b":24,"s":0}],"k":[{"t":"s","x":17,"y":17,"w":16,"h":16,"v":"1gvcp6y"},{"t":"x","x":43,"y":15,"w":98.5,"h":20,"s":"Copy lead link","f":"Poppins","fw":400,"fs":14,"c":[27,29,26,1],"lh":20},{"t":"s","x":17,"y":53,"w":16,"h":16,"v":"1y6m25j"},{"t":"x","x":43,"y":51,"w":109,"h":20,"s":"Send to archive","f":"Poppins","fw":400,"fs":14,"c":[27,29,26,1],"lh":20},{"t":"f","x":7,"y":83,"w":206,"h":1,"n":"menu-divider","bg":[230,232,227,1],"k":[]},{"t":"s","x":17,"y":98,"w":16,"h":16,"v":"roql33"},{"t":"x","x":43,"y":96,"w":79.5,"h":20,"s":"Delete lead","f":"Poppins","fw":400,"fs":14,"c":[217,45,32,1],"lh":20}]}}]}
+const sec = await figma.getNodeByIdAsync('__SECTION__')
+const src = sec.findChild((n) => n.name === '_builder').characters
+const AF = Object.getPrototypeOf(async function () {}).constructor
+return await new AF('P', src)(P)
